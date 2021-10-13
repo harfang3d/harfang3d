@@ -1,0 +1,1 @@
+Undo a [ImGuiSameLine] call or force a new line when in an horizontal layout.

@@ -1,0 +1,1 @@
+Collision component, see [man.Physics].

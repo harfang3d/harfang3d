@@ -1,0 +1,1 @@
+Compute the Euler angles triplet for the provided `z` direction. The up-vector `y` can be provided to improve coherency of the returned values over time.

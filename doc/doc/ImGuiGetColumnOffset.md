@@ -1,0 +1,1 @@
+Returns the current column offset in pixels, from the left side of the content region.

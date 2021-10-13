@@ -1,0 +1,1 @@
+Return the content boundaries max (roughly (0,0)+Size-Scroll) where Size can be override with [ImGuiSetNextWindowContentSize], in window space.

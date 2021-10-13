@@ -1,0 +1,1 @@
+Get UV coordinate for a while pixel, useful to draw custom shapes via the ImDrawList API.

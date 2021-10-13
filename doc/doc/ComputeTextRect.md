@@ -1,0 +1,1 @@
+Compute the width and height of a text string.

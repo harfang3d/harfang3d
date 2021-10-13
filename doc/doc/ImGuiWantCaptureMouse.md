@@ -1,0 +1,1 @@
+ImGui wants mouse capture. Use this function to determine when to pause mouse processing from other parts of your program.

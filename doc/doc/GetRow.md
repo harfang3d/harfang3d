@@ -1,0 +1,1 @@
+Returns the nth row of a matrix.

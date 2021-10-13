@@ -1,0 +1,1 @@
+Return the camera near clipping plane.

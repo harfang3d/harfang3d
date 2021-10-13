@@ -1,0 +1,1 @@
+Command object to set a uniform texture at draw time.

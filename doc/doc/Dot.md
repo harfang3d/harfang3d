@@ -1,0 +1,1 @@
+Return the dot product of two vectors.

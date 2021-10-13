@@ -1,0 +1,1 @@
+Save a [Picture] in [BMP](https://en.wikipedia.org/wiki/BMP_file_format) file format.

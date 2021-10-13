@@ -1,0 +1,1 @@
+If returning `true` the node is open and the user is responsible for calling [ImGuiTreePop].

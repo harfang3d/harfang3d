@@ -1,0 +1,1 @@
+Rendering pipeline base class.

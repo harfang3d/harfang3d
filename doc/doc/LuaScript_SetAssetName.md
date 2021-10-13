@@ -1,0 +1,1 @@
+Set the filename of a LuaScript in the current assets folder.

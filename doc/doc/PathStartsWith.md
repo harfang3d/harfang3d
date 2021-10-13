@@ -1,0 +1,1 @@
+Test if the provided path starts with the provided prefix.

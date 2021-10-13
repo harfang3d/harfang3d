@@ -1,0 +1,1 @@
+Adjust scrolling amount to make a given position visible. Generally [ImGuiGetCursorStartPos] + offset to compute a valid position.

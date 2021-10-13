@@ -1,0 +1,1 @@
+Return the list of names of a material texture uniforms.

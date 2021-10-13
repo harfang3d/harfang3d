@@ -1,0 +1,1 @@
+Return a material depth test function.

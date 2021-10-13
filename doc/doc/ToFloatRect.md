@@ -1,0 +1,1 @@
+Return an integer rectangle as a floating point rectangle.

@@ -1,0 +1,1 @@
+Object containing the world space position, normal and depth of a contact as reported by the collision system.

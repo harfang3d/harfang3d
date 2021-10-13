@@ -1,0 +1,1 @@
+State of a crowd agent.

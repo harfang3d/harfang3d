@@ -1,0 +1,1 @@
+Return the [CollisionType] of a [Collision] component.

@@ -1,0 +1,1 @@
+Return the following value: FontSize + style.FramePadding.y * 2 + style.ItemSpacing.y (distance in pixels between 2 consecutive lines of framed widgets)

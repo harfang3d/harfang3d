@@ -1,0 +1,1 @@
+Reference to a [Material] inside a [PipelineResources] object.

@@ -1,0 +1,1 @@
+Return the material depth write mask.

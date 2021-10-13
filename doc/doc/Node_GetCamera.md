@@ -1,0 +1,1 @@
+Return the [Camera] component of the node.

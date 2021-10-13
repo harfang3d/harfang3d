@@ -1,0 +1,1 @@
+Signal to the OpenVR compositor that it can immediatly start processing the current frame.

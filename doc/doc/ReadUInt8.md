@@ -1,0 +1,1 @@
+Read a binary 8 bit unsigned integer value from a local file.

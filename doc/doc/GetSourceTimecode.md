@@ -1,0 +1,1 @@
+Return the current timecode of a playing audio source.

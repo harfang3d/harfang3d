@@ -1,0 +1,1 @@
+Declare a widget to edit a float value. The widget can be dragged over to modify the underlying value.

@@ -1,0 +1,1 @@
+Return `true` if the provided volume overlaps with this volume, `false` otherwise. The test can optionally be restricted to a specific axis.

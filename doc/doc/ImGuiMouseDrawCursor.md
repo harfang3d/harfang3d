@@ -1,0 +1,1 @@
+Enable/disable the ImGui software mouse cursor.

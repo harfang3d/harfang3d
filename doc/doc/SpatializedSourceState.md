@@ -1,0 +1,1 @@
+State for a spatialized audio source, see [man.Audio].

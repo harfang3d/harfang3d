@@ -1,0 +1,1 @@
+Set the collision shape mass in Kg.

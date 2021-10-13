@@ -1,0 +1,48 @@
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+set(CMAKE_SYSTEM_VERSION 1)
+
+if(DEFINED ENV{OECORE_TARGET_SYSROOT})
+	set(CMAKE_FIND_ROOT_PATH $ENV{OECORE_TARGET_SYSROOT})
+else()
+	set(CMAKE_SYSROOT ${TARGET_SYSROOT})
+	set(TARGET_PREFIX "aarch64-poky-linux-")
+
+	set(CMAKE_C_COMPILER ${NATIVE_SYSROOT}/usr/bin/aarch64-poky-linux/${TARGET_PREFIX}gcc)
+	set(CMAKE_CXX_COMPILER ${NATIVE_SYSROOT}/usr/bin/aarch64-poky-linux/${TARGET_PREFIX}g++)
+
+	add_compile_options("-march=armv8-a+simd" "-mtune=cortex-a57.cortex-a53")
+
+	set(CMAKE_MODULE_LINKER_FLAGS_INIT "-Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed")
+	set(CMAKE_EXE_LINKER_FLAGS_INIT    "-Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed")
+
+	set(CMAKE_FIND_ROOT_PATH ${TARGET_SYSROOT} ${NATIVE_SYSROOT})
+
+	set(HG_EMBEDDED ON CACHE BOOL "" FORCE)
+	set(HG_USE_GLFW_WAYLAND ON CACHE BOOL "" FORCE)
+	add_compile_options("-DGLFW_INCLUDE_ES2")
+endif()
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+find_package(PythonInterp 3.2 REQUIRED)
+if(PYTHONINTERP_FOUND)
+	set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+endif()
+set(Python3_Interpreter_FOUND ${PYTHONINTERP_FOUND})
+
+if(HG_BUILD_HG_PYTHON)
+	find_package(PythonLibs 3.2 REQUIRED)
+	if(PYTHONLIBS_FOUND)
+		set(Python3_LIBRARIES    ${PYTHON_LIBRARIES})
+		set(Python3_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
+		set(Python3_VERSION      ${PYTHON_VERSION_STRING})
+	endif()
+	set(Python3_FOUND ${PYTHONLIBS_FOUND})
+else()
+	set(Python3_FOUND ${PYTHONINTERP_FOUND})
+endif()
+

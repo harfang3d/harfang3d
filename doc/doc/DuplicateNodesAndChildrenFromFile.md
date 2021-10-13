@@ -1,0 +1,1 @@
+Call [DuplicateNodeAndChildrenFromFile] for each node in a list.

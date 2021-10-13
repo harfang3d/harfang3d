@@ -1,0 +1,1 @@
+Allocates internal storage for the required number of [LuaScript] components in one go.

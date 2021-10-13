@@ -1,0 +1,1 @@
+Is the current window hovered and hoverable (not blocked by a popup), differentiates child windows from each others.

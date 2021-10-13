@@ -1,0 +1,1 @@
+State for a stereo audio source, see [man.Audio].

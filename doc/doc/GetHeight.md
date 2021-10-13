@@ -1,0 +1,1 @@
+Return the height of a rectangle.

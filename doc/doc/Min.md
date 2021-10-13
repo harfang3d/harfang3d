@@ -1,0 +1,1 @@
+Return a vector whose elements are the minimum of each of the two specified vectors.

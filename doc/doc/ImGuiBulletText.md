@@ -1,0 +1,1 @@
+Draw a bullet followed by a static text.

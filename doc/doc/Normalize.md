@@ -1,0 +1,1 @@
+Return the input vector scaled so that its length is one.

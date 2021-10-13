@@ -1,0 +1,1 @@
+Return the width of the content region.

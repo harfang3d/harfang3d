@@ -1,0 +1,1 @@
+Get the transform rotation. If you want the visual rotation of a Node with a rigid body, use [GetRotation] on the matrix returned by [Transform_GetWorld]. See [man.Physics].

@@ -1,0 +1,1 @@
+Return the value of an integer JSON key.

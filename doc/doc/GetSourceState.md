@@ -1,0 +1,1 @@
+Return the state of an audio source.

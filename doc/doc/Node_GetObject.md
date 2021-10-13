@@ -1,0 +1,1 @@
+Return [Object] component of the node.

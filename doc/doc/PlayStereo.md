@@ -1,0 +1,1 @@
+Start playing a stereo sound. Return a handle to the started source.

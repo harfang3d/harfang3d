@@ -1,0 +1,1 @@
+Return `true` if the monitor is the primary host device monitor, `false` otherwise.

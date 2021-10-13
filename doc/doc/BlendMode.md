@@ -1,0 +1,1 @@
+Control the compositing mode used to draw primitives.

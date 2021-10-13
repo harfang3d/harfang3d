@@ -1,0 +1,1 @@
+Return a 32 bit RGBA integer from a color.

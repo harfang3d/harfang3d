@@ -1,0 +1,1 @@
+Color button widget, display a small colored rectangle.

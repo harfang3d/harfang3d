@@ -1,0 +1,1 @@
+Return the intersection of two rectangles.

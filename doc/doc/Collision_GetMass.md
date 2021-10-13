@@ -1,0 +1,1 @@
+Return the collision shape mass in Kg.

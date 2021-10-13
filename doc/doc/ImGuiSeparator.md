@@ -1,0 +1,1 @@
+Output an horizontal line to separate two distinct UI sections.

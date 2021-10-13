@@ -1,0 +1,1 @@
+Set tooltip under mouse-cursor, typically used with [ImGuiIsItemHovered]/[ImGuiIsAnyItemHovered]. Last call wins.

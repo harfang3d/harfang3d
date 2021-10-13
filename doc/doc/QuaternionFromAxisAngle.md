@@ -1,0 +1,1 @@
+Return a quaternion rotation from a 3d axis and a rotation around that axis.

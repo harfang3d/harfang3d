@@ -1,0 +1,10 @@
+<html>
+    <body style="margin: 0px">
+        <iframe src="content/tree.html" width="20%" height="100%" style="border: 0px">
+            Your browser does not support iframes.
+        </iframe>
+        <iframe style="float: right; border: 0px" name="content-frame" src="content/man.Overview.html" width="78%" height="100%" frameborder="0px">
+            Your browser does not support iframes. <a href="content/man.Overview.html">Click here to view the page directly.</a>
+        </iframe>
+    </body>
+</html>

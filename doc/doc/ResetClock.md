@@ -1,0 +1,1 @@
+Reset the elapsed time counter.

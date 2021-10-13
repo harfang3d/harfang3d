@@ -1,0 +1,1 @@
+Return a 4x3 scale matrix from the parameter scaling vector.

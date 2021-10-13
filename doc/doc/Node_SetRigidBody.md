@@ -1,0 +1,1 @@
+Set the [RigidBody] component of a node.

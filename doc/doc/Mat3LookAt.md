@@ -1,0 +1,1 @@
+Return a rotation matrix looking down the provided vector. The input vector does not need to be normalized.

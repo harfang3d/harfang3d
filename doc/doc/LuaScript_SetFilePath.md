@@ -1,0 +1,1 @@
+Set the path of a LuaScript.

@@ -1,0 +1,1 @@
+Return a 32 bit ABGR integer from a color.

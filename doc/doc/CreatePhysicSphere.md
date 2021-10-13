@@ -1,0 +1,1 @@
+Create a [Node] with a [Transform], [Object] and [RigidBody] components.

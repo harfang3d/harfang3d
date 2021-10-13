@@ -1,0 +1,1 @@
+Create a parameter structure for a crowd agent to be used with a [Crowd] object.

@@ -1,0 +1,1 @@
+Force capture mouse when your widget is being hovered.

@@ -1,0 +1,1 @@
+Return the rotation component of a transformation matrix as a [Mat3] rotation matrix.

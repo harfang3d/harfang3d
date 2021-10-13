@@ -1,0 +1,1 @@
+Make a streamer object to stream WAV datastream from the local filesystem.

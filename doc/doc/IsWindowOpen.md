@@ -1,0 +1,1 @@
+Return `true` if the window is open, `false` otherwise.

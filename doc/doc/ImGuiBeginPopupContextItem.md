@@ -1,0 +1,1 @@
+ImGui helper to open and begin popup when clicked on last item.

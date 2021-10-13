@@ -1,0 +1,1 @@
+Write a binary 32 bit unsigned integer to a file.

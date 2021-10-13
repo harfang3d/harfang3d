@@ -1,0 +1,1 @@
+Interpolate between the rotation represented by two quaternions. The _Spherical Linear Interpolation_ will always take the shortest path between the two rotations.

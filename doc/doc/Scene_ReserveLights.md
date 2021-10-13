@@ -1,0 +1,1 @@
+Allocates internal storage for the required number of [Light] components in one go.

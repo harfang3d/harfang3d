@@ -1,0 +1,1 @@
+Return `true` if rect `a` intersects rect `b`.

@@ -1,0 +1,14 @@
+{
+	"profiles": {
+		"default": {
+			"type": "standard",
+			"generate-mips": true,
+			"compression": "DXTx",
+			"min-filter": "anisotropic8x",
+			"mag-filter": "anisotropic8x"
+		},
+		"bcx": {
+			"compression": "BCx"
+		}
+	}
+}

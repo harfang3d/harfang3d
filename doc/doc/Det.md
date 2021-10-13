@@ -1,0 +1,1 @@
+Return the determinant of a matrix.

@@ -1,0 +1,1 @@
+Create a 32 bit integer RGBA color.

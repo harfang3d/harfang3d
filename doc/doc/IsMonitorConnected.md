@@ -1,0 +1,1 @@
+Test if the specified monitor is connected to the host device.

@@ -1,0 +1,1 @@
+Shutdown the global ImGui context.

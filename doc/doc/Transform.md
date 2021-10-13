@@ -1,0 +1,1 @@
+Transformation component for a [Node], see [man.Scene].

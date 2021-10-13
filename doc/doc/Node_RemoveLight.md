@@ -1,0 +1,1 @@
+Remove the [Light] component from the [Node].

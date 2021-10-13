@@ -1,0 +1,1 @@
+Radio button widget, return the button state.

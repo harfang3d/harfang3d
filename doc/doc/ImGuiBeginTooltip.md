@@ -1,0 +1,1 @@
+Used to create full-featured tooltip windows that aren't just text.

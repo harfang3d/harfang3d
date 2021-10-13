@@ -1,0 +1,1 @@
+Helper class to generate vertex buffers for drawing primitives.

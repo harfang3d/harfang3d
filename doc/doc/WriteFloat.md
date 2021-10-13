@@ -1,0 +1,1 @@
+Write a binary 32 bit floating point value to a file.

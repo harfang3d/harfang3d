@@ -1,0 +1,1 @@
+Rewind the read/write cursor of an open file.

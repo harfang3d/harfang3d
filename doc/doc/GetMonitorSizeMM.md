@@ -1,0 +1,1 @@
+Returns the size, in millimetres, of the display area of the specified monitor.

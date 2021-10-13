@@ -1,0 +1,1 @@
+Return all children for a given node.

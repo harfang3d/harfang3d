@@ -1,0 +1,1 @@
+Shutdown the SRanipal eye detection SDK.

@@ -1,0 +1,1 @@
+Return a 3x3 rotation matrix around the world Y axis {0, 1, 0}.

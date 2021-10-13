@@ -1,0 +1,1 @@
+Set a playing audio source panning.

@@ -1,0 +1,1 @@
+Gamepad was disconnected since the last update.

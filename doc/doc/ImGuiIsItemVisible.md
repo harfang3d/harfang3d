@@ -1,0 +1,1 @@
+Was the last item visible and not out of sight due to clipping/scrolling.

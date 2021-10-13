@@ -1,0 +1,1 @@
+Set the next window to be focused/top-most. Call before [ImGuiBegin].

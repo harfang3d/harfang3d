@@ -1,0 +1,1 @@
+Set next window position, call before [ImGuiBegin].

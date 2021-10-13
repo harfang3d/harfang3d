@@ -1,0 +1,1 @@
+Load a scene in JSON format from the local filesystem.

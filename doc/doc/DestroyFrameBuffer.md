@@ -1,0 +1,1 @@
+Destroy a frame buffer and its resources.

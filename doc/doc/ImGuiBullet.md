@@ -1,0 +1,1 @@
+Draw a small circle and keep the cursor on the same line. Advances by the same distance as an empty [ImGuiTreeNode] call.

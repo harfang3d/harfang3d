@@ -1,0 +1,1 @@
+Return `true` if the provided position is inside the bounding volume, `false` otherwise.

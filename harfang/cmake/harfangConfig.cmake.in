@@ -1,0 +1,173 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# export Harfang variables
+set(HG_VERSION "@HG_VERSION@")
+set(HG_GRAPHIC_API "@HG_GRAPHIC_API@")
+set(HG_HOST_PREFIX "@HG_HOST_PREFIX@")
+set(HG_TARGET_PREFIX "@HG_TARGET_PREFIX@")
+set(HG_EMBEDDED @HG_EMBEDDED@)
+set(HG_USE_GLFW @HG_USE_GLFW@)
+set(HG_USE_GLFW_WAYLAND @HG_USE_GLFW_WAYLAND@)
+set(HG_USE_EGL @HG_USE_EGL@)
+set(HG_ENABLE_BULLET3_SCENE_PHYSICS @HG_ENABLE_BULLET3_SCENE_PHYSICS@)
+set(HG_ENABLE_OPENVR_API @HG_ENABLE_OPENVR_API@)
+set(HG_ENABLE_SRANIPAL_API @HG_ENABLE_SRANIPAL_API@)
+set(HG_ENABLE_RECAST_DETOUR_API @HG_ENABLE_RECAST_DETOUR_API@)
+
+if(HG_ENABLE_OPENVR_API)
+	add_compile_definitions(HG_ENABLE_OPENVR_API)
+endif()
+
+if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
+	add_compile_definitions(HG_ENABLE_BULLET3_SCENE_PHYSICS)
+endif()
+
+if(HG_ENABLE_SRANIPAL_API)
+	add_compile_definitions(HG_ENABLE_SRANIPAL_API)
+endif()
+
+if(HG_ENABLE_RECAST_DETOUR_API)
+	add_compile_definitions(HG_ENABLE_RECAST_DETOUR_API)
+endif()
+
+if(HG_USE_GLFW_WAYLAND)
+	add_compile_definitions(HG_USE_GLFW_WAYLAND)
+endif()
+
+if(HG_USE_GLFW)
+	add_compile_definitions(HG_USE_GLFW)
+endif()
+
+if(HG_EMBEDDED) 
+	add_compile_definitions(HG_EMBEDDED)
+endif()
+
+add_compile_definitions(HG_GRAPHIC_API="${HG_GRAPHIC_API}")
+if(HG_GRAPHIC_API STREQUAL "GL")
+	set(HG_DEFAULT_RENDERER_TYPE bgfx::RendererType::OpenGL)
+elseif(HG_GRAPHIC_API STREQUAL "GLES")
+	set(HG_DEFAULT_RENDERER_TYPE bgfx::RendererType::OpenGLES)
+elseif(HG_GRAPHIC_API STREQUAL "VK")
+	set(HG_DEFAULT_RENDERER_TYPE bgfx::RendererType::Vulkan)
+elseif(HG_GRAPHIC_API STREQUAL "DX9")
+	set(HG_DEFAULT_RENDERER_TYPE bgfx::RendererType::Direct3D9)
+elseif(HG_GRAPHIC_API STREQUAL "DX11")
+	set(HG_DEFAULT_RENDERER_TYPE bgfx::RendererType::Direct3D11)
+elseif(HG_GRAPHIC_API STREQUAL "DX12")
+	set(HG_DEFAULT_RENDERER_TYPE bgfx::RendererType::Direct3D12)
+else()
+	message(FATAL_ERROR "Unknown graphic API : ${HG_GRAPHIC_API}")
+endif()
+add_compile_definitions(HG_DEFAULT_RENDERER_TYPE=${HG_DEFAULT_RENDERER_TYPE})
+
+# Unix/Linux specific dependencies
+if(UNIX)
+	find_dependency(glfw3 3.2)
+	
+	if(NOT APPLE AND NOT ANDROID AND NOT EMSCRIPTEN)
+		find_dependency(Threads REQUIRED)
+
+		find_dependency(PulseAudio)
+		find_dependency(ALSA)
+		find_library(JACK_LIBRARY jack)
+		find_library(SNDIO_LIBRARY sndio)
+
+		if( NOT HG_USE_GLFW_WAYLAND )
+			find_dependency( X11 )
+		endif()
+
+		if( (NOT X11_FOUND) OR HG_USE_GLFW_WAYLAND )
+			find_dependency(ECM REQUIRED NO_MODULE)
+			list(APPEND CMAKE_MODULE_PATH "${ECM_MODULE_PATH}")
+			find_dependency(Wayland REQUIRED)
+		endif()
+
+		find_dependency(OpenGL)
+
+		if(NOT HG_EMBEDDED)
+			find_dependency(PkgConfig REQUIRED)
+			pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+		endif()
+
+	endif()
+endif()
+
+# Import CPPSDK targets
+include("${CMAKE_CURRENT_LIST_DIR}/cppsdkTargets.cmake")
+
+# Recreate OpenVR target if needed
+if(HG_ENABLE_OPENVR_API)
+	get_filename_component(_OPENVR_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY )
+	get_filename_component(_OPENVR_IMPORT_PREFIX "${_OPENVR_IMPORT_PREFIX}" DIRECTORY)
+
+	find_library(OPENVR_LIBRARY_RELEASE name openvr_api PATHS "${_OPENVR_IMPORT_PREFIX}/lib/Release" NO_DEFAULT_PATH)
+	find_library(OPENVR_LIBRARY_DEBUG name openvr_api PATHS "${_OPENVR_IMPORT_PREFIX}/lib/Debug" NO_DEFAULT_PATH)
+
+	if(NOT (OPENVR_LIBRARY_RELEASE OR OPENVR_LIBRARY_DEBUG))
+		message(FATAL_ERROR "OpenVR library not found")
+	endif()
+
+	add_library(OpenVR SHARED IMPORTED GLOBAL)
+	set(_OPENVR_IMPORTED_CONFIGS "")
+	if(OPENVR_LIBRARY_RELEASE)
+		list(APPEND _OPENVR_IMPORTED_CONFIGS RELEASE)
+		if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+			find_file(OPENVR_DLL_RELEASE name openvr_api${CMAKE_SHARED_LIBRARY_SUFFIX} PATHS "${_OPENVR_IMPORT_PREFIX}/bin/Release" NO_DEFAULT_PATH)
+			set_target_properties(OpenVR PROPERTIES
+				IMPORTED_IMPLIB_RELEASE "${OPENVR_LIBRARY_RELEASE}"
+				IMPORTED_LOCATION_RELEASE "${OPENVR_DLL_RELEASE}"
+			)
+		else()
+			set_target_properties(OpenVR PROPERTIES
+				IMPORTED_LOCATION_RELEASE "${OPENVR_LIBRARY_RELEASE}"
+			)
+		endif()
+	endif()
+	if(OPENVR_LIBRARY_DEBUG)
+		list(APPEND _OPENVR_IMPORTED_CONFIGS DEBUG)
+		if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+			find_file(OPENVR_DLL_DEBUG name openvr_api${CMAKE_SHARED_LIBRARY_SUFFIX} PATHS "${_OPENVR_IMPORT_PREFIX}/bin/Debug" NO_DEFAULT_PATH)
+			set_target_properties(OpenVR PROPERTIES
+				IMPORTED_IMPLIB_DEBUG "${OPENVR_LIBRARY_DEBUG}"
+				IMPORTED_LOCATION_DEBUG "${OPENVR_DLL_DEBUG}"
+			)
+		else()
+			set_target_properties(OpenVR PROPERTIES
+				IMPORTED_LOCATION_DEBUG "${OPENVR_LIBRARY_DEBUG}"
+			)
+		endif()
+	endif()
+	set_property(TARGET OpenVR PROPERTY IMPORTED_CONFIGURATIONS ${_OPENVR_IMPORTED_CONFIGS})
+
+	unset(_OPENVR_IMPORTED_CONFIGS)
+	unset(_OPENVR_IMPORT_PREFIX)
+endif()
+
+check_required_components(cppsdk)
+
+# Helper function to deploy CPPSDK shared libraries
+function(install_cppsdk_dependencies destination component)
+	foreach(_target @HG_SHARED_LIBRARY_TARGETS@)
+		if(TARGET ${_target})
+			get_target_property(_target_type ${_target} TYPE)
+			if (_target_type STREQUAL "SHARED_LIBRARY")
+				get_target_property(_target_location_release ${_target} IMPORTED_LOCATION_RELEASE)
+				if(_target_location_release)
+					install(FILES ${_target_location_release} DESTINATION ${destination} CONFIGURATIONS Release COMPONENT ${component})
+				endif()
+
+				get_target_property(_target_location_debug ${_target} IMPORTED_LOCATION_DEBUG)
+				if(_target_location_debug)
+					install(FILES ${_target_location_debug} DESTINATION ${destination} CONFIGURATIONS Debug COMPONENT ${component})
+				endif()
+			endif()
+		endif()
+	endforeach()
+
+	# copy glfw shared library even if it is part of the system
+	if(NOT TARGET hg::glfw)
+		install(FILES $<TARGET_FILE:glfw> DESTINATION ${destination} COMPONENT ${component})
+	endif()
+endfunction()

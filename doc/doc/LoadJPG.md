@@ -1,0 +1,1 @@
+Load a [Picture] in [JPEG](https://en.wikipedia.org/wiki/JPEG) file format.

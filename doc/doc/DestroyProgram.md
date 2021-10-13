@@ -1,0 +1,1 @@
+Destroy a shader program.

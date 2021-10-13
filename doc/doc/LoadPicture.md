@@ -1,0 +1,1 @@
+Load a [Picture] content from the filesystem.

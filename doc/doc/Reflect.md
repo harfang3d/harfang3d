@@ -1,0 +1,1 @@
+Return the input vector reflected around the specified normal.

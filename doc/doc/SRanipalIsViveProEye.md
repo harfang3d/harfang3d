@@ -1,0 +1,1 @@
+Return `true` if the eye detection device in use is Vive Pro Eye.

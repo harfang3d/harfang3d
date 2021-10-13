@@ -1,0 +1,1 @@
+Quaternion can be used to represent a 3d rotation. It provides a more compact representation of the rotation than [Mat3] and can efficiently and correctly interpolate (see [Slerp]) between two rotations.

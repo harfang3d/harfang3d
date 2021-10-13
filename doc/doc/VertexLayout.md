@@ -1,0 +1,1 @@
+Memory layout and types of vertex attributes.

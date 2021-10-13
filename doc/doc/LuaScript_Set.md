@@ -1,0 +1,1 @@
+Set a [LuaObject] in the environment of the LuaScript.

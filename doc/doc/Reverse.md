@@ -1,0 +1,1 @@
+Return the provided vector pointing in the opposite direction.

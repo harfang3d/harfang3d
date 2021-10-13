@@ -1,0 +1,1 @@
+A [TimeCallback] connection to a [Signal_returning_void_taking_time_ns].

@@ -1,0 +1,1 @@
+Construct a new color object. The red, green, blue and alpha components are in normalized range [0;1].

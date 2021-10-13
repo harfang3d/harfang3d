@@ -1,0 +1,1 @@
+Fog properties for the forward pipeline.

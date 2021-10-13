@@ -1,0 +1,1 @@
+Set a material color write mask.

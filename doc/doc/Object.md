@@ -1,0 +1,1 @@
+This components draws a [Model]. It stores the material table used to draw the model.

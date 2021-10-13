@@ -1,0 +1,1 @@
+Set next window collapsed state, call before [ImGuiBegin].

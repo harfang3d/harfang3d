@@ -1,0 +1,1 @@
+Return the mouse cursor coordinates in screen space.

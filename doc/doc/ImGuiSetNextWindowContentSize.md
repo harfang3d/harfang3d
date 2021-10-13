@@ -1,0 +1,1 @@
+Set the size of the content area of the next declared window. Call before [ImGuiBegin].

@@ -1,0 +1,1 @@
+Return the material color mask.

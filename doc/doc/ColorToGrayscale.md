@@ -1,0 +1,1 @@
+Return the grayscale representation of a color. A weighted average is used to account for human perception of colors.

@@ -1,0 +1,1 @@
+Load texture flags in the texture metafile from the local filesystem.

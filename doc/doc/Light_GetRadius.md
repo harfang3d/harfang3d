@@ -1,0 +1,1 @@
+Get the light range in meters.

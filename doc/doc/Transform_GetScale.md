@@ -1,0 +1,1 @@
+Get the transform scale.

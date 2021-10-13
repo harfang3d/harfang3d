@@ -1,0 +1,1 @@
+Copy a directory on the local filesystem, recurse through subdirectories.

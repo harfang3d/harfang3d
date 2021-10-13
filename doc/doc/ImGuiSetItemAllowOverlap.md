@@ -1,0 +1,1 @@
+Allow the last item to be overlapped by a subsequent item. Sometimes useful with invisible buttons, selectables, etc... to catch unused areas.

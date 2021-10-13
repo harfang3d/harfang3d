@@ -1,0 +1,14 @@
+image: eidheim/testing
+
+before_script:
+  - mkdir build && cd build
+  - export CXXFLAGS=-Werror
+  - export CTEST_OUTPUT_ON_FAILURE=1
+
+test:
+  script:
+    - scan-build-6.0 cmake .. && scan-build-6.0 --status-bugs make
+    - rm -r *
+    - CXX=clang++-6.0 cmake .. && make
+    - rm -r *
+    - CXX=g++ cmake .. && make && make test

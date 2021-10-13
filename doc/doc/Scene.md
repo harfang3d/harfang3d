@@ -1,0 +1,1 @@
+A scene object representing a world populated with [Node], see [man.Scene].

@@ -1,0 +1,1 @@
+The base element of a scene, see [man.Scene].

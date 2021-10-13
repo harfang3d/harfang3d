@@ -1,0 +1,1 @@
+Return time as a human-readable string.

@@ -1,0 +1,1 @@
+Return a quaternion 3d rotation oriented toward the specified position when sitting on the world's origin _{0, 0, 0}_.

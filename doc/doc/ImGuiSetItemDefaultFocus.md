@@ -1,0 +1,1 @@
+Make the last item the default focused item of a window.

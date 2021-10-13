@@ -1,0 +1,1 @@
+Set the camera near clipping plane.

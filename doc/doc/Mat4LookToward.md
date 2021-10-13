@@ -1,0 +1,1 @@
+Return a _look at_ matrix whose orientation points toward the specified direction.

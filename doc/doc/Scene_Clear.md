@@ -1,0 +1,1 @@
+Remove all nodes from the scene.

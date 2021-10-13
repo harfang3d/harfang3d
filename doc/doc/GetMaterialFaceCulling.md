@@ -1,0 +1,1 @@
+Return a material culling mode.

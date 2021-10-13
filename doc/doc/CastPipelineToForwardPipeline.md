@@ -1,0 +1,1 @@
+Cast a [Pipeline] object to [ForwardPipeline].

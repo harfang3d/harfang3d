@@ -1,0 +1,1 @@
+Lock horizontal starting position. Once closing a group it is seen as a single item (so you can use [ImGuiIsItemHovered] on a group, [ImGuiSameLine] between groups, etc...).

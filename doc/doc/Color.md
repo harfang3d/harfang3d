@@ -1,0 +1,1 @@
+Four-component RGBA color object.

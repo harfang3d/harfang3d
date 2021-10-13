@@ -1,0 +1,1 @@
+Return the squared Euclidean distance between two vectors.

@@ -1,0 +1,1 @@
+Return a list of monitors connected to the system.

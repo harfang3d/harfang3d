@@ -1,0 +1,1 @@
+Return the distance covered by the mouse cursor since the last button press.

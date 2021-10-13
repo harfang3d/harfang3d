@@ -1,0 +1,1 @@
+Return the input path with all redundant navigation entries stripped (folder separator, `..` and `.` entries).

@@ -1,0 +1,1 @@
+Return the current ImGui time in seconds.

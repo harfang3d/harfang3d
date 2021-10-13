@@ -1,0 +1,1 @@
+Set a material depth write mask.

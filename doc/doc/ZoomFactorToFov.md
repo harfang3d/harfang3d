@@ -1,0 +1,1 @@
+Convert from a zoom factor value in meters to a fov value in radian.

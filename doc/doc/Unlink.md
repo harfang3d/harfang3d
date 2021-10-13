@@ -1,0 +1,1 @@
+Remove a file from the local filesystem.

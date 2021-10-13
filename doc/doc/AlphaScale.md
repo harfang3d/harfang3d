@@ -1,0 +1,1 @@
+Scale the alpha component of the input color.

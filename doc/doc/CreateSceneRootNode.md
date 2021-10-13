@@ -1,0 +1,1 @@
+Helper function to create a [Node] with a [Transform] component then parent all root nodes in the scene to it.

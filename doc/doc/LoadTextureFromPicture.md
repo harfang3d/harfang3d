@@ -1,0 +1,1 @@
+Creates 2D [Texture] from a 2D [Picture]. Picture format should be `RGBA8`.

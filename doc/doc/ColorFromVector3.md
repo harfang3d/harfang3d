@@ -1,0 +1,1 @@
+Create a color from a 3d vector, alpha defaults to 1.

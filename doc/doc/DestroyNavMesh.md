@@ -1,0 +1,1 @@
+Destroy a navigation mesh object.

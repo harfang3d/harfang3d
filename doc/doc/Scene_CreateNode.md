@@ -1,0 +1,1 @@
+Create a [Node] in the scene.

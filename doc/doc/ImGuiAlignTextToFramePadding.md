@@ -1,0 +1,1 @@
+Vertically align upcoming text baseline to FramePadding __y__ coordinate so that it will align properly to regularly framed items.

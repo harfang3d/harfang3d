@@ -1,0 +1,1 @@
+Returns a vector whose elements are -1 if the corresponding vector element is < 0 and 1 if it's >= 0.

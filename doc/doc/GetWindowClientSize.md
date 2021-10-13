@@ -1,0 +1,1 @@
+Return a window client rectangle. The client area of a window does not include its decorations.

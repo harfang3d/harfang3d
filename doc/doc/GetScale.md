@@ -1,0 +1,1 @@
+Return the scale component of a matrix a scale vector.

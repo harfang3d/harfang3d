@@ -1,0 +1,1 @@
+Clear all submitted data up to this point.

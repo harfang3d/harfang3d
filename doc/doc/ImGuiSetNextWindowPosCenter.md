@@ -1,0 +1,1 @@
+Set next window position to be centered on screen, call before [ImGuiBegin].

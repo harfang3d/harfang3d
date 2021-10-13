@@ -1,0 +1,1 @@
+Remove the [Object] component from the [Node].

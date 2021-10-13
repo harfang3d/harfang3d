@@ -1,0 +1,218 @@
+{
+	"cameras": [
+		{
+			"fov": 2.2379655838012695,
+			"ortho": false,
+			"size": 1.0,
+			"zrange": {
+				"zfar": 1000.0,
+				"znear": 0.009999999776482582
+			}
+		}
+	],
+	"canvas": {
+		"clear_color": true,
+		"clear_z": true,
+		"color": [
+			0,
+			0,
+			0,
+			255
+		]
+	},
+	"environment": {
+		"ambient": [
+			0,
+			0,
+			0,
+			255
+		],
+		"current_camera": null,
+		"fog_color": [
+			255,
+			255,
+			255,
+			255
+		],
+		"fog_far": 0.0,
+		"fog_near": 0.0
+	},
+	"lights": [
+		{
+			"diffuse": [
+				255,
+				255,
+				255,
+				255
+			],
+			"inner_angle": 9.999999747378752e-05,
+			"outer_angle": 0.39269909262657166,
+			"priority": 0.0,
+			"pssm_bias": 0.5,
+			"radius": 0.0,
+			"shadow_bias": 9.999999747378752e-06,
+			"shadow_type": "none",
+			"specular": [
+				255,
+				255,
+				255,
+				255
+			],
+			"type": "point"
+		}
+	],
+	"nodes": [
+		{
+			"components": [
+				0,
+				4294967295,
+				0,
+				4294967295,
+				4294967295
+			],
+			"idx": 0,
+			"name": "cube_diffuse_color"
+		},
+		{
+			"components": [
+				1,
+				0,
+				4294967295,
+				4294967295,
+				4294967295
+			],
+			"idx": 1,
+			"name": "Camera"
+		},
+		{
+			"components": [
+				2,
+				4294967295,
+				4294967295,
+				0,
+				4294967295
+			],
+			"idx": 2,
+			"name": "Omni001"
+		}
+	],
+	"objects": [
+		{
+			"material_infos": [
+				{
+					"name": "mat_diffuse_color"
+				}
+			],
+			"materials": [
+				{
+					"blend_mode": "opaque",
+					"depth_test": "less",
+					"face_culling": "cw",
+					"program": "core/shader/default.hps",
+					"textures": [
+						{
+							"name": "uDiffuseMap",
+							"stage": 0,
+							"texture": {
+								"flags": 0,
+								"name": "d:/gs/fbx_converter/tests/data/out/diffuse_color.png"
+							}
+						}
+					],
+					"values": [
+						{
+							"count": 1,
+							"name": "uDiffuseColor",
+							"type": "vec4",
+							"value": [
+								1.0,
+								0.501960813999176,
+								0.0,
+								1.0
+							]
+						},
+						{
+							"count": 1,
+							"name": "uSpecularColor",
+							"type": "vec4",
+							"value": [
+								0.0,
+								0.0,
+								0.0,
+								0.03125
+							]
+						},
+						{
+							"count": 1,
+							"name": "uSelfColor",
+							"type": "vec4",
+							"value": [
+								0.0,
+								0.0,
+								0.0,
+								-1.0
+							]
+						}
+					]
+				}
+			],
+			"name": "d:/gs/fbx_converter/tests/data/out/cube_diffuse_color.geo"
+		}
+	],
+	"transforms": [
+		{
+			"parent": null,
+			"pos": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"rot": [
+				90.0,
+				0.0,
+				0.0
+			],
+			"scl": [
+				1.0,
+				1.0,
+				1.0
+			]
+		},
+		{
+			"parent": null,
+			"pos": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"rot": [
+				90.0,
+				0.0,
+				0.0
+			],
+			"scl": [
+				1.0,
+				1.0,
+				1.0
+			]
+		},
+		{
+			"parent": null,
+			"pos": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"rot": [
+				-9.334667083749082e-06,
+				0.0,
+				0.0
+			],
+			"scl": [
+				1.0,
+				1.0,
+				1.0
+			]
+		}
+	]
+}

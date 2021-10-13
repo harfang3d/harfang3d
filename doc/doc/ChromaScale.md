@@ -1,0 +1,1 @@
+Return a copy of the color with its saturation scaled as specified.

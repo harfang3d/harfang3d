@@ -1,0 +1,1 @@
+Return the content of a local filesystem as a string.

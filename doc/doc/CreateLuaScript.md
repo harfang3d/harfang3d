@@ -1,0 +1,1 @@
+Create a new [Node] with a [LuaScript] component.

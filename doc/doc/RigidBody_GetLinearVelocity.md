@@ -1,0 +1,1 @@
+Return the rigid body linear velocity.

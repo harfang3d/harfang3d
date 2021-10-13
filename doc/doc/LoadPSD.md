@@ -1,0 +1,1 @@
+Load a [Picture] in [PSD](https://en.wikipedia.org/wiki/Adobe_Photoshop#File_format) file format.

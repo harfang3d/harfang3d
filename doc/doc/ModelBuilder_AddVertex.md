@@ -1,0 +1,1 @@
+Add a vertex to the builder database. Use the returned optimized index to submit primitives using methods such as [ModelBuilder_AddTriangle].

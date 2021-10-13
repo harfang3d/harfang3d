@@ -1,0 +1,1 @@
+Intersect an infinite ray with an axis-aligned bounding box, if the first returned value is `true` it is followed by the near and far intersection points.

@@ -1,0 +1,1 @@
+Framebuffer for a VR eye. Render to two such buffer, one for each eye, before submitting them using [OpenVRSubmitFrame].

@@ -1,0 +1,1 @@
+Allocates internal storage for the required number of [Object] components in one go.

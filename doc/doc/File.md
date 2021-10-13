@@ -1,0 +1,1 @@
+Interface to a file on the host local filesystem.

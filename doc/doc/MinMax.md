@@ -1,0 +1,1 @@
+3D bounding volume defined by a minimum and maximum position.

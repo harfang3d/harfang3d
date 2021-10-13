@@ -1,0 +1,1 @@
+Return the pipeline info object for the forward pipeline.

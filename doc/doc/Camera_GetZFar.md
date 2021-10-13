@@ -1,0 +1,1 @@
+Return the camera far clipping plane.

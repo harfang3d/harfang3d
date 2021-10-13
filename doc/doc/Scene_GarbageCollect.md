@@ -1,0 +1,1 @@
+Destroy any unreferenced components in the scene.

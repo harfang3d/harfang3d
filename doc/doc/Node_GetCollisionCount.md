@@ -1,0 +1,1 @@
+Return the amount of [Collision] components of a [Node].

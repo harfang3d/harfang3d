@@ -1,0 +1,1 @@
+Return the [Transform] component of the node.

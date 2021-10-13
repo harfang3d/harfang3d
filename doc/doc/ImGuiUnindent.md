@@ -1,0 +1,1 @@
+Move content position back to the left (cancel [ImGuiIndent]).

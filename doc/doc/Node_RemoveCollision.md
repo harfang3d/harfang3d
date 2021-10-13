@@ -1,0 +1,1 @@
+Remove the [Collision] component attached to the `slot` of the [Node].

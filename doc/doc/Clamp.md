@@ -1,0 +1,1 @@
+Return a vector whose elements are equal to the vector elements clipped to the specified interval.

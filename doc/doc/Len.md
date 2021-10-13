@@ -1,0 +1,1 @@
+Return the length of the vector.

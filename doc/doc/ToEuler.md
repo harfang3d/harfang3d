@@ -1,0 +1,1 @@
+Convert a quaternion rotation to its _Euler_ vector representation.

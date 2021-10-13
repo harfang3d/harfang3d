@@ -1,0 +1,1 @@
+Set the light range in meters. No light will be contributed to elements further away than this distance from the node world position.

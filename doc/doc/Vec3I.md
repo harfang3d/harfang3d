@@ -1,0 +1,1 @@
+Create a vector from integer values in the [0;255] range.

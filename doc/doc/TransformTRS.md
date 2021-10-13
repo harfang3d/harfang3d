@@ -1,0 +1,1 @@
+Translation, rotation and scale packed as a single object.

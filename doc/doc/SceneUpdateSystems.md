@@ -1,0 +1,1 @@
+Update a scene and all its optional systems.

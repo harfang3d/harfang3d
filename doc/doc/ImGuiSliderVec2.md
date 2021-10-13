@@ -1,0 +1,1 @@
+[Vec2] slider widget.

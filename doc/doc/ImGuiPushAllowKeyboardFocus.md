@@ -1,0 +1,1 @@
+Allow focusing using TAB/Shift-TAB, enabled by default but you can disable it for certain widgets.

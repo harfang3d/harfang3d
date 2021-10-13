@@ -1,0 +1,1 @@
+A group of navigation agents to efficiently simulate a crowd, see [man.Navigation].

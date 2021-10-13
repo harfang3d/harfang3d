@@ -1,0 +1,5 @@
+pycurl
+pygit2
+wheel
+pypeg2
+markdown

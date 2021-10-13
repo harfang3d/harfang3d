@@ -1,0 +1,1 @@
+Remove the [Transform] component from the [Node].

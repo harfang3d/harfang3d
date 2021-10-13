@@ -1,0 +1,1 @@
+Configure the camera to use orthographic or perspective projection.

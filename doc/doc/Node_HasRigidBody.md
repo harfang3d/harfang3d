@@ -1,0 +1,1 @@
+Return `true` if the [Node] has a [RigidBody] component.

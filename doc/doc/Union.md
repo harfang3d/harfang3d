@@ -1,0 +1,1 @@
+Compute the union of this bounding volume with another volume or a 3d position.

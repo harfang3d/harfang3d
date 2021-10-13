@@ -1,0 +1,1 @@
+Return the total elapsed time since the object creation or the last call to [ResetClock].

@@ -1,0 +1,1 @@
+Remove the [Camera] component from the [Node].

@@ -1,0 +1,1 @@
+Return the value of a string JSON key.

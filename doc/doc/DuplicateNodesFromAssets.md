@@ -1,0 +1,1 @@
+Call [DuplicateNodesFromAssets] for each node in a list.

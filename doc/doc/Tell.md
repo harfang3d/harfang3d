@@ -1,0 +1,1 @@
+Return the current handle cursor position in bytes.

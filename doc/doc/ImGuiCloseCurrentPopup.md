@@ -1,0 +1,1 @@
+Close the popup we have begin-ed into. Clicking on a menu item or selectable automatically closes the current popup.

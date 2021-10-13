@@ -1,0 +1,1 @@
+Declare a widget to edit an [iVec2] value. The widget can be dragged over to modify the underlying value.

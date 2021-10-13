@@ -1,0 +1,1 @@
+Return a copy of the input path stripped of the provided suffix.

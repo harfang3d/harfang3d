@@ -1,0 +1,1 @@
+Return the extension part of a file path.

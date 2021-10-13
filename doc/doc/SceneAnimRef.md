@@ -1,0 +1,1 @@
+Reference to a scene animation.

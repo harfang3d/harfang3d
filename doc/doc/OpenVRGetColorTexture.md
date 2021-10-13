@@ -1,0 +1,1 @@
+Return the color texture attached to an eye framebuffer.

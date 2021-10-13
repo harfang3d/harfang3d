@@ -1,0 +1,1 @@
+Return a quaternion 3d rotation from its _Euler_ vector representation.

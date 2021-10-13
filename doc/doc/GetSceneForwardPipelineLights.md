@@ -1,0 +1,1 @@
+Filter through the scene lights and return a list of pipeline lights to be used by the scene forward pipeline.

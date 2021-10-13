@@ -1,0 +1,1 @@
+Return `true` if the provided line intersect the bounding volume, `false` otherwise.

@@ -1,0 +1,1 @@
+Return `true` when activated. Shortcuts are displayed for convenience but not processed at the moment.

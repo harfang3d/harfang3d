@@ -1,0 +1,1 @@
+A 3x4 matrix used to store complete transformation including rotation, scale and position.

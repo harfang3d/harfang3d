@@ -1,0 +1,1 @@
+Return a file path from a set of string elements.

@@ -1,0 +1,1 @@
+Returns a vector in the same direction as the specified vector, but with its length clipped by the specified interval.

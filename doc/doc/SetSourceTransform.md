@@ -1,0 +1,1 @@
+Set a playing spatialized audio source transformation.

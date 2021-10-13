@@ -1,0 +1,1 @@
+Allocates internal storage for the required number of [Transform] components in one go.

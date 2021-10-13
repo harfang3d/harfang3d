@@ -1,0 +1,1 @@
+Format a path for display.

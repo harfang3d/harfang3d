@@ -1,0 +1,1 @@
+Helper function to create a [Node] with a [Transform] and a [Light] component.

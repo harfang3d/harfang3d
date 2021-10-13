@@ -1,0 +1,1 @@
+Returns a vector whose elements are equal to the nearest integer greater than or equal to the vector elements.

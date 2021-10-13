@@ -1,0 +1,1 @@
+Disabled static text.

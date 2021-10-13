@@ -1,0 +1,1 @@
+Return `true` if any item is active, `false` otherwise.

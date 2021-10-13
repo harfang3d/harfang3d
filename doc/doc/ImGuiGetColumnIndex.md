@@ -1,0 +1,1 @@
+Returns the index of the current column.

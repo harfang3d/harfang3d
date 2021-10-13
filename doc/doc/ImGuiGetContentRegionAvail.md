@@ -1,0 +1,1 @@
+Get available space for content in the current layout.

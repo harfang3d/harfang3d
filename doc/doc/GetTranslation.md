@@ -1,0 +1,1 @@
+Return the translation part of a tranformation matrix as a translation vector.

@@ -1,0 +1,1 @@
+Opaque reference to an Lua object. This type is used to transfer values between VMs, see [man.Scripting].

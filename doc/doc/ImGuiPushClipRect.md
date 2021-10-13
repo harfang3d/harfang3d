@@ -1,0 +1,1 @@
+Push a new clip rectangle onto the clipping stack.

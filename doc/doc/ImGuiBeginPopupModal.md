@@ -1,0 +1,1 @@
+Begin an ImGui modal dialog.

@@ -1,0 +1,1 @@
+Start playing a spatialized sound. Return a handle to the started source.

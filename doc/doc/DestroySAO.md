@@ -1,0 +1,1 @@
+Destroy an ambient occlusion post process object and its resources.

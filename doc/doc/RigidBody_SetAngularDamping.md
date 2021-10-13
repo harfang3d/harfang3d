@@ -1,0 +1,1 @@
+Set the rigid body angular damping. A value of 0.0 means no damping, 1.0 means the maximal dissipation of the energy.

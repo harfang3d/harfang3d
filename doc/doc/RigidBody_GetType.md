@@ -1,0 +1,1 @@
+Return the rigid body type. See [RigidBody_SetType].

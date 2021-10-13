@@ -1,0 +1,1 @@
+Return the object [Material] at index.

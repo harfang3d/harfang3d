@@ -1,0 +1,1 @@
+Creates a 3x3 homogeneous rotation matrix from euler angles __x__, __y__, __z__ where each rotation is applied in the __YXZ__ order.

@@ -1,0 +1,1 @@
+Remove the [RigidBody] component from the [Node].

@@ -1,0 +1,1 @@
+Return the center position of the volume.

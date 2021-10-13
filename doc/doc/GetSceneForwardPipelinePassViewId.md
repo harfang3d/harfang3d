@@ -1,0 +1,1 @@
+Return the view id for a scene forward pipeline pass id.

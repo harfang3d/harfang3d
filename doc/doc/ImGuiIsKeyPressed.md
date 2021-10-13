@@ -1,0 +1,1 @@
+Was the specified key pressed? A key press implies that the key was down and is currently released.

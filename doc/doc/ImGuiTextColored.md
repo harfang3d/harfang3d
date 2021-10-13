@@ -1,0 +1,1 @@
+Colored static text.

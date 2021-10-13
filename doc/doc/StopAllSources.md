@@ -1,0 +1,1 @@
+Stop all playing audio sources.

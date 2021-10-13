@@ -1,0 +1,11 @@
+Newton Dynamics
+glfw 3.3
+googletest 1.8.1
+imgui 1.70 WIP
+Lua 5.3.5
+openal-soft 1.19.1
+openvr 1.3.22
+stb_image 2.22
+stb_image_write 1.13
+stb_vorbis 1.16
+tiny-process-library 2.0.0

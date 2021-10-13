@@ -1,0 +1,1 @@
+Holds the canvas properties of a scene, see the `canvas` member of class [Scene].

@@ -1,0 +1,1 @@
+Return `true` if the provided segment intersect the bounding volume, `false` otherwise.

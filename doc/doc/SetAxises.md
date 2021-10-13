@@ -1,0 +1,1 @@
+Inject X, Y and Z axises into a 3x3 matrix.

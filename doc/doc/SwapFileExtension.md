@@ -1,0 +1,1 @@
+Return the input file path with its extension replaced.

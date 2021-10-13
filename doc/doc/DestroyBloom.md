@@ -1,0 +1,1 @@
+Destroy a bloom post process object and all associated resources.

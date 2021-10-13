@@ -1,0 +1,1 @@
+Test if a resource if valid.

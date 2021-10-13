@@ -1,0 +1,1 @@
+Return the current SRanipal device state.

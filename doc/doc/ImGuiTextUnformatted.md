@@ -1,0 +1,1 @@
+Raw text without formatting. Roughly equivalent to [ImGuiText] but faster, recommended for long chunks of text.

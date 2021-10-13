@@ -1,0 +1,1 @@
+Compute the height of a text string.

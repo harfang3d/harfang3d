@@ -1,0 +1,1 @@
+Set `min = p - size/2` and `max = p + size/2`.

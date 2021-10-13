@@ -1,0 +1,1 @@
+Test the extension of a file path.

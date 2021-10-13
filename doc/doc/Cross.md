@@ -1,0 +1,1 @@
+Return the cross product of two vectors.

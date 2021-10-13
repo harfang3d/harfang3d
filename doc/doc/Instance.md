@@ -1,0 +1,1 @@
+Component to instantiate a scene as a child of a node upon setup.

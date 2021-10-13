@@ -1,0 +1,1 @@
+Return a vector as a matrix.

@@ -1,0 +1,1 @@
+Return a quaternion rotation from its [Mat3] representation.

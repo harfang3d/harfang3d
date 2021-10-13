@@ -1,0 +1,1 @@
+Return `true` if any item is hovered by the mouse cursor, `false` otherwise.

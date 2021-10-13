@@ -1,0 +1,1 @@
+This enumeration is used to control the order of rotation around the X, Y and Z axises.

@@ -1,0 +1,1 @@
+Convert an iso-surface to a render model, this function is geared toward efficiency and meant for realtime.

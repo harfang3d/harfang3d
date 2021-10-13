@@ -1,0 +1,1 @@
+Set next item open state.

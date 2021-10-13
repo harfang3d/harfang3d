@@ -1,0 +1,1 @@
+Setup the [RigidBody] component of a [Node], taking into account its [Collision] components, their respective types, dimensions and masses.

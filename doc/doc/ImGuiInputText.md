@@ -1,0 +1,1 @@
+Text input widget, returns the current widget buffer content.

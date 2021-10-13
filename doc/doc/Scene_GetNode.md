@@ -1,0 +1,1 @@
+Get a node by name. For more complex queries see [Scene_GetNodeEx].

@@ -1,0 +1,1 @@
+Return the available content space including window decorations and scrollbar.

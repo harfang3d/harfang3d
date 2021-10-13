@@ -1,0 +1,1 @@
+Load a sound in WAV format from the local filesystem and return a reference to it.

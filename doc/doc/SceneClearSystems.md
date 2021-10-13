@@ -1,0 +1,1 @@
+Clear scene and all optional systems.

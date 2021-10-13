@@ -1,0 +1,1 @@
+Combo box widget, return the current selection index. Combo items are passed as an array of string.

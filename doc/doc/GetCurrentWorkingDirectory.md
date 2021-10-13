@@ -1,0 +1,1 @@
+Return the system current working directory.

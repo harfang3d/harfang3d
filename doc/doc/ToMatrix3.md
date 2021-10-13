@@ -1,0 +1,1 @@
+Convert a quaternion rotation to its [Mat3] representation.

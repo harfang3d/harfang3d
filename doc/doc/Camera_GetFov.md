@@ -1,0 +1,1 @@
+Return the camera field of view.

@@ -1,0 +1,1 @@
+Returns the current column width in pixels.

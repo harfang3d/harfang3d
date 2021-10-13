@@ -1,0 +1,1 @@
+Environment properties of a scene, see `environment` member of the [Scene] class.

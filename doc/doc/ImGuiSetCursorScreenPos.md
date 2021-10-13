@@ -1,0 +1,1 @@
+Set the widget cursor output position in screen space.

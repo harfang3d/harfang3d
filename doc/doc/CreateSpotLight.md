@@ -1,0 +1,1 @@
+Create a [Node] with a [Transform] and a [Light] component.

@@ -1,0 +1,1 @@
+Set scrolling amount between [0;[ImGuiGetScrollMaxX]].

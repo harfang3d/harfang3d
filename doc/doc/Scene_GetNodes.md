@@ -1,0 +1,1 @@
+Return all nodes in scene.

@@ -1,0 +1,1 @@
+Set the [CollisionType] of a [Collision] component.

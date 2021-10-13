@@ -1,0 +1,1 @@
+Write a binary 8 bit unsigned integer to a file.

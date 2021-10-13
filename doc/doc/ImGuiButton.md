@@ -1,0 +1,1 @@
+Button widget returning `True` if the button was pressed.

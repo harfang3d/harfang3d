@@ -1,0 +1,1 @@
+Return the path part of a file path (excluding file name and extension).

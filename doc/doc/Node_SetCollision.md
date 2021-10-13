@@ -1,0 +1,1 @@
+Set the [Collision] component of a [Node] at the desired `slot`. This is how you combine several collision shapes on a single node.

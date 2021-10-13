@@ -1,0 +1,1 @@
+Context to render immediate GUI.

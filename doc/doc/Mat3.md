@@ -1,0 +1,1 @@
+A 3x3 matrix used to store rotation.

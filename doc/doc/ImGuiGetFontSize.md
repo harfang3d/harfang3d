@@ -1,0 +1,1 @@
+Return the font size (height in pixels) of the current ImGui font with the current scale applied.

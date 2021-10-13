@@ -1,0 +1,1 @@
+Destroy an eye framebuffer.

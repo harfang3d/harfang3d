@@ -1,0 +1,1 @@
+Return a window title.

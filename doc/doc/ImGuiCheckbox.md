@@ -1,0 +1,1 @@
+Checkbox widget returning the check state.

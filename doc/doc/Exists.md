@@ -1,0 +1,1 @@
+Return `true` if a file exists on the local filesystem, `false` otherwise.

@@ -1,0 +1,1 @@
+Return the number of nodes in the scene excluding instantiated ones. To include those, use [Scene_GetAllNodeCount].

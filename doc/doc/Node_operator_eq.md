@@ -1,0 +1,1 @@
+Return `true` if both objects point to the same node instance, `false` otherwise.

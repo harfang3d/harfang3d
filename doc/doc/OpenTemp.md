@@ -1,0 +1,1 @@
+Return a handle to a temporary file on the local filesystem.

@@ -1,0 +1,1 @@
+Decompose a transformation matrix into its translation, scaling and rotation components.

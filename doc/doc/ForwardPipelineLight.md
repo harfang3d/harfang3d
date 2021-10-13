@@ -1,0 +1,1 @@
+Single light for the forward pipeline. The complete lighting rig is passed as a [ForwardPipelineLights], see [PrepareForwardPipelineLights].

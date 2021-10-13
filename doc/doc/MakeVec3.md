@@ -1,0 +1,1 @@
+Make a [Vec3] from a [Vec4]. The input vector `w` component is discarded.

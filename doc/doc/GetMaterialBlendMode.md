@@ -1,0 +1,1 @@
+Return a material blending mode.

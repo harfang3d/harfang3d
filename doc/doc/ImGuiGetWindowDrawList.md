@@ -1,0 +1,1 @@
+Get the draw list associated to the current window, to append your own drawing primitives.

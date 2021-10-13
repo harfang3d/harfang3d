@@ -1,0 +1,1 @@
+Make a rectangle from width and height.

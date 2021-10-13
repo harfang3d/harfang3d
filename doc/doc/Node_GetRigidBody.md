@@ -1,0 +1,1 @@
+Return the [RigidBody] component of a [Node].

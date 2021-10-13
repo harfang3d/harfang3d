@@ -1,0 +1,1 @@
+Return a [LuaObject] from the environment of the LuaScript.

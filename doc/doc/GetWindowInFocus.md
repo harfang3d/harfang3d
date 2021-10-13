@@ -1,0 +1,1 @@
+Return the system window with input focus.

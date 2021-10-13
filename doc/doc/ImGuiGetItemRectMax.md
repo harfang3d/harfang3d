@@ -1,0 +1,1 @@
+Get bounding rect maximum of last item in screen space.

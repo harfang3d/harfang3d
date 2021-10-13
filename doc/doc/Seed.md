@@ -1,0 +1,1 @@
+Set the starting seed of the pseudo-random number generator.

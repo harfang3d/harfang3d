@@ -1,0 +1,1 @@
+Return the provided vector facing toward the provided direction. If the angle between `v` and `d` is less than 90° then `v` is returned unchanged, `v` will be returned reversed otherwise.

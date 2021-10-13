@@ -1,0 +1,1 @@
+Returns `true` if `path` is a directory on the local filesystem, `false` otherwise.

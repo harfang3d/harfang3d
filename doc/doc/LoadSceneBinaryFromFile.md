@@ -1,0 +1,1 @@
+Load a scene in binary format from the local filesystem.

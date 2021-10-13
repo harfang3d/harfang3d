@@ -1,0 +1,1 @@
+Was the specified mouse button clicked during the last frame? A mouse click implies that the button pressed earlier and released during the last frame.

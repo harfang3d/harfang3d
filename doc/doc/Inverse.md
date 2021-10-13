@@ -1,0 +1,1 @@
+Return the inverse of a matrix, vector or quaternion.

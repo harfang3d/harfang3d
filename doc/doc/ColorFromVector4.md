@@ -1,0 +1,1 @@
+Return a 4-dimensional vector as a color.

@@ -1,0 +1,1 @@
+Force capture keyboard when your widget is being hovered.

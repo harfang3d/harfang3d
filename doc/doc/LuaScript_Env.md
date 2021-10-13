@@ -1,0 +1,1 @@
+Get the environment of the LuaScript.

@@ -1,0 +1,1 @@
+Return the absolute value of the function input. For vectors, the absolute value is applied to each component individually and the resulting vector is returned.

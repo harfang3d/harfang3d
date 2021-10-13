@@ -1,0 +1,1 @@
+Display text+label aligned the same way as value+label widgets.

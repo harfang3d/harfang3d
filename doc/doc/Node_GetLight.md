@@ -1,0 +1,1 @@
+Return the [Light] component of the node.

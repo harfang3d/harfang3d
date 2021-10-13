@@ -1,0 +1,1 @@
+Return the texture reference assigned to a material named uniform.

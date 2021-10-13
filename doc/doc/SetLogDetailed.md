@@ -1,0 +1,1 @@
+Display the `details` field of log outputs.

@@ -1,0 +1,1 @@
+Load a navigation mesh from the local filesystem.

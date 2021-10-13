@@ -1,0 +1,1 @@
+Return the list of supported monitor modes.

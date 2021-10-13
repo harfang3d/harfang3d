@@ -1,0 +1,1 @@
+Return the depth texture attached to an eye framebuffer.

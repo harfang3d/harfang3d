@@ -1,0 +1,1 @@
+Returns `true` if the cursor is at the end of the file, `false` otherwise.

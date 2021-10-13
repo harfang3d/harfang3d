@@ -1,0 +1,1 @@
+Get bounding rect size of last item in screen space.

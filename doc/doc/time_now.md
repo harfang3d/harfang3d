@@ -1,0 +1,1 @@
+Return the current system time.

@@ -1,0 +1,1 @@
+Return the number of [Material] in the object material table.

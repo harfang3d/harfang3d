@@ -1,0 +1,1 @@
+Write a string to a file as 32 bit integer size followed by the string content in UTF8.

@@ -1,0 +1,1 @@
+Set named window collapsed state, prefer using [ImGuiSetNextWindowCollapsed].

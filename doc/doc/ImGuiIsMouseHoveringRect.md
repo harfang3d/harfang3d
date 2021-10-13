@@ -1,0 +1,1 @@
+Test whether the mouse cursor is hovering the specified rectangle.

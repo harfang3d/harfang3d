@@ -1,0 +1,1 @@
+Return the size in bytes of a local file.

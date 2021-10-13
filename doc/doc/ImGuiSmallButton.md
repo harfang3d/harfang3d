@@ -1,0 +1,1 @@
+Small button widget fitting the height of a text line, return `True` if the button was pressed.

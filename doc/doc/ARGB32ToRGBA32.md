@@ -1,0 +1,1 @@
+Convert a 32 bit integer ARGB color to RGBA.

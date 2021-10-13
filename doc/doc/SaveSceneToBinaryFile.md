@@ -1,0 +1,1 @@
+Save a scene as binary to the local filesystem.

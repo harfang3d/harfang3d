@@ -1,0 +1,1 @@
+Set the parent node for this transform. This transform will then inherit the transformation of its parent node's [Transform] component.

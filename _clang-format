@@ -1,0 +1,17 @@
+BreakBeforeBraces: Attach
+ColumnLimit: 160
+UseTab: Always
+TabWidth: 4
+IndentWidth: 4
+IndentCaseLabels: true
+AccessModifierOffset: -4
+AlignAfterOpenBracket: DontAlign
+AlwaysBreakTemplateDeclarations: false
+AlignTrailingComments: false
+AllowShortBlocksOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortBlocksOnASingleLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackParameters: true
+BinPackArguments: true
+AlwaysBreakTemplateDeclarations: false
