@@ -20,7 +20,7 @@
 	url = https://github.com/bkaradzic/bx
 [submodule "extern/bgfx/bimg"]
 	path = extern/bgfx/bimg
-	url = https://github.com/ejulien/bimg
+	url = https://github.com/bkaradzic/bimg
 [submodule "doc/tutorials"]
 	path = doc/tutorials
 	url = ../tutorials-hg2.git
