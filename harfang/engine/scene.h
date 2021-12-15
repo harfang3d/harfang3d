@@ -414,6 +414,8 @@ public:
 	void SetRigidBodyRestitution(ComponentRef ref, float restitution);
 	float GetRigidBodyFriction(ComponentRef ref) const;
 	void SetRigidBodyFriction(ComponentRef ref, float friction);
+	float GetRigidBodyRollingFriction(ComponentRef ref) const;
+	void SetRigidBodyRollingFriction(ComponentRef ref, float rolling_friction);
 
 	// collision component
 	Collision CreateCollision();
@@ -422,6 +424,8 @@ public:
 
 	void SetCollisionType(ComponentRef ref, CollisionType type);
 	CollisionType GetCollisionType(ComponentRef ref) const;
+	void SetCollisionLocalTransform(ComponentRef ref, Mat4 m);
+	Mat4 GetCollisionLocalTransform(ComponentRef ref) const;
 	void SetCollisionMass(ComponentRef ref, float mass);
 	float GetCollisionMass(ComponentRef ref) const;
 	void SetCollisionSize(ComponentRef ref, const Vec3 &size);
@@ -729,7 +733,7 @@ private:
 		uint8_t linear_damping{pack_float<uint8_t>(1.f)};
 		std::array<uint8_t, 3> angular_damping = {pack_float<uint8_t>(1.f), pack_float<uint8_t>(1.f), pack_float<uint8_t>(1.f)};
 
-		float restitution{0.f}, friction{0.5f};
+		float restitution{0.f}, friction{0.5f}, rolling_friction{0.f};
 	};
 
 	generational_vector_list<Transform_> transforms;
@@ -744,6 +748,8 @@ private:
 		float mass;
 		Vec3 size;
 		std::string resource_path;
+		Mat4 m;
+		Collision_() : m(Mat4::Identity) {}
 	};
 
 	generational_vector_list<Collision_> collisions;
@@ -884,10 +890,10 @@ Node CreateLinearLight(Scene &scene, const Mat4 &mtx, const Color &diffuse, cons
 Node CreateObject(Scene &scene, const Mat4 &mtx, const ModelRef &model, std::vector<Material> materials = {});
 
 Node CreateInstance(Scene &scene, const Mat4 &mtx, const std::string &name, const Reader &ir, const ReadProvider &ip, PipelineResources &resources,
-	const PipelineInfo &pipeline, uint32_t flags = LSSF_Nodes | LSSF_Anims);
-Node CreateInstanceFromFile(Scene &scene, const Mat4 &mtx, const std::string &name, PipelineResources &resources, const PipelineInfo &pipeline,
+	const PipelineInfo &pipeline, bool &success, uint32_t flags = LSSF_Nodes | LSSF_Anims);
+Node CreateInstanceFromFile(Scene &scene, const Mat4 &mtx, const std::string &name, PipelineResources &resources, const PipelineInfo &pipeline, bool &success,
 	uint32_t flags = LSSF_Nodes | LSSF_Anims);
-Node CreateInstanceFromAssets(Scene &scene, const Mat4 &mtx, const std::string &name, PipelineResources &resources, const PipelineInfo &pipeline,
+Node CreateInstanceFromAssets(Scene &scene, const Mat4 &mtx, const std::string &name, PipelineResources &resources, const PipelineInfo &pipeline, bool &success,
 	uint32_t flags = LSSF_Nodes | LSSF_Anims);
 
 Node CreateScript(Scene &scene);

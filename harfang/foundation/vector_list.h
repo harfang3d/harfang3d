@@ -183,9 +183,11 @@ public:
 	uint32_t remove(uint32_t i) {
 		const auto n = next(i); // next entry in use
 
-		const uint32_t idx = idx_[i];
-		__ASSERT__(!is_free_idx(idx)); // assert entry is in use
-		reinterpret_cast<T *>(storage_)[idx].~T(); // destroy object
+		{
+			const uint32_t idx = idx_[i];
+			__ASSERT__(!is_free_idx(idx)); // assert entry is in use
+			reinterpret_cast<T *>(storage_)[idx].~T(); // destroy object
+		}
 
 		uint32_t free_skip = 1;
 		if ((i + 1) < idx_.size()) {

@@ -21,4 +21,6 @@ void DestroyTemporalAccumulation(TemporalAccumulation &temporal_acc);
 
 void ComputeTemporalAccumulation(bgfx::ViewId &view_id, const iRect &rect, const Texture &current, const Texture &previous, const Texture &attr1, bgfx::FrameBufferHandle output, const TemporalAccumulation &temporal_acc);
 
+bool IsValid(const TemporalAccumulation &temporal_acc);
+
 } // namespace hg

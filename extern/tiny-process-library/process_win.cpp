@@ -112,7 +112,7 @@ Process::id_type Process::open(const string_type &command, const string_type &pa
 #endif
 
   const std::wstring wpath=utf8_to_wstring(path);
-  BOOL bSuccess = CreateProcess(nullptr, process_command.empty()?nullptr:&process_command[0], nullptr, nullptr, TRUE, 0,
+  BOOL bSuccess = CreateProcess(nullptr, process_command.empty()?nullptr:&process_command[0], nullptr, nullptr, TRUE, CREATE_NO_WINDOW,
                                 nullptr, wpath.empty()?nullptr:wpath.c_str(), &startup_info, &process_info);
 
   if(!bSuccess)

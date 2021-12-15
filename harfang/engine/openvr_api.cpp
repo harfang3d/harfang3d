@@ -36,14 +36,14 @@ static std::array<OpenVRTrackedDeviceState, vr::k_unMaxTrackedDeviceCount> openv
 static uint32_t rt_width = 0, rt_height = 0;
 
 static Mat44 OVRToMat44(const vr::HmdMatrix44_t &m) {
-	static Mat44 VR_to_gs(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1);
+	static const Mat44 VR_to_gs(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1);
 	return /*VR_to_gs * */ Mat44(m.m[0][0], m.m[1][0], m.m[2][0], m.m[3][0], m.m[0][1], m.m[1][1], m.m[2][1], m.m[3][1], m.m[0][2], m.m[1][2], m.m[2][2],
 			   m.m[3][2], m.m[0][3], m.m[1][3], m.m[2][3], m.m[3][3]) *
 		   VR_to_gs;
 }
 
 static Mat4 OVRToMat4(const vr::HmdMatrix34_t &m) {
-	static Mat4 VR_to_gs(1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0);
+	static const Mat4 VR_to_gs(1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0);
 	return VR_to_gs * Mat4(m.m[0][0], m.m[1][0], m.m[2][0], m.m[0][1], m.m[1][1], m.m[2][1], m.m[0][2], m.m[1][2], m.m[2][2], m.m[0][3], m.m[1][3], m.m[2][3]) *
 		   VR_to_gs;
 }

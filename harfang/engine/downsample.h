@@ -25,4 +25,6 @@ void DestroyDownsample(Downsample &downsample);
 void ComputeDownsample(
 	bgfx::ViewId &view_id, const iRect &rect, const Texture &color, const Texture &attr0, const Texture &depth, const Downsample &downsample);
 
+bool IsValid(const Downsample &downsample);
+
 } // namespace hg

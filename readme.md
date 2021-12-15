@@ -95,6 +95,7 @@ https://www.harfang3d.com/download
 1. Clone the `Harfang 3D` repository including its submodules.
     ```
     git clone --recursive -j8 https://github.com/harfang3d/harfang3d.git
+    cd harfang3d
     ```
 
 1. Create build directory. Note that the described directory layout is not mandatory.
@@ -116,7 +117,7 @@ https://www.harfang3d.com/download
     cd cmake
     ```
 
-1. Generate build system using CMake. For example, on Windows it wil be:
+1. Generate the build system using CMake. For example, on Windows it will be:
     ```
     cmake ../.. -G "Visual Studio 16 2019" -A x64 \
         -DCMAKE_INSTALL_PREFIX:PATH="D:/harfang/build/install" \

@@ -89,6 +89,17 @@ File OpenWriteText(const char *path) {
 	return {invalid_gen_ref};
 }
 
+File OpenAppendText(const char *path) {
+	auto *f = _Open(path, "a");
+
+	if (f) {
+		std::lock_guard<std::mutex> lock(files_mutex);
+		return {files.add_ref(f)};
+	}
+
+	return {invalid_gen_ref};
+}
+
 File OpenTemp(const char *tmplt) {
 	size_t len = strlen(tmplt);
 	File out{invalid_gen_ref};

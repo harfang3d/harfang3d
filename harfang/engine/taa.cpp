@@ -10,6 +10,8 @@
 
 namespace hg {
 
+bool IsValid(const TAA &taa) { return bgfx::isValid(taa.u_color) && bgfx::isValid(taa.u_prv_color) && bgfx::isValid(taa.u_attr0) && bgfx::isValid(taa.u_attr1); }
+
 static TAA _CreateTAA(const Reader &ir, const ReadProvider &ip, const char *path) {
 	TAA taa;
 
@@ -19,6 +21,9 @@ static TAA _CreateTAA(const Reader &ir, const ReadProvider &ip, const char *path
 	taa.u_attr0 = bgfx::createUniform("u_attr0", bgfx::UniformType::Sampler);
 	taa.u_attr1 = bgfx::createUniform("u_attr1", bgfx::UniformType::Sampler);
 
+	if (!IsValid(taa)) {
+		DestroyTAA(taa);
+	}
 	return taa;
 }
 
@@ -35,7 +40,7 @@ void DestroyTAA(TAA &taa) {
 
 void ApplyTAA(bgfx::ViewId &view_id, const iRect &rect, const Texture &color, const Texture &prv_color, const Texture &attr0, const Texture &attr1,
 	bgfx::FrameBufferHandle output, const TAA &taa) {
-	const bgfx::Caps *caps = bgfx::getCaps();
+	__ASSERT__(IsValid(taa));
 
 	bgfx::TransientIndexBuffer idx;
 	bgfx::TransientVertexBuffer vtx;

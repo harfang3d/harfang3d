@@ -23,19 +23,19 @@ The rigid body intertia tensor is computed from its collision shape properties. 
 
 ## Simulating Physics
 
-Create a physics backend such as [SceneNewtonPhysics] and call [SceneNewtonPhysics_SceneCreatePhysicsFromAssets] to create the physics states corresponding to the scene declaration.
+Create a physics backend such as [SceneNewtonPhysics] and call [SceneBullet3Physics_SceneCreatePhysicsFromAssets] to create the physics states corresponding to the scene declaration.
 
-*Note:* [SceneNewtonPhysics_SceneCreatePhysicsFromAssets] means that if setting up the physics states requires access to an external resource, such as a mesh, it should be loaded from the assets system. If you are working from the filesystem, use [SceneNewtonPhysics_SceneCreatePhysicsFromFile].
+*Note:* [SceneBullet3Physics_SceneCreatePhysicsFromAssets] means that if setting up the physics states requires access to an external resource, such as a mesh, it should be loaded from the assets system. If you are working from the filesystem, use [SceneBullet3Physics_SceneCreatePhysicsFromFile].
 
 ### Running the Simulation
 
 This involves 3 steps on each update:
 
-1. Synchronize physics state with the scene declaration using [SceneNewtonPhysics_SceneCreatePhysicsFromAssets]. Alternatively, you can use a more fine-grained approach using [SceneNewtonPhysics_NodeCreatePhysicsFromAssets] to improve performance.
-2. Step the simulation using [SceneNewtonPhysics_StepSimulation].
-3. Synchronize the updated physics transformations to the scene using [SceneNewtonPhysics_SyncDynamicBodiesToScene].
+1. Synchronize physics state with the scene declaration using [SceneBullet3Physics_SceneCreatePhysicsFromAssets]. Alternatively, you can use a more fine-grained approach using [SceneBullet3Physics_NodeCreatePhysicsFromAssets] to improve performance.
+2. Step the simulation using [SceneBullet3Physics_StepSimulation].
+3. Synchronize the updated physics transformations to the scene using [SceneBullet3Physics_SyncDynamicBodiesToScene].
 
-*Note:* If you are using kinematic bodies you will also need to synchronize them from their node transformation on each update using [SceneNewtonPhysics_SyncKinematicBodiesFromScene].
+*Note:* If you are using kinematic bodies you will also need to synchronize them from their node transformation on each update using [SceneBullet3Physics_SyncKinematicBodiesFromScene].
 
 ### The Easy Way
 
@@ -45,7 +45,7 @@ When using a script system, this function will also dispatch collision events to
 
 ## Keeping the System Synchronized
 
-Call the physics system garbage collect method (eg. [SceneNewtonPhysics_GarbageCollect]) on each update to ensure that destroyed nodes or components are properly removed. If you know that no node or component was destroyed during a particular update, not calling the garbage collector will save on performance.
+Call the physics system garbage collect method (eg. [SceneBullet3Physics_GarbageCollect]) on each update to ensure that destroyed nodes or components are properly removed. If you know that no node or component was destroyed during a particular update, not calling the garbage collector will save on performance.
 
 ## Reading Physics Transformation
 

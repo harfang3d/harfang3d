@@ -149,6 +149,7 @@ bool GetMonitorModes(const Monitor *monitor, std::vector<MonitorMode> &out) {
 
 //-- Window
 static std::map<const Window *, void (*)(const Window *w, int count, const char **paths)> window_drop_cb;
+static std::map<const Window *, void (*)(const Window *w)> window_refresh_cb;
 
 struct Window {
 	uintptr_t unused;
@@ -438,6 +439,18 @@ void SetWindowDropCallback(const Window *w, void (*cb)(const Window *w, int coun
 		glfwSetDropCallback(glfw_w, GLFW_window_drop_cb_proxy);
 }
 
+static void GLFW_window_refresh_cb_proxy(GLFWwindow *w) {
+	const auto i = window_refresh_cb.find((Window *)w);
+	if (i != std::end(window_refresh_cb))
+		i->second((Window *)w);
+}
+
+void SetWindowRefreshCallback(const Window *w, void (*cb)(const Window *window)) {
+	window_refresh_cb[w] = cb;
+	if (auto glfw_w = GetGLFWWindow(w))
+		glfwSetWindowRefreshCallback(glfw_w, GLFW_window_refresh_cb_proxy);
+}
+
 //
 void SetWindowIcon(const Window *w, int count, const Icon *icons) {
 	if (auto glfw_w = GetGLFWWindow(w)) {
@@ -448,6 +461,20 @@ void SetWindowIcon(const Window *w, int count, const Icon *icons) {
 
 		glfwSetWindowIcon(glfw_w, count, images.data());
 	}
+}
+
+void CenterWindow(Window *w) {
+	if (auto glfw_w = GetGLFWWindow(w))
+		if (const auto monitor = glfwGetPrimaryMonitor()) {
+			int xpos, ypos;
+			glfwGetMonitorPos(monitor, &xpos, &ypos);
+
+			int w, h;
+			glfwGetWindowSize(glfw_w, &w, &h);
+
+			if (const auto mode = glfwGetVideoMode(monitor))
+				glfwSetWindowPos(glfw_w, (mode->width - w) / 2 + xpos, (mode->height - h) / 2 + ypos);
+		}
 }
 
 } // namespace hg

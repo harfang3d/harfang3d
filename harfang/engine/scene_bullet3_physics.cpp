@@ -181,12 +181,14 @@ Vec3 from_btVector3(const btVector3 &v) { return Vec3(v.x(), v.y(), v.z()); }
 btVector3 to_btVector3(const Vec3 &v) { return btVector3(v.x, v.y, v.z); }
 
 //
+#if 0
 struct PhysicSystemMotionState : public btMotionState {
 	PhysicSystemMotionState(Node node_, const btTransform &com_) : com(com_), node(node_) {}
 
 	void getWorldTransform(btTransform &com_world_trs) const override {
 		if (auto trs = node.GetTransform()) {
-			const auto world = TransformationMat4(trs.GetPos(), trs.GetRot(), Vec3::One);
+			auto w = trs.GetWorld();
+			const auto world = TransformationMat4(GetT(w), GetR(w), Vec3::One);
 			com_world_trs = to_btTransform(world) * com.inverse();
 		}
 	}
@@ -199,6 +201,7 @@ struct PhysicSystemMotionState : public btMotionState {
 	btTransform com;
 	Node node;
 };
+#endif
 
 //
 static void __DeleteRigidBody(const btRigidBody *body) {
@@ -253,7 +256,6 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 	}
 
 	auto trs = node.GetTransform();
-
 	btTransform bt_trs = btTransform::getIdentity();
 	if (trs)
 		bt_trs = to_btTransform(TransformationMat4(trs.GetPos(), trs.GetRot(), Vec3::One)); // most up to date transform
@@ -265,8 +267,10 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 			root_shape = *shapes.begin();
 		} else {
 			auto compound = new btCompoundShape;
-			for (auto shape : shapes)
-				compound->addChildShape(btTransform::getIdentity(), shape);
+			for (size_t idx = 0; idx < node.GetCollisionCount(); ++idx) {
+				const auto col = node.GetCollision(idx);
+				compound->addChildShape(to_btTransform(col.GetLocalTransform()), shapes[idx]);
+			}
 			root_shape = compound;
 		}
 
@@ -276,11 +280,12 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 		btVector3 local_inertia;
 		root_shape->calculateLocalInertia(total_mass, local_inertia);
 
-		btMotionState *motion_state = new PhysicSystemMotionState(node, btTransform::getIdentity());
-		btRigidBody::btRigidBodyConstructionInfo rb_info(total_mass, motion_state, root_shape, local_inertia);
+		btRigidBody::btRigidBodyConstructionInfo rb_info(total_mass, nullptr, root_shape, local_inertia);
 
 		rb_info.m_restitution = rb.GetRestitution();
 		rb_info.m_friction = rb.GetFriction();
+		rb_info.m_rollingFriction = rb.GetRollingFriction();
+		rb_info.m_startWorldTransform = bt_trs;
 
 		_node.body = new btRigidBody(rb_info);
 
@@ -401,10 +406,10 @@ void SceneBullet3Physics::CollectCollisionEvents(const Scene &scene, NodeNodeCon
 			if (i != std::end(node_collision_event_tracking_modes)) {
 				auto &contacts = node_node_contacts[node_a_ref][node_b_ref];
 
-				for (int i = 0; i < manifold_contact_count; ++i) {
-					const auto &contact = manifold->getContactPoint(i);
+				for (int j = 0; j < manifold_contact_count; ++j) {
+					const auto &contact = manifold->getContactPoint(j);
 
-					contacts.push_back({from_btVector3(contact.m_positionWorldOnB), from_btVector3(contact.m_normalWorldOnB), numeric_cast<uint32_t>(i),
+					contacts.push_back({from_btVector3(contact.m_positionWorldOnB), from_btVector3(contact.m_normalWorldOnB), numeric_cast<uint32_t>(j),
 						contact.getDistance()});
 				}
 			}
@@ -413,36 +418,51 @@ void SceneBullet3Physics::CollectCollisionEvents(const Scene &scene, NodeNodeCon
 }
 
 //
-void SceneBullet3Physics::SyncKinematicBodiesFromScene(const Scene &scene) {
-	float mtx[16];
+void SceneBullet3Physics::SyncBodiesFromScene(const Scene &scene) {
+	for (const auto &i : nodes)
+		if (const auto node = scene.GetNode(i.first))
+			if (auto trs = node.GetTransform()) {
+				const auto body = i.second.body;
+				const auto flags = body->getCollisionFlags();
 
-	bool had_sync = false;
-
-	for (auto &i : nodes) {
-		auto body = i.second.body;
-		/*
-				if (NewtonBodyGetType(body) == NEWTON_KINEMATIC_BODY) {
-					if (auto node = scene.GetNode(i.first)) {
-						const auto world = node.GetTransform().GetWorld();
-
-						const auto m = TransformationMat4(GetT(world), GetR(world));
-						Mat4ToFloat16Transposed(m, mtx);
-
-						NewtonBodySetMatrix(body, mtx);
-						had_sync = true;
-					}
+				if (flags == btRigidBody::CF_KINEMATIC_OBJECT) {
+					const auto world = hg::Orthonormalize(trs.GetWorld());
+					// const auto world = TransformationMat4(GetT(w), GetR(w), Vec3::One);
+					body->setWorldTransform(to_btTransform(world));
+				} else if (flags == btRigidBody::CF_DYNAMIC_OBJECT) {
+					const auto world = body->getInterpolationWorldTransform();
+					trs.SetWorld(from_btTransform(world));
 				}
-		*/
-	}
-
-	if (had_sync)
-		; // NewtonInvalidateCache(world);
+			}
 }
 
 //
 void SceneBullet3Physics::NodeWake(NodeRef ref) const {
 	if (auto body = GetNodeBody(ref))
 		body->activate();
+}
+
+//
+void SceneBullet3Physics::NodeSetDeactivation(NodeRef ref, bool enable) const {
+	if (auto body = GetNodeBody(ref))
+		body->setActivationState(enable ? ACTIVE_TAG : DISABLE_DEACTIVATION);
+}
+
+bool SceneBullet3Physics::NodeGetDeactivation(NodeRef ref) const {
+	if (auto body = GetNodeBody(ref))
+		return body->getActivationState() == ACTIVE_TAG ? true : false;
+	return true;
+}
+
+//
+void SceneBullet3Physics::NodeResetWorld(NodeRef ref, const Mat4 &world) const {
+	if (auto body = GetNodeBody(ref)) {
+		body->setWorldTransform(to_btTransform(world));
+		body->setLinearVelocity(btVector3(0, 0, 0));
+		body->setAngularVelocity(btVector3(0, 0, 0));
+		body->clearForces();
+		body->activate();
+	}
 }
 
 //
@@ -500,12 +520,40 @@ void SceneBullet3Physics::NodeSetAngularVelocity(NodeRef ref, const Vec3 &W) {
 		body->setAngularVelocity(to_btVector3(W));
 }
 
+void SceneBullet3Physics::NodeGetLinearLockAxes(NodeRef ref, bool &X, bool &Y, bool &Z) const {
+	if (auto body = GetNodeBody(ref)) {
+		const auto &v = body->getAngularVelocity();
+		X = v.x() == 1.f ? false : true;
+		X = v.y() == 1.f ? false : true;
+		X = v.z() == 1.f ? false : true;
+	}
+}
+
+void SceneBullet3Physics::NodeSetLinearLockAxes(NodeRef ref, bool X, bool Y, bool Z) {
+	if (auto body = GetNodeBody(ref))
+		body->setLinearFactor(btVector3(X ? 0.f : 1.f, Y ? 0.f : 1.f, Z ? 0.f : 1.f));
+}
+
+void SceneBullet3Physics::NodeGetAngularLockAxes(NodeRef ref, bool &X, bool &Y, bool &Z) const {
+	if (auto body = GetNodeBody(ref)) {
+		const auto &v = body->getAngularVelocity();
+		X = v.x() == 1.f ? false : true;
+		X = v.y() == 1.f ? false : true;
+		X = v.z() == 1.f ? false : true;
+	}
+}
+
+void SceneBullet3Physics::NodeSetAngularLockAxes(NodeRef ref, bool X, bool Y, bool Z) {
+	if (auto body = GetNodeBody(ref))
+		body->setAngularFactor(btVector3(X ? 0.f : 1.f, Y ? 0.f : 1.f, Z ? 0.f : 1.f));
+}
+
 //
 struct NodeCollideWorldCallback : btCollisionWorld::ContactResultCallback {
 	NodeCollideWorldCallback(const Scene &_scene, NodeRef _node_ref) : scene(_scene), node_ref(_node_ref) {}
 
-	virtual btScalar addSingleResult(btManifoldPoint &cp, const btCollisionObjectWrapper *col_obj_0_wrap, int part_id_0, int index_0,
-		const btCollisionObjectWrapper *col_obj_1_wrap, int part_id_1, int index_1) {
+	btScalar addSingleResult(btManifoldPoint &cp, const btCollisionObjectWrapper *col_obj_0_wrap, int part_id_0, int index_0,
+		const btCollisionObjectWrapper *col_obj_1_wrap, int part_id_1, int index_1) override {
 		const auto node_0_ref = scene.GetNodeRef(uint32_t(col_obj_0_wrap->getCollisionObject()->getUserIndex()));
 		const auto node_1_ref = scene.GetNodeRef(uint32_t(col_obj_1_wrap->getCollisionObject()->getUserIndex()));
 
@@ -588,6 +636,57 @@ RaycastOut SceneBullet3Physics::RaycastFirstHit(const Scene &scene, const Vec3 &
 						hit.m = mesh->bt_mat[mesh->bt_id_mat[trace.m_TriangleIndex]];
 	*/
 	return out;
+}
+
+std::vector<RaycastOut> SceneBullet3Physics::RaycastAllHits(const Scene &scene, const Vec3 &world_p0, const Vec3 &world_p1) const {
+	struct AllRayResultWithTriangleIndexCallback : public btCollisionWorld::AllHitsRayResultCallback {
+		AllRayResultWithTriangleIndexCallback(const btVector3 &rayFromWorld, const btVector3 &rayToWorld)
+			: AllHitsRayResultCallback(rayFromWorld, rayToWorld), m_TriangleIndex(-1), m_shapePart(-1) {}
+
+		int m_TriangleIndex;
+		int m_shapePart;
+
+		virtual btScalar addSingleResult(btCollisionWorld::LocalRayResult &rayResult, bool normalInWorldSpace) {
+			if (rayResult.m_localShapeInfo) {
+				m_TriangleIndex = rayResult.m_localShapeInfo->m_triangleIndex;
+				m_shapePart = rayResult.m_localShapeInfo->m_shapePart;
+			} else {
+				m_TriangleIndex = -1;
+				m_shapePart = -1;
+			}
+			return AllHitsRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
+		}
+	};
+
+	btVector3 from = to_btVector3(world_p0), to = to_btVector3(world_p1);
+
+	AllRayResultWithTriangleIndexCallback trace(from, to);
+	trace.m_collisionFilterGroup = btBroadphaseProxy::AllFilter;
+	trace.m_collisionFilterMask = ~0; // FIXME
+
+	world->rayTest(from, to, trace);
+
+	if (!trace.hasHit())
+		return {};
+
+	std::vector<RaycastOut> outs;
+	outs.resize(trace.m_hitNormalWorld.size());
+
+	for (int i = 0; i < trace.m_hitNormalWorld.size(); ++i) {
+		outs[i].N = from_btVector3(trace.m_hitNormalWorld[i]);
+		outs[i].node = scene.GetNode(trace.m_collisionObjects[i]->getUserIndex());
+		outs[i].P = from_btVector3(trace.m_hitPointWorld[i]);
+		outs[i].t = Dot(outs[i].P - world_p0, Normalize(world_p1 - world_p0));
+	}
+
+	/* FIXME
+		if (RigidBody *rb = (RigidBody *)hit.i->rigid_body)
+			if ((trace.m_shapePart >= 0) && ((uint)trace.m_shapePart < rb->shapes.size()))
+				if (Mesh *mesh = rb->shapes[trace.m_shapePart].mesh.c_ptr())
+					if (uint(trace.m_TriangleIndex) < mesh->bt_id_mat.size())
+						hit.m = mesh->bt_mat[mesh->bt_id_mat[trace.m_TriangleIndex]];
+	*/
+	return outs;
 }
 
 //

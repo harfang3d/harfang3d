@@ -16,6 +16,20 @@ Harfang 2.0.0 for CPython 3.2+ on windows-x64 (build ba08463ee9e6c0c93960230fb88
 See http://harfang3d.com/license for licensing terms
 ```
 
+### Troubleshooting
+
+> _`pip install` fails with a message saying `harfang is not a supported wheel on this platform`._
+>
+> Make sure that your pip install is up to date. Outdated pip versions have been known to cause such problems.
+
+> _The dynamic library fails to load when importing the `harfang` module in Python._
+>
+> Make sure your system has the required runtime dependencies installed. It should have OpenAL and on Windows the Visual C++ 2017 redistributable installed.
+
+> _`ImportError: DLL load failed: %1 is not a valid Win32 application.` error when importing the `harfang` module._
+>
+> This error usually happens when installing the incorrect version of Harfang for your Python version. For example when installing the 64 bit version of Harfang on a 32 bit install of the Python interpreter.
+
 ## First Program
 
 Let's write a simple test program, create a new file named `test.py` and paste the following code into it.

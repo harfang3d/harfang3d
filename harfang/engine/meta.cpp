@@ -84,8 +84,8 @@ json LoadJson(const Reader &ir, const Handle &h, bool *result) {
 	return js;
 }
 
-json LoadJsonFromFile(const char *path, bool *result) { return LoadJson(g_file_reader, ScopedReadHandle(g_file_read_provider, path), result); }
-json LoadJsonFromAssets(const char *name, bool *result) { return LoadJson(g_assets_reader, ScopedReadHandle(g_assets_read_provider, name), result); }
+json LoadJsonFromFile(const char *path, bool *result) { return LoadJson(g_file_reader, ScopedReadHandle(g_file_read_provider, path, true), result); }
+json LoadJsonFromAssets(const char *name, bool *result) { return LoadJson(g_assets_reader, ScopedReadHandle(g_assets_read_provider, name, true), result); }
 
 bool SaveJsonToFile(const json &js, const char *path) {
 	const auto js_ = js.dump(1, '\t', true);

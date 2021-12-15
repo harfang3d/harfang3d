@@ -1,0 +1,1 @@
+Returns color and depth texture attachments.

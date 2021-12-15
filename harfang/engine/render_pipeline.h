@@ -84,12 +84,12 @@ bool IsRenderUp();
 /// Fit the backbuffer to the specified window client area dimensions, return true if resizing was carried out.
 bool RenderResetToWindow(Window *win, int &width, int &height, uint32_t reset_flags = 0);
 
-void SetView2D(bgfx::ViewId id, int x, int y, int res_x, int res_y, float znear = -1.f, float zfar = 1.f, uint16_t clear_flags = BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
-	const Color &clear_color = Color::Black, float depth = 1.f, uint8_t stencil = 0, bool y_up = false);
-void SetViewPerspective(bgfx::ViewId id, int x, int y, int res_x, int res_y, const Mat4 &world, float znear = 0.01f, float zfar = 1000.f,
-	float zoom_factor = 1.8,
+void SetView2D(bgfx::ViewId id, int x, int y, int res_x, int res_y, float znear = -1.f, float zfar = 1.f,
 	uint16_t clear_flags = BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, const Color &clear_color = Color::Black, float depth = 1.f, uint8_t stencil = 0,
-	const Vec2 &aspect_ratio = {});
+	bool y_up = false);
+void SetViewPerspective(bgfx::ViewId id, int x, int y, int res_x, int res_y, const Mat4 &world, float znear = 0.01f, float zfar = 1000.f,
+	float zoom_factor = 1.8, uint16_t clear_flags = BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, const Color &clear_color = Color::Black, float depth = 1.f,
+	uint8_t stencil = 0, const Vec2 &aspect_ratio = {});
 void SetViewOrthographic(bgfx::ViewId id, int x, int y, int res_x, int res_y, const Mat4 &world, float znear = 0.01f, float zfar = 1000.f, float size = 1.f,
 	uint16_t clear_flags = BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, const Color &clear_color = Color::Black, float depth = 1.f, uint8_t stencil = 0,
 	const Vec2 &aspect_ratio = {});
@@ -618,18 +618,18 @@ struct Pipeline {
 void DestroyPipeline(Pipeline &pipeline);
 
 //
-struct PipelineFrameBuffer {
+struct FrameBuffer {
 	bgfx::FrameBufferHandle handle = BGFX_INVALID_HANDLE;
-	TextureRef color, depth;
 };
 
-PipelineFrameBuffer CreateFrameBuffer(
-	bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, PipelineResources &res, const char *name);
+FrameBuffer CreateFrameBuffer(const hg::Texture &color, const hg::Texture &depth, const char *name);
+FrameBuffer CreateFrameBuffer(bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, const char *name);
+FrameBuffer CreateFrameBuffer(int width, int height, bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, const char *name);
 
-PipelineFrameBuffer CreateFrameBuffer(
-	int width, int height, bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, PipelineResources &res, const char *name);
+Texture GetColorTexture(FrameBuffer &frameBuffer);
+Texture GetDepthTexture(FrameBuffer &frameBuffer);
 
-void DestroyFrameBuffer(PipelineResources &res, PipelineFrameBuffer &frameBuffer);
+void DestroyFrameBuffer(FrameBuffer &frameBuffer);
 
 bool CreateFullscreenQuad(bgfx::TransientIndexBuffer &idx, bgfx::TransientVertexBuffer &vtx);
 

@@ -20,6 +20,7 @@ File Open(const char *path, bool silent = false);
 File OpenText(const char *path, bool silent = false);
 File OpenWrite(const char *path);
 File OpenWriteText(const char *path);
+File OpenAppendText(const char *path);
 File OpenTemp(const char *tmplt);
 bool Close(File file);
 

@@ -36,4 +36,6 @@ void DestroySAO(SAO &sao);
 void ComputeSAO(bgfx::ViewId &view_id, const iRect &rect, const Texture &attr0, const Texture &attr1, const Texture &noise, bgfx::FrameBufferHandle output,
 	const SAO &sao, const Mat44 &projection, float bias, float radius, int sample_count, float sharpness);
 
+bool IsValid(const SAO &sao);
+
 } // namespace hg

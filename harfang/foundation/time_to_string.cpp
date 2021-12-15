@@ -32,7 +32,7 @@ bool time_from_string(const std::string &v, time_ns &out) {
 
 	switch (vals.size()) {
 		case 1: {
-			sec = strtof(vals[0].c_str(), &eon);
+			sec = strtod(vals[0].c_str(), &eon);
 			if (eon == vals[0].c_str() || sec > 59)
 				return false;
 		} break;
@@ -42,7 +42,7 @@ bool time_from_string(const std::string &v, time_ns &out) {
 			if (eon == vals[0].c_str() || min > 59)
 				return false;
 
-			sec = strtof(vals[1].c_str(), &eon);
+			sec = strtod(vals[1].c_str(), &eon);
 			if (eon == vals[1].c_str() || sec > 59)
 				return false;
 		} break;
@@ -56,13 +56,13 @@ bool time_from_string(const std::string &v, time_ns &out) {
 			if (eon == vals[1].c_str() || min > 59)
 				return false;
 
-			sec = strtof(vals[2].c_str(), &eon);
+			sec = strtod(vals[2].c_str(), &eon);
 			if (eon == vals[2].c_str() || sec > 59)
 				return false;
 		} break;
 	}
 
-	out = time_from_sec_f(sec);
+	out = time_from_sec_d(sec);
 	out += time_from_min(min);
 	out += time_from_hour(hour);
 	return true;

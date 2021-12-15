@@ -23,4 +23,6 @@ void DestroyAAABlur(AAABlur &aaa_blur);
 void ComputeAAABlur(bgfx::ViewId &view_id, const iRect &rect, const Texture &attr0, bgfx::FrameBufferHandle fb0,
 	bgfx::FrameBufferHandle fb1, const AAABlur &aaa_blur);
 
+bool IsValid(const AAABlur &aaa_blur);
+
 } // namespace hg

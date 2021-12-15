@@ -10,6 +10,11 @@
 
 namespace hg {
 
+bool IsValid(const HiZ &hiz) {
+	return bgfx::isValid(hiz.pyramid.handle) && bgfx::isValid(hiz.prg_copy) && bgfx::isValid(hiz.prg_compute) && bgfx::isValid(hiz.u_depth) &&
+		   bgfx::isValid(hiz.u_projection);
+}
+
 static HiZ _CreateHiZ(const Reader &ir, const ReadProvider &ip, const char *path, bgfx::BackbufferRatio::Enum ratio) {
 	HiZ hiz;
 
@@ -44,12 +49,17 @@ static HiZ _CreateHiZ(const Reader &ir, const ReadProvider &ip, const char *path
 
 	bgfx::TextureHandle handle = bgfx::createTexture2D(hiz.pyramid_infos.width, hiz.pyramid_infos.height, hiz.pyramid_infos.numMips,
 		hiz.pyramid_infos.numLayers, hiz.pyramid_infos.format, BGFX_TEXTURE_COMPUTE_WRITE | flags);
-	bgfx::setName(handle, "hiz.pyramid");
+	
 	hiz.pyramid = hg::MakeTexture(handle, BGFX_TEXTURE_COMPUTE_WRITE | flags);
-
 	hiz.prg_copy = hg::LoadComputeProgram(ir, ip, hg::format("%1/shader/hiz_copy_cs.sc").arg(path));
 	hiz.prg_compute = hg::LoadComputeProgram(ir, ip, hg::format("%1/shader/hiz_compute_cs.sc").arg(path));
 	
+	if (!IsValid(hiz)) {
+		DestroyHiZ(hiz);
+		return hiz;
+	}
+
+	bgfx::setName(handle, "hiz.pyramid");
 	return hiz;
 }
 
@@ -65,6 +75,8 @@ void DestroyHiZ(HiZ &hiz) {
 }
 
 void ComputeHiZ(bgfx::ViewId &view_id, const iRect &rect, const Mat44& proj, const Texture &depth, const HiZ &hiz) {
+	__ASSERT__(IsValid(hiz));
+
 	bgfx::setUniform(hiz.u_projection, to_bgfx(proj).data());
 
 	bgfx::setViewName(view_id, "HiZ copy");

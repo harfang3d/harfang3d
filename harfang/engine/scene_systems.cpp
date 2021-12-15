@@ -185,7 +185,7 @@ static void SceneUpdateSystemsImpl(Scene &scene, SceneClocks &clocks, time_ns dt
 
 #if HG_ENABLE_BULLET3_SCENE_PHYSICS
 	if (bullet3_physics)
-		bullet3_physics->SyncKinematicBodiesFromScene(scene);
+		bullet3_physics->SyncBodiesFromScene(scene);
 #endif
 }
 

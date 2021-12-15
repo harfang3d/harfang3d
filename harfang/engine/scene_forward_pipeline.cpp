@@ -22,6 +22,56 @@ void ForwardPipelineAAA::Flip(const ViewState &view_state) {
 }
 
 //
+bool IsValid(const ForwardPipelineAAA &aaa) {
+	for (auto &tex : aaa.noise) {
+		if (!bgfx::isValid(tex.handle)) {
+			return false;
+		}
+	}
+	if (!(bgfx::isValid(aaa.depth.handle) && bgfx::isValid(aaa.attr0.handle) && bgfx::isValid(aaa.attr1.handle))) {
+		return false;
+	}
+	if (!bgfx::isValid(aaa.attributes_fb)) {
+		return false;
+	}
+
+	if (!(IsValid(aaa.downsample) && IsValid(aaa.upsample) && IsValid(aaa.ssgi) && IsValid(aaa.ssr) && IsValid(aaa.temporal_acc) && IsValid(aaa.hiz) &&
+			IsValid(aaa.taa) && IsValid(aaa.blur) && IsValid(aaa.motion_blur) && IsValid(aaa.bloom))) {
+		return false;
+	}
+	for (int i = 0; i < 2; i++) {
+		if (!(bgfx::isValid(aaa.ssgi_history[i].handle) && bgfx::isValid(aaa.ssgi_history_fb[i]) && bgfx::isValid(aaa.ssr_history[i].handle) &&
+				bgfx::isValid(aaa.ssr_history_fb[i]))) {
+			return false;
+		}
+	}
+
+	if (aaa.ssgi_ratio != bgfx::BackbufferRatio::Equal) {
+		if (!(bgfx::isValid(aaa.ssgi_output.handle) && bgfx::isValid(aaa.ssgi_output_fb))) {
+			return false;
+		}
+	}
+
+	if (aaa.ssr_ratio != bgfx::BackbufferRatio::Equal) {
+		if (!(bgfx::isValid(aaa.ssr_output.handle) && bgfx::isValid(aaa.ssr_output_fb))) {
+			return false;
+		}
+	}
+
+	if (!(bgfx::isValid(aaa.work[0].handle) && bgfx::isValid(aaa.work_fb[0]))) {
+		return false;
+	}
+	if (aaa.ssgi_ratio != aaa.ssr_ratio) {
+		if (!(bgfx::isValid(aaa.work[1].handle) && bgfx::isValid(aaa.work_fb[1]))) {
+			return false;
+		}
+	}
+
+	return bgfx::isValid(aaa.frame_hdr.handle) && bgfx::isValid(aaa.frame_hdr_fb) && bgfx::isValid(aaa.work_frame_hdr_fb) &&
+		   bgfx::isValid(aaa.prv_frame_hdr_fb) && bgfx::isValid(aaa.next_frame_hdr_fb) && bgfx::isValid(aaa.u_color) && bgfx::isValid(aaa.u_depth) &&
+		   bgfx::isValid(aaa.compositing_prg);
+}
+
 static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const ReadProvider &ip, const char *path, const ForwardPipelineAAAConfig &config,
 	bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio) {
 	ForwardPipelineAAA aaa;
@@ -34,29 +84,21 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 	{
 		// depth texture
 		aaa.depth = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, bgfx::TextureFormat::D24, flags)};
-		bgfx::setName(aaa.depth.handle, "aaa.depth");
 		// w: linear depth, xyz: view normal
 		aaa.attr0 = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-		bgfx::setName(aaa.attr0.handle, "aaa.attr0");
 		// yz: velocity
 		aaa.attr1 = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-		bgfx::setName(aaa.attr1.handle, "aaa.attr1");
-
+		
 		bgfx::TextureHandle texs[] = {aaa.depth.handle, aaa.attr0.handle, aaa.attr1.handle};
 		aaa.attributes_fb = bgfx::createFrameBuffer(3, texs, true);
-		bgfx::setName(aaa.attributes_fb, "Attributes FB");
 	}
 
 	{
 		aaa.work[0] = {flags, bgfx::createTexture2D(ssgi_ratio, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-		bgfx::setName(aaa.work[0].handle, "aaa.work[0]");
 		aaa.work_fb[0] = bgfx::createFrameBuffer(1, &aaa.work[0].handle, true);
-		bgfx::setName(aaa.work_fb[0], "Work FB #0");
 		if(ssgi_ratio != ssr_ratio) {
 			aaa.work[1] = {flags, bgfx::createTexture2D(ssr_ratio, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-			bgfx::setName(aaa.work[1].handle, "aaa.work[1]");
 			aaa.work_fb[1] = bgfx::createFrameBuffer(1, &aaa.work[1].handle, true);
-			bgfx::setName(aaa.work_fb[1], "Work FB #1");
 		} else {
 			aaa.work[1] = aaa.work[0];
 			aaa.work_fb[1] = aaa.work_fb[0];
@@ -67,7 +109,6 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 		aaa.ssgi_ratio = ssgi_ratio;
 		if (ssgi_ratio != bgfx::BackbufferRatio::Equal) {
 			aaa.ssgi_output = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-			bgfx::setName(aaa.ssgi_output.handle, "aaa.ssgi_output");
 			bgfx::TextureHandle texs[] = {aaa.ssgi_output.handle};
 			aaa.ssgi_output_fb = bgfx::createFrameBuffer(1, texs, true);
 		} else {
@@ -77,11 +118,8 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 		aaa.ssgi = CreateSSGIFromAssets(path);
 
 		aaa.ssgi_history[0] = {flags, bgfx::createTexture2D(aaa.ssgi_ratio, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-		bgfx::setName(aaa.ssgi_history[0].handle, "aaa.ssgi_history_0");
-
 		aaa.ssgi_history[1] = {flags, bgfx::createTexture2D(aaa.ssgi_ratio, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-		bgfx::setName(aaa.ssgi_history[1].handle, "aaa.ssgi_history_1");
-
+		
 		aaa.ssgi_history_fb[0] = bgfx::createFrameBuffer(1, &aaa.ssgi_history[0].handle, true);
 		aaa.ssgi_history_fb[1] = bgfx::createFrameBuffer(1, &aaa.ssgi_history[1].handle, true);
 	}
@@ -90,7 +128,6 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 		aaa.ssr_ratio = ssr_ratio;
 		if (ssr_ratio != bgfx::BackbufferRatio::Equal) {
 			aaa.ssr_output = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-			bgfx::setName(aaa.ssr_output.handle, "aaa.ssr_output");
 			bgfx::TextureHandle texs[] = {aaa.ssr_output.handle};
 			aaa.ssr_output_fb = bgfx::createFrameBuffer(1, texs, true);
 		} else {
@@ -100,11 +137,9 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 		aaa.ssr = CreateSSRFromAssets(path);
 
 		aaa.ssr_history[0] = {flags, bgfx::createTexture2D(aaa.ssr_ratio, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-		bgfx::setName(aaa.ssr_history[0].handle, "aaa.ssr_history_0");
-
+		
 		aaa.ssr_history[1] = {flags, bgfx::createTexture2D(aaa.ssr_ratio, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-		bgfx::setName(aaa.ssr_history[1].handle, "aaa.ssr_history_1");
-
+		
 		aaa.ssr_history_fb[0] = bgfx::createFrameBuffer(1, &aaa.ssr_history[0].handle, true);
 		aaa.ssr_history_fb[1] = bgfx::createFrameBuffer(1, &aaa.ssr_history[1].handle, true);
 	}
@@ -119,18 +154,6 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 
 	{ aaa.temporal_acc = CreateTemporalAccumulationFromAssets(path); }
 
-#if 0
-	{
-		aaa.sao_output = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Half, false, 1, bgfx::TextureFormat::R8, flags)};
-
-		bgfx::TextureHandle texs[] = {aaa.sao_output.handle};
-		aaa.sao_output_fb = bgfx::createFrameBuffer(1, texs, true);
-		bgfx::setName(aaa.sao_output_fb, "SAO output FB");
-
-		aaa.sao = CreateSAOFromAssets(path, bgfx::BackbufferRatio::Half);
-	}
-#endif
-
 	{ aaa.motion_blur = CreateMotionBlurFromAssets(path); }
 
 	{
@@ -139,20 +162,15 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 
 		bgfx::TextureHandle texs[] = {aaa.depth.handle, aaa.frame_hdr.handle};
 		aaa.frame_hdr_fb = bgfx::createFrameBuffer(2, texs, false);
-		bgfx::setName(aaa.frame_hdr_fb, "Frame HDR FB"); // current frame without SSR/SSGI
-
+		
 		aaa.work_frame_hdr_fb = bgfx::createFrameBuffer(bgfx::BackbufferRatio::Equal, bgfx::TextureFormat::RGBA16F, flags);
-		bgfx::setName(aaa.work_frame_hdr_fb, "Work HDR frame FB");
-
+		
 		aaa.prv_frame_hdr_fb = bgfx::createFrameBuffer(bgfx::BackbufferRatio::Equal, bgfx::TextureFormat::RGBA16F, flags); // (reprojected) input to SSR/SSGI
-		bgfx::setName(aaa.prv_frame_hdr_fb, "Previous HDR frame FB");
 		aaa.next_frame_hdr_fb = bgfx::createFrameBuffer(bgfx::BackbufferRatio::Equal, bgfx::TextureFormat::RGBA16F, flags); // current frame with SSR/SSGI
-		bgfx::setName(aaa.next_frame_hdr_fb, "Next HDR frame FB");
 	}
 
 	{
 		aaa.compositing_prg = hg::LoadProgram(ir, ip, hg::format("%1/shader/compositing").arg(path).c_str());
-
 		aaa.u_color = bgfx::createUniform("u_color", bgfx::UniformType::Sampler);
 		aaa.u_depth = bgfx::createUniform("u_depth", bgfx::UniformType::Sampler);
 	}
@@ -160,6 +178,35 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 	aaa.taa = CreateTAAFromAssets(path);
 	aaa.bloom = CreateBloomFromAssets(hg::format("%1/shader").arg(path), bgfx::BackbufferRatio::Equal);
 
+	if (!IsValid(aaa)) {
+		DestroyForwardPipelineAAA(aaa);
+		return aaa;
+	}
+
+	bgfx::setName(aaa.depth.handle, "aaa.depth");
+	bgfx::setName(aaa.attr0.handle, "aaa.attr0");
+	bgfx::setName(aaa.attr1.handle, "aaa.attr1");
+	bgfx::setName(aaa.attributes_fb, "Attributes FB");
+	bgfx::setName(aaa.work[0].handle, "aaa.work[0]");
+	bgfx::setName(aaa.work_fb[0], "Work FB #0");
+	bgfx::setName(aaa.ssgi_history[0].handle, "aaa.ssgi_history_0");
+	bgfx::setName(aaa.ssgi_history[1].handle, "aaa.ssgi_history_1");
+	bgfx::setName(aaa.ssr_history[0].handle, "aaa.ssr_history_0");
+	bgfx::setName(aaa.ssr_history[1].handle, "aaa.ssr_history_1");
+	bgfx::setName(aaa.frame_hdr_fb, "Frame HDR FB");
+	bgfx::setName(aaa.work_frame_hdr_fb, "Work HDR frame FB");
+	bgfx::setName(aaa.prv_frame_hdr_fb, "Previous HDR frame FB");
+	bgfx::setName(aaa.next_frame_hdr_fb, "Next HDR frame FB");
+	if (ssgi_ratio != bgfx::BackbufferRatio::Equal) {
+		bgfx::setName(aaa.ssgi_output.handle, "aaa.ssgi_output");		
+	}
+	if (ssr_ratio != bgfx::BackbufferRatio::Equal) {
+		bgfx::setName(aaa.ssr_output.handle, "aaa.ssr_output");
+	}
+	if (ssgi_ratio != ssr_ratio) {
+		bgfx::setName(aaa.work[1].handle, "aaa.work[1]");
+		bgfx::setName(aaa.work_fb[1], "Work FB #1");
+	}
 	return aaa;
 }
 
@@ -259,14 +306,21 @@ void GetSceneForwardPipelineLights(const Scene &scene, std::vector<ForwardPipeli
 		if (light_type == LT_Linear) {
 			lgt_.type = FPLT_Linear;
 			lgt_.pssm_split = lgt.GetPSSMSplit();
+			lgt_.radius = 0.f;
+			lgt_.inner_angle = 0.f;
+			lgt_.outer_angle = 0.f;
 		} else if (light_type == LT_Spot) {
 			lgt_.type = FPLT_Spot;
+			lgt_.pssm_split = hg::Vec4::Zero;
 			lgt_.radius = lgt.GetRadius();
 			lgt_.inner_angle = lgt.GetInnerAngle();
 			lgt_.outer_angle = lgt.GetOuterAngle();
 		} else { // fall back to point
 			lgt_.type = FPLT_Point;
+			lgt_.pssm_split = hg::Vec4::Zero;
 			lgt_.radius = lgt.GetRadius();
+			lgt_.inner_angle = 0.f;
+			lgt_.outer_angle = 0.f;
 		}
 
 		const auto shadow_type = lgt.GetShadowType();
@@ -406,6 +460,8 @@ void PrepareSceneForwardPipelineViewDependentRenderData(bgfx::ViewId &view_id, c
 	// FIXME cull skinned models !!!
 	render_data.view_opaque_skinned = render_data.all_opaque_skinned;
 	render_data.view_transparent_skinned = render_data.all_transparent_skinned;
+		
+	render_data.fog = GetSceneForwardPipelineFog(scene);
 }
 
 //
@@ -437,7 +493,7 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	std::fill(std::begin(views), std::end(views), 65535);
 
 	// update pipeline
-	UpdateForwardPipeline(pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, GetSceneForwardPipelineFog(scene));
+	UpdateForwardPipeline(pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, render_data.fog);
 	UpdateForwardPipelineAAA(pipeline, rect, view_state.view, view_state.proj, aaa.prv_view_state.view, aaa.prv_view_state.proj, TAAProjectionJitter8(frame),
 		aaa.ssgi_ratio, aaa.ssr_ratio, aaa_config.temporal_aa_weight, aaa_config.motion_blur, aaa_config.exposure, aaa_config.gamma, aaa_config.sample_count,
 		aaa_config.max_distance); // [todo] ssgi_ratio/ssr_ratio
@@ -674,7 +730,7 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	std::fill(std::begin(views), std::end(views), 65535);
 
 	// update pipeline
-	UpdateForwardPipeline(pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, GetSceneForwardPipelineFog(scene));
+	UpdateForwardPipeline(pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, render_data.fog);
 	//	UpdateForwardPipelineAAA(pipeline, rect, view_state.view, view_state.proj, view_state.view, view_state.proj, {});
 
 	{

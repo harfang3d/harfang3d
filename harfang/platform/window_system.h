@@ -112,6 +112,8 @@ Window *GetWindowInFocus();
 iVec2 GetWindowPos(const Window *window);
 /// Set the window position
 bool SetWindowPos(Window *window, const iVec2 &position);
+/// Center a window on the primary monitor.
+void CenterWindow(Window *window);
 
 /// Return true if the window is open.
 bool IsWindowOpen(const Window *window);
@@ -132,6 +134,8 @@ void HideCursor();
 
 /// Enable drop support on a specific window
 void SetWindowDropCallback(const Window *window, void (*cb)(const Window *window, int count, const char **paths));
+/// Called when a window needs to be refreshed.
+void SetWindowRefreshCallback(const Window *window, void (*cb)(const Window *window));
 
 /// \}
 

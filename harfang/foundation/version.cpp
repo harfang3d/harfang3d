@@ -2,6 +2,7 @@
 
 #include "foundation/version.h"
 #include "foundation/string.h"
+
 #include <sstream>
 #include <stdexcept>
 

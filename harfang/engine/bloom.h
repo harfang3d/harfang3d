@@ -34,4 +34,6 @@ void DestroyBloom(Bloom &bloom);
 void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, bgfx::FrameBufferHandle output, const Bloom &bloom, float threshold,
 	float smoothness, float intensity);
 
+bool IsValid(const Bloom &bloom);
+
 } // namespace hg

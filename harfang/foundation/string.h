@@ -103,8 +103,7 @@ template <typename T> std::string join(T begin_it, T end_it, const std::string &
 	auto e = std::prev(end_it);
 
 	std::string out;
-	if (count > 1)
-		out = join(begin_it, e, separator) + last_separator;
+	out = join(begin_it, e, separator) + last_separator;
 	out += *e;
 
 	return out;

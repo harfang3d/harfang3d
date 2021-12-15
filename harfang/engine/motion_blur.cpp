@@ -10,6 +10,11 @@
 
 namespace hg {
 
+bool IsValid(const MotionBlur &motion_blur) {
+	return bgfx::isValid(motion_blur.prg_motion_blur) && bgfx::isValid(motion_blur.u_color) && bgfx::isValid(motion_blur.u_attr0) &&
+		   bgfx::isValid(motion_blur.u_attr1) && bgfx::isValid(motion_blur.u_noise);
+}
+
 static MotionBlur _CreateMotionBlur(const Reader &ir, const ReadProvider &ip, const char *path) {
 	MotionBlur motion_blur;
 
@@ -19,6 +24,9 @@ static MotionBlur _CreateMotionBlur(const Reader &ir, const ReadProvider &ip, co
 	motion_blur.u_attr1 = bgfx::createUniform("u_attr1", bgfx::UniformType::Sampler);
 	motion_blur.u_noise = bgfx::createUniform("u_noise", bgfx::UniformType::Sampler);
 
+	if (!IsValid(motion_blur)) {
+		DestroyMotionBlur(motion_blur);
+	}
 	return motion_blur;
 }
 
@@ -35,6 +43,8 @@ void DestroyMotionBlur(MotionBlur &motion_blur) {
 
 void ApplyMotionBlur(bgfx::ViewId &view_id, const iRect &rect, const Texture &color, const Texture &attr0, const Texture &attr1, const Texture &noise,
 	bgfx::FrameBufferHandle output, const MotionBlur &motion_blur) {
+	__ASSERT__(IsValid(motion_blur));
+
 	const bgfx::Caps *caps = bgfx::getCaps();
 
 	bgfx::TransientIndexBuffer idx;

@@ -198,7 +198,8 @@ void ImGuiCreateFontTexture(DearImguiContext &ctx) {
 	
 	ctx.m_texture = bgfx::createTexture2D((uint16_t)width, (uint16_t)height, false, 1, bgfx::TextureFormat::BGRA8, 0, bgfx::copy(data, width * height * 4));
 
-	io.Fonts->ClearInputData();
+	// commented out because we don't want to destroy imgui mouse cursors
+	// io.Fonts->ClearInputData();
 	io.Fonts->ClearTexData();
 }
 

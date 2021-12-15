@@ -16,7 +16,6 @@ struct HiZ {
 	bgfx::ProgramHandle prg_compute = BGFX_INVALID_HANDLE;
 	bgfx::UniformHandle u_depth = BGFX_INVALID_HANDLE;
 	bgfx::UniformHandle u_projection = BGFX_INVALID_HANDLE;
-	bgfx::UniformHandle u_resolution = BGFX_INVALID_HANDLE;
 };
 
 HiZ CreateHiZFromFile(const char *path, bgfx::BackbufferRatio::Enum ratio);
@@ -26,5 +25,7 @@ void DestroyHiZ(HiZ &hiz);
 
 /// @note input depth buffer must be in linear depth
 void ComputeHiZ(bgfx::ViewId &view_id, const iRect &rect, const Mat44 &proj, const Texture &attr0, const HiZ &hiz);
+
+bool IsValid(const HiZ &hiz);
 
 } // namespace hg

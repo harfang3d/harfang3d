@@ -10,12 +10,20 @@
 
 namespace hg {
 
+bool IsValid(const TemporalAccumulation &temporal_acc) {
+	return bgfx::isValid(temporal_acc.compute) && bgfx::isValid(temporal_acc.u_previous) && bgfx::isValid(temporal_acc.u_current) &&
+		   bgfx::isValid(temporal_acc.u_attr1);
+}
+
 static TemporalAccumulation _CreateTemporalAccumulation(const Reader &ir, const ReadProvider &ip, const char *path) {
     TemporalAccumulation temporal_acc;
 	temporal_acc.compute = hg::LoadProgram(ir, ip, hg::format("%1/shader/temporal_accumulation").arg(path));
 	temporal_acc.u_current = bgfx::createUniform("u_current", bgfx::UniformType::Sampler);
 	temporal_acc.u_previous = bgfx::createUniform("u_previous", bgfx::UniformType::Sampler);
 	temporal_acc.u_attr1 = bgfx::createUniform("u_attr1", bgfx::UniformType::Sampler);
+	if (!IsValid(temporal_acc)) {
+		DestroyTemporalAccumulation(temporal_acc);
+	}
     return temporal_acc;
 }
 
@@ -30,6 +38,8 @@ void DestroyTemporalAccumulation(TemporalAccumulation &temporal_acc) {
 }
 
 void ComputeTemporalAccumulation(bgfx::ViewId &view_id, const iRect &rect, const Texture &current, const Texture &previous, const Texture &attr1, bgfx::FrameBufferHandle output, const TemporalAccumulation &temporal_acc) {
+	__ASSERT__(IsValid(temporal_acc));
+
 	const bgfx::Caps *caps = bgfx::getCaps();
 
 	bgfx::TransientIndexBuffer idx;

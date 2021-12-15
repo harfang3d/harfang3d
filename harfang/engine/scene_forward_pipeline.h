@@ -137,6 +137,8 @@ ForwardPipelineAAA CreateForwardPipelineAAAFromAssets(const char *path, const Fo
 
 void DestroyForwardPipelineAAA(ForwardPipelineAAA &aaa);
 
+bool IsValid(const ForwardPipelineAAA &aaa);
+
 //
 enum SceneForwardPipelinePass {
 	SFPP_Opaque,
@@ -171,6 +173,7 @@ struct SceneForwardPipelineRenderData {
 
 	ForwardPipelineLights pipe_lights;
 	ForwardPipelineShadowData shadow_data;
+	ForwardPipelineFog fog;
 };
 
 /// Prepare common scene render data for a submission to the forward pipeline by calling SubmitSceneToForwardPipeline.

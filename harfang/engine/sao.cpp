@@ -11,6 +11,12 @@
 
 namespace hg {
 
+bool IsValid(const SAO &sao) {
+	return bgfx::isValid(sao.compute_fb) && bgfx::isValid(sao.blur_fb) && bgfx::isValid(sao.prg_compute) && bgfx::isValid(sao.prg_blur) &&
+		   bgfx::isValid(sao.u_attr0) && bgfx::isValid(sao.u_attr1) && bgfx::isValid(sao.u_noise) && bgfx::isValid(sao.u_input) &&
+		   bgfx::isValid(sao.u_params) && bgfx::isValid(sao.u_projection_infos) && bgfx::isValid(sao.u_sample_count);
+}
+
 static void CreateSAOCommon(SAO &sao, const Reader &ir, const ReadProvider &ip, const char *path) {
 	sao.u_attr0 = bgfx::createUniform("u_attr0", bgfx::UniformType::Sampler);
 	sao.u_attr1 = bgfx::createUniform("u_attr1", bgfx::UniformType::Sampler);
@@ -30,14 +36,17 @@ static SAO _CreateSAO(const Reader &ir, const ReadProvider &ip, const char *path
 	const uint64_t flags = 0 | BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
 	sao.compute_fb = bgfx::createFrameBuffer(ratio, bgfx::TextureFormat::R8, flags);
-	bgfx::setName(sao.compute_fb, "SAO.compute_fb");
-
 	sao.blur_fb = bgfx::createFrameBuffer(ratio, bgfx::TextureFormat::R8, flags);
-	bgfx::setName(sao.blur_fb, "SAO.blur_fb");
 
 	CreateSAOCommon(sao, ir, ip, path);
 
-	// [todo] check for errors...
+	if (!IsValid(sao)) {
+		DestroySAO(sao);
+		return sao;
+	}
+
+	bgfx::setName(sao.compute_fb, "SAO.compute_fb");
+	bgfx::setName(sao.blur_fb, "SAO.blur_fb");
 	return sao;
 }
 
@@ -65,6 +74,8 @@ void DestroySAO(SAO &sao) {
 
 void ComputeSAO(bgfx::ViewId &view_id, const iRect &rect, const Texture &attr0, const Texture &attr1, const Texture &noise, bgfx::FrameBufferHandle output, const SAO &sao,
 	const Mat44 &projection, float bias, float radius, int sample_count, float sharpness) {
+	__ASSERT__(IsValid(sao));
+
 	const bgfx::Caps *caps = bgfx::getCaps();
 
 	bgfx::TransientIndexBuffer idx;

@@ -384,7 +384,7 @@ IsoSurface ConvoluteIsoSurface(const IsoSurface &surface, int width, int height,
 }
 
 IsoSurface GaussianBlurIsoSurface(const IsoSurface &surface, int width, int height, int depth) {
-	static float kernel[27] = {
+	static const float kernel[27] = {
 		0.3f * 0.6f, 0.6f * 0.6f, 0.3f * 0.6f,
 		0.6f * 0.6f, 1.f * 0.6f, 0.6f * 0.6f,
 		0.3f * 0.6f, 0.6f * 0.6f, 0.3f * 0.6f,

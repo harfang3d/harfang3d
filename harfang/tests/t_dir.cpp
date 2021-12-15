@@ -13,7 +13,7 @@
 TEST(Dir, ListDirRecursive) {
 	std::vector<hg::DirEntry> entries = hg::ListDirRecursive(GetResPath("").c_str());
 	EXPECT_FALSE(entries.empty());
-	std::string expected = hg::PathJoin({"gpu", "texture", "mire512.png"});
+	std::string expected = hg::PathJoin({"pic", "owl.jpg"});
 	auto i = std::find_if(entries.begin(), entries.end(), [&](const hg::DirEntry &e) { return e.name == expected; });
 	EXPECT_NE(i, entries.end());
 }

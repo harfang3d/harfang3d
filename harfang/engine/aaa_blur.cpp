@@ -19,11 +19,19 @@ static AAABlur _CreateAAABlur(const Reader &ir, const ReadProvider &ip, const ch
 	aaa_blur.u_sigma = bgfx::createUniform("u_sigma", bgfx::UniformType::Vec4);
 	aaa_blur.u_input = bgfx::createUniform("u_input", bgfx::UniformType::Sampler);
 	aaa_blur.u_attr0 = bgfx::createUniform("u_attr0", bgfx::UniformType::Sampler);
+	if (!IsValid(aaa_blur)) {
+		DestroyAAABlur(aaa_blur);
+	}
 	return aaa_blur;
 }
 
 AAABlur CreateAAABlurFromFile(const char *path) { return _CreateAAABlur(g_file_reader, g_file_read_provider, path); }
 AAABlur CreateAAABlurFromAssets(const char *path) { return _CreateAAABlur(g_assets_reader, g_assets_read_provider, path); }
+
+bool IsValid(const AAABlur &aaa_blur) {
+	return bgfx::isValid(aaa_blur.compute) && bgfx::isValid(aaa_blur.u_dir) && bgfx::isValid(aaa_blur.u_sigma) && bgfx::isValid(aaa_blur.u_input) &&
+		   bgfx::isValid(aaa_blur.u_attr0);
+}
 
 void DestroyAAABlur(AAABlur &aaa_blur) {
 	bgfx_Destroy(aaa_blur.compute);
@@ -34,6 +42,7 @@ void DestroyAAABlur(AAABlur &aaa_blur) {
 }
 
 void ComputeAAABlur(bgfx::ViewId &view_id, const iRect &rect, const Texture &attr0, bgfx::FrameBufferHandle fb0, bgfx::FrameBufferHandle fb1, const AAABlur &aaa_blur) {
+	__ASSERT__(IsValid(aaa_blur));
 	bgfx::TransientIndexBuffer idx;
 	bgfx::TransientVertexBuffer vtx;
 	CreateFullscreenQuad(idx, vtx);

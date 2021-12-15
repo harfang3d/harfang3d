@@ -13,12 +13,12 @@
 namespace hg {
 
 int size_of(PictureFormat format) {
-	static int size_of_format[PF_Last] = {0, 3, 4, 16};
+	static const int size_of_format[PF_Last] = {0, 3, 4, 16};
 	return size_of_format[format];
 }
 
 size_t GetChannelCount(PictureFormat format) {
-	static size_t channel_count_format[PF_Last] = {0, 3, 4, 4};
+	static const size_t channel_count_format[PF_Last] = {0, 3, 4, 4};
 	return channel_count_format[format];
 }
 
