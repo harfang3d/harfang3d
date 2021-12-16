@@ -1,0 +1,1 @@
+Retrieves depth texture attachment.

@@ -10,6 +10,11 @@
 
 namespace hg {
 
+bool IsValid(const SSR &ssr) {
+	return bgfx::isValid(ssr.prg_ssr) && bgfx::isValid(ssr.u_color) && bgfx::isValid(ssr.u_attr0) && bgfx::isValid(ssr.u_attr1) && bgfx::isValid(ssr.u_noise) &&
+		   bgfx::isValid(ssr.u_probe) && bgfx::isValid(ssr.u_hiz) && bgfx::isValid(ssr.u_depthTexInfos);
+}
+
 static SSR _CreateSSR(const Reader &ir, const ReadProvider &ip, const char *path) {
 	SSR ssr;
 	ssr.prg_ssr = hg::LoadProgram(ir, ip, hg::format("%1/shader/ssr").arg(path));
@@ -20,6 +25,10 @@ static SSR _CreateSSR(const Reader &ir, const ReadProvider &ip, const char *path
 	ssr.u_probe = bgfx::createUniform("u_probe", bgfx::UniformType::Sampler);
 	ssr.u_hiz = bgfx::createUniform("u_hiz", bgfx::UniformType::Sampler);
 	ssr.u_depthTexInfos = bgfx::createUniform("u_depthTexInfos", bgfx::UniformType::Vec4);
+
+	if (!IsValid(ssr)) {
+		DestroySSR(ssr);
+	}
 	return ssr;
 }
 
@@ -39,7 +48,7 @@ void DestroySSR(SSR &ssr) {
 
 void ComputeSSR(bgfx::ViewId &view_id, const iRect &rect, bgfx::BackbufferRatio::Enum ratio, const Texture &color, const Texture &attr0, 
 	const Texture &attr1, const Texture &probe, const Texture &noise, const HiZ &hiz, bgfx::FrameBufferHandle output, const SSR &ssr) {
-	const bgfx::Caps *caps = bgfx::getCaps();
+	__ASSERT__(IsValid(ssr));
 
 	bgfx::TransientIndexBuffer idx;
 	bgfx::TransientVertexBuffer vtx;

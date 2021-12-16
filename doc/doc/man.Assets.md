@@ -1,14 +1,14 @@
 .title Resources & Assets
 
-By convention, we call production files: **resources** (eg. *the project resources*).
+By convention, production files are called: **resources** (eg. *the project resources*).
 
-Files issued from the compilation of production files for a specific target are called: **assets** (eg. *the project assets for iOS*).
+Files issued from the compilation of production files for a specific target are called: **assets** (eg. *the project assets for Windows PC*).
 
 [TOC]
 
 ## Resource Formats
 
-During development resources are stored in *production formats*, these formats are meant for efficient editing. Before they can be loaded at runtime, resources must be compiled into their *runtime formats* as assets which are specific to and optimized for the target platform.
+During development resources are stored in *production formats*, these formats are meant for efficient editing. Before they can be loaded at runtime, resources must be compiled into their *runtime formats* as assets which are specific to the target platform.
 
 To compile a project resources use:
 

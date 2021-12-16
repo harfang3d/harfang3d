@@ -22,42 +22,30 @@ Color operator/(const Color &a, const float v) { return {a.r / v, a.g / v, a.b /
 float ColorToGrayscale(const Color &c) { return 0.3f * c.r + 0.59f * c.g + 0.11f * c.b; }
 
 uint32_t ColorToRGBA32(const Color &c) {
-	uint32_t value;
-	const auto pl = reinterpret_cast<uint8_t *>(&value);
-	pl[0] = static_cast<uint8_t>(Clamp(c.r, 0.f, 1.f) * 255.f);
-	pl[1] = static_cast<uint8_t>(Clamp(c.g, 0.f, 1.f) * 255.f);
-	pl[2] = static_cast<uint8_t>(Clamp(c.b, 0.f, 1.f) * 255.f);
-	pl[3] = static_cast<uint8_t>(Clamp(c.a, 0.f, 1.f) * 255.f);
-	return value;
+	return static_cast<uint8_t>(Clamp(c.r, 0.f, 1.f) * 255.f) | (static_cast<uint8_t>(Clamp(c.g, 0.f, 1.f) * 255.f) << 8) |
+		   (static_cast<uint8_t>(Clamp(c.b, 0.f, 1.f) * 255.f) << 16) | (static_cast<uint8_t>(Clamp(c.a, 0.f, 1.f) * 255.f) << 24);
 }
 
 uint32_t ColorToABGR32(const Color &c) {
-	uint32_t value;
-	const auto pl = reinterpret_cast<uint8_t *>(&value);
-	pl[0] = static_cast<uint8_t>(Clamp(c.a, 0.f, 1.f) * 255.f);
-	pl[1] = static_cast<uint8_t>(Clamp(c.b, 0.f, 1.f) * 255.f);
-	pl[2] = static_cast<uint8_t>(Clamp(c.g, 0.f, 1.f) * 255.f);
-	pl[3] = static_cast<uint8_t>(Clamp(c.r, 0.f, 1.f) * 255.f);
-	return value;
+	return static_cast<uint8_t>(Clamp(c.a, 0.f, 1.f) * 255.f) | (static_cast<uint8_t>(Clamp(c.b, 0.f, 1.f) * 255.f) << 8) |
+		   (static_cast<uint8_t>(Clamp(c.g, 0.f, 1.f) * 255.f) << 16) | (static_cast<uint8_t>(Clamp(c.r, 0.f, 1.f) * 255.f) << 24);
 }
 
 Color ColorFromRGBA32(unsigned int value) {
 	Color c;
-	const auto i = reinterpret_cast<const uint8_t *>(&value);
-	c.r = float(i[0]) / 255.f;
-	c.g = float(i[1]) / 255.f;
-	c.b = float(i[2]) / 255.f;
-	c.a = float(i[3]) / 255.f;
+	c.r = float((value)&0xff) / 255.f;
+	c.g = float((value >> 8) & 0xff) / 255.f;
+	c.b = float((value >> 16) & 0xff) / 255.f;
+	c.a = float((value >> 24) & 0xff) / 255.f;
 	return c;
 }
 
 Color ColorFromABGR32(unsigned int value) {
 	Color c;
-	const auto i = reinterpret_cast<const uint8_t *>(&value);
-	c.a = float(i[0]) / 255.f;
-	c.b = float(i[1]) / 255.f;
-	c.g = float(i[2]) / 255.f;
-	c.r = float(i[3]) / 255.f;
+	c.a = float((value)&0xff) / 255.f;
+	c.b = float((value >> 8) & 0xff) / 255.f;
+	c.g = float((value >> 16) & 0xff) / 255.f;
+	c.r = float((value >> 24) & 0xff) / 255.f;
 	return c;
 }
 
@@ -111,5 +99,112 @@ Color ClampLen(const Color &c, float min, float max) {
 
 Color ColorFromVector3(const Vec3 &v) { return {v.x, v.y, v.z, 1}; }
 Color ColorFromVector4(const Vec4 &v) { return {v.x, v.y, v.z, v.w}; }
+
+//
+Color ToHLS(const Color &c) {
+	const float min = Min(c.r, c.g, c.b);
+	const float max = Max(c.r, c.g, c.b);
+
+	const double diff = max - min;
+	const float l = (max + min) / 2;
+
+	float h = 0, s = 0;
+
+	if (diff > 0.f) {
+		if (l <= 0.5)
+			s = diff / (max + min);
+		else
+			s = diff / (2 - max - min);
+
+		const double r_dist = (max - c.r) / diff;
+		const double g_dist = (max - c.g) / diff;
+		const double b_dist = (max - c.b) / diff;
+
+		if (c.r == max)
+			h = b_dist - g_dist;
+		else if (c.g == max)
+			h = 2.f + r_dist - b_dist;
+		else
+			h = 4.f + g_dist - r_dist;
+
+		h = h * 60.f;
+		if (h < 0.f)
+			h += 360.f;
+	}
+
+	return {h, l, s, c.a};
+}
+
+static float QqhToRgb(float q1, float q2, float hue) {
+	if (hue > 360.f)
+		hue -= 360.f;
+	else if (hue < 0.f)
+		hue += 360.f;
+
+	if (hue < 60.f)
+		return q1 + (q2 - q1) * hue / 60.f;
+	if (hue < 180.f)
+		return q2;
+	if (hue < 240.f)
+		return q1 + (q2 - q1) * (240.f - hue) / 60.f;
+
+	return q1;
+}
+
+Color FromHLS(const Color &c) {
+	const float p2 = c.g <= 0.5f ? c.g * (1.f + c.b) : c.g + c.b - c.g * c.b;
+	const float p1 = 2.f * c.g - p2;
+
+	float r, g, b;
+
+	if (c.b == 0.f) {
+		r = c.g;
+		g = c.g;
+		b = c.g;
+	} else {
+		r = QqhToRgb(p1, p2, c.r + 120.f);
+		g = QqhToRgb(p1, p2, c.r);
+		b = QqhToRgb(p1, p2, c.r - 120.f);
+	}
+
+	return {r, g, b, c.a};
+}
+
+//
+Color SetHue(const Color &c, float h) {
+	auto hls = ToHLS(c);
+	hls.r = h;
+	return FromHLS(hls);
+}
+
+Color SetSaturation(const Color &c, float s) {
+	auto hls = ToHLS(c);
+	hls.b = s;
+	return FromHLS(hls);
+}
+
+Color SetLuminance(const Color &c, float l) {
+	auto hls = ToHLS(c);
+	hls.g = l;
+	return FromHLS(hls);
+}
+
+Color ScaleHue(const Color &c, float k) {
+	auto hls = ToHLS(c);
+	hls.r *= k;
+	return FromHLS(hls);
+}
+
+Color ScaleSaturation(const Color &c, float k) {
+	auto hls = ToHLS(c);
+	hls.b *= k;
+	return FromHLS(hls);
+}
+
+Color ScaleLuminance(const Color &c, float k) {
+	auto hls = ToHLS(c);
+	hls.g *= k;
+	return FromHLS(hls);
+}
 
 } // namespace hg

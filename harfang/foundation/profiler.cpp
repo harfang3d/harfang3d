@@ -40,8 +40,8 @@ static size_t GetTaskInBucket(size_t bucket_index, const std::string &name) {
 			return i;
 
 	// create missing event
-	auto &event = *tasks.emplace(tasks.end());
-	event.name = name;
+	auto event = tasks.emplace(tasks.end());
+	event->name = name;
 
 	bucket.push_back(tasks.size() - 1);
 	return tasks.size() - 1;
@@ -144,10 +144,10 @@ ProfilerSectionIndex BeginProfilerSection(const std::string &name, const std::st
 	auto task_idx = GetTaskInBucket(bucket_idx, name);
 	auto &task = tasks[task_idx];
 
-	auto &section = *sections.emplace(sections.end());
-	section.thread_id = std::this_thread::get_id();
-	section.details = section_details;
-	section.start = time_now();
+	auto section = sections.emplace(sections.end());
+	section->thread_id = std::this_thread::get_id();
+	section->details = section_details;
+	section->start = time_now();
 
 	auto section_idx = sections.size() - 1;
 	task.section_indexes.push_back(section_idx);

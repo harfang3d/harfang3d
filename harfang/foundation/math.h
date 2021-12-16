@@ -14,7 +14,9 @@ static const float TwoPi = Pi * 2.f;
 
 template <class T> constexpr T inline Abs(const T &v) { return v < 0 ? -v : v; }
 template <class T> constexpr T inline Min(const T &a, const T &b) { return a < b ? a : b; }
+template <class T> constexpr T inline Min(const T &a, const T &b, const T &c) { return Min(Min(a, b), c); }
 template <class T> constexpr T inline Max(const T &a, const T &b) { return a > b ? a : b; }
+template <class T> constexpr T inline Max(const T &a, const T &b, const T &c) { return Max(Max(a, b), c); }
 template <class T> constexpr T inline Clamp(const T &v, const T &min, const T &max) { return v < min ? min : (v > max ? max : v); }
 template <class T> constexpr T inline Lerp(const T &a, const T &b, float k) { return T(a * (1.f - k) + b * k); }
 
@@ -83,7 +85,7 @@ template <typename T> T HermiteInterpolate(T y0, T y1, T y2, T y3, float t, floa
 	const auto a1 = t3 - 2.f * t2 + t;
 	const auto a2 = t3 - t2;
 	const auto a3 = -2.f * t3 + 3.f * t2;
-	return y1 * a0 + t0  * a1 + t1 * a2 + y2 * a3;
+	return y1 * a0 + t0 * a1 + t1 * a2 + y2 * a3;
 }
 
 template <class T> T LinearInterpolateArray(uint32_t count, const T *values, float t) {

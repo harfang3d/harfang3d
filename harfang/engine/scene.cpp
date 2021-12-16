@@ -865,6 +865,17 @@ void Scene::SetRigidBodyFriction(ComponentRef ref, float friction) {
 		rb->friction = friction;
 }
 
+float Scene::GetRigidBodyRollingFriction(ComponentRef ref) const {
+	if (const auto rb = GetComponent_(rigid_bodies, ref))
+		return rb->rolling_friction;
+	return 0.f;
+}
+
+void Scene::SetRigidBodyRollingFriction(ComponentRef ref, float rolling_friction) {
+	if (auto rb = GetComponent_(rigid_bodies, ref))
+		rb->rolling_friction = rolling_friction;
+}
+
 //
 Collision Scene::CreateCollision() { return {scene_ref, collisions.add_ref({})}; }
 void Scene::DestroyCollision(ComponentRef ref) { collisions.remove_ref(ref); }
@@ -878,6 +889,17 @@ CollisionType Scene::GetCollisionType(ComponentRef ref) const {
 	if (const auto col = GetComponent_(collisions, ref))
 		return col->type;
 	return CT_Sphere;
+}
+
+void Scene::SetCollisionLocalTransform(ComponentRef ref, Mat4 m) {
+	if (auto col = GetComponent_(collisions, ref))
+		col->m = m;
+}
+
+Mat4 Scene::GetCollisionLocalTransform(ComponentRef ref) const {
+	if (const auto col = GetComponent_(collisions, ref))
+		return col->m;
+	return Mat4::Identity;
 }
 
 void Scene::SetCollisionMass(ComponentRef ref, float mass) {
@@ -1222,23 +1244,23 @@ Node CreateLinearLight(Scene &scene, const Mat4 &mtx, const Color &diffuse, floa
 }
 
 Node CreateInstance(Scene &scene, const Mat4 &mtx, const std::string &name, const Reader &ir, const ReadProvider &ip, PipelineResources &resources,
-	const PipelineInfo &pipeline, uint32_t flags) {
+	const PipelineInfo &pipeline, bool &success, uint32_t flags) {
 	Node node = scene.CreateNode();
 	node.SetName(name);
 	node.SetTransform(scene.CreateTransform(mtx));
 	node.SetInstance(scene.CreateInstance(name));
-	node.SetupInstance(ir, ip, resources, pipeline, flags);
+	success = node.SetupInstance(ir, ip, resources, pipeline, flags);
 	return node;
 }
 
 Node CreateInstanceFromFile(
-	Scene &scene, const Mat4 &mtx, const std::string &name, PipelineResources &resources, const PipelineInfo &pipeline, uint32_t flags) {
-	return CreateInstance(scene, mtx, name, g_file_reader, g_file_read_provider, resources, pipeline, flags);
+	Scene &scene, const Mat4 &mtx, const std::string &name, PipelineResources &resources, const PipelineInfo &pipeline, bool &success, uint32_t flags) {
+	return CreateInstance(scene, mtx, name, g_file_reader, g_file_read_provider, resources, pipeline, success, flags);
 }
 
 Node CreateInstanceFromAssets(
-	Scene &scene, const Mat4 &mtx, const std::string &name, PipelineResources &resources, const PipelineInfo &pipeline, uint32_t flags) {
-	return CreateInstance(scene, mtx, name, g_assets_reader, g_assets_read_provider, resources, pipeline, flags);
+	Scene &scene, const Mat4 &mtx, const std::string &name, PipelineResources &resources, const PipelineInfo &pipeline, bool &success, uint32_t flags) {
+	return CreateInstance(scene, mtx, name, g_assets_reader, g_assets_read_provider, resources, pipeline, success, flags);
 }
 
 //
@@ -1661,6 +1683,8 @@ Node SceneView::GetNode(const Scene &scene, const std::string &name) const {
 	for (const auto &ref : nodes)
 		if (scene.GetNodeName(ref) == name)
 			return scene.GetNode(ref);
+
+	debug(format("Node '%1' not found in scene").arg(name));
 	return {};
 }
 
@@ -1810,6 +1834,7 @@ BoundToNodeAnim Scene::BindNodeAnim(NodeRef ref, AnimRef anim_ref) const {
 			bound_anim.color_track[NCAT_LightSpecular] = int8_t(i);
 	}
 
+	bound_anim.bound_to_node_instance_anim = {0, nullptr};
 	if (!anim.instance_anim_track.keys.empty())
 		bound_anim.bound_to_node_instance_anim.kf = -1;
 

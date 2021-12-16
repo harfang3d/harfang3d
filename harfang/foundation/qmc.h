@@ -26,7 +26,7 @@ typename std::enable_if<std::is_floating_point<T>::value, T>::type vdC(int index
 /// Computes generalized halton sequence.
 template <typename T>
 void halton(T *out, int dimension, int index, int n) {
-	static int prime[10] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29};
+	static const int prime[10] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29};
 
 	__ASSERT__(n >= 0);
 

@@ -102,6 +102,7 @@ void SaveComponent(const Scene::Collision_ *data_, json &js) {
 	js["mass"] = data_->mass;
 	js["size"] = data_->size;
 	js["path"] = data_->resource_path;
+	js["m"] = data_->m;
 }
 
 //
@@ -231,6 +232,7 @@ void LoadComponent(Scene::Collision_ *data_, const json &js) {
 	data_->mass = js["mass"];
 	data_->size = js["size"];
 	data_->resource_path = js["path"].get<std::string>();
+	data_->m = js["m"];
 }
 
 //

@@ -167,7 +167,7 @@ struct Light { // 16B on 64 bit
 };
 
 //
-enum RigidBodyType : uint8_t { RBT_Dynamic, RBT_Kinematic, RBT_Static};
+enum RigidBodyType : uint8_t { RBT_Dynamic, RBT_Kinematic, RBT_Static };
 
 struct RigidBody { // 16B on 64 bit
 	bool IsValid() const;
@@ -187,6 +187,8 @@ struct RigidBody { // 16B on 64 bit
 	void SetRestitution(float restitution);
 	float GetFriction() const;
 	void SetFriction(float friction);
+	float GetRollingFriction() const;
+	void SetRollingFriction(float rolling_friction);
 
 	intrusive_shared_ptr_st<SceneRef> scene_ref;
 	ComponentRef ref;
@@ -204,6 +206,8 @@ struct Collision { // 16B on 64 bit
 	CollisionType GetType() const;
 	void SetType(CollisionType type);
 
+	Mat4 GetLocalTransform() const;
+	void SetLocalTransform(Mat4 m);
 	float GetMass() const;
 	void SetMass(float mass);
 	float GetRadius() const;

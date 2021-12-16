@@ -20,16 +20,16 @@
 #include <foundation/pack_float.h>
 #include <foundation/path_tools.h>
 #include <foundation/projection.h>
+#include <foundation/sha1.h>
 #include <foundation/string.h>
 #include <foundation/time.h>
 #include <foundation/vector3.h>
-#include <foundation/sha1.h>
 
-#include "tiny_gltf.h"
 #include "json.hpp"
+#include "tiny_gltf.h"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <mutex>
 
 #undef CopyFile
@@ -83,7 +83,6 @@ template <typename T> struct arrayAdapter {
 	}
 };
 
-/// Interface of any adapted array that returns integer data
 /// Interface of any adapted array that returns byte data
 struct byteArrayBase {
 	virtual ~byteArrayBase() = default;
@@ -109,7 +108,7 @@ struct floatArrayBase {
 template <class T> struct byteArray : public byteArrayBase {
 	arrayAdapter<T> adapter;
 
-	byteArray(const arrayAdapter<T> &a) : adapter(a) {}
+	explicit byteArray(const arrayAdapter<T> &a) : adapter(a) {}
 	unsigned char operator[](size_t position) const override { return static_cast<unsigned char>(adapter[position]); }
 
 	size_t size() const override { return adapter.elemCount; }
@@ -119,7 +118,7 @@ template <class T> struct byteArray : public byteArrayBase {
 template <class T> struct intArray : public intArrayBase {
 	arrayAdapter<T> adapter;
 
-	intArray(const arrayAdapter<T> &a) : adapter(a) {}
+	explicit intArray(const arrayAdapter<T> &a) : adapter(a) {}
 	unsigned int operator[](size_t position) const override { return static_cast<unsigned int>(adapter[position]); }
 
 	size_t size() const override { return adapter.elemCount; }
@@ -128,7 +127,7 @@ template <class T> struct intArray : public intArrayBase {
 template <class T> struct floatArray : public floatArrayBase {
 	arrayAdapter<T> adapter;
 
-	floatArray(const arrayAdapter<T> &a) : adapter(a) {}
+	explicit floatArray(const arrayAdapter<T> &a) : adapter(a) {}
 	float operator[](size_t position) const override { return static_cast<float>(adapter[position]); }
 
 	size_t size() const override { return adapter.elemCount; }
@@ -136,7 +135,7 @@ template <class T> struct floatArray : public floatArrayBase {
 
 struct v2fArray {
 	arrayAdapter<hg::Vec2> adapter;
-	v2fArray(const arrayAdapter<hg::Vec2> &a) : adapter(a) {}
+	explicit v2fArray(const arrayAdapter<hg::Vec2> &a) : adapter(a) {}
 
 	hg::Vec2 operator[](size_t position) const { return adapter[position]; }
 	size_t size() const { return adapter.elemCount; }
@@ -144,7 +143,7 @@ struct v2fArray {
 
 struct v3fArray {
 	arrayAdapter<hg::Vec3> adapter;
-	v3fArray(const arrayAdapter<hg::Vec3> &a) : adapter(a) {}
+	explicit v3fArray(const arrayAdapter<hg::Vec3> &a) : adapter(a) {}
 
 	hg::Vec3 operator[](size_t position) const { return adapter[position]; }
 	size_t size() const { return adapter.elemCount; }
@@ -152,7 +151,7 @@ struct v3fArray {
 
 struct v4fArray {
 	arrayAdapter<hg::Vec4> adapter;
-	v4fArray(const arrayAdapter<hg::Vec4> &a) : adapter(a) {}
+	explicit v4fArray(const arrayAdapter<hg::Vec4> &a) : adapter(a) {}
 
 	hg::Vec4 operator[](size_t position) const { return adapter[position]; }
 	size_t size() const { return adapter.elemCount; }
@@ -160,7 +159,7 @@ struct v4fArray {
 
 struct m44fArray {
 	arrayAdapter<hg::Mat44> adapter;
-	m44fArray(const arrayAdapter<hg::Mat44> &a) : adapter(a) {}
+	explicit m44fArray(const arrayAdapter<hg::Mat44> &a) : adapter(a) {}
 
 	hg::Mat44 operator[](size_t position) const { return adapter[position]; }
 	size_t size() const { return adapter.elemCount; }
@@ -609,21 +608,26 @@ static hg::TextureRef ExportTexture(const Model &model, const int &textureIndex,
 
 //
 static hg::Material ExportMaterial(const Model &model, const Material &gltf_mat, const Config &config, hg::PipelineResources &resources) {
+#if 0
+	// CWE 563: Variable is assigned a value that is never used
 	hg::Color diffuse = {0.5f, 0.5f, 0.5f, 1.f}, emissive = {0, 0, 0, 1}, specular = {0.5f, 0.5f, 0.5f, 1.f}, ambient = {0, 0, 0, 1};
+#endif
 
 	float glossiness{1.f};
 	float reflection{1.f};
 
 	hg::debug(hg::format("Exporting material '%1'").arg(gltf_mat.name));
-
-	std::string meta_RAW_text("{\"profiles\": {\"default\": {\"compression\": \"RAW\"}}}");
-	std::string meta_BC1_text("{\"profiles\": {\"default\": {\"compression\": \"BC1\"}}}");
-	std::string meta_BC3_text("{\"profiles\": {\"default\": {\"compression\": \"BC3\"}}}");
-	std::string meta_BC4_text("{\"profiles\": {\"default\": {\"compression\": \"BC4\"}}}");
-	std::string meta_BC5_text("{\"profiles\": {\"default\": {\"compression\": \"BC5\"}}}");
-	std::string meta_BC6_text("{\"profiles\": {\"default\": {\"compression\": \"BC6\"}}}");
-	std::string meta_BC7_text("{\"profiles\": {\"default\": {\"compression\": \"BC7\"}}}");
-	std::string meta_BC7_srgb_text("{\"profiles\": {\"default\": {\"compression\": \"BC7\", \"srgb\": 1}}}");
+#if 0
+	// CWE 563: Variable is assigned a value that is never used
+	static const std::string meta_RAW_text("{\"profiles\": {\"default\": {\"compression\": \"RAW\"}}}");
+	static const std::string meta_BC1_text("{\"profiles\": {\"default\": {\"compression\": \"BC1\"}}}");
+	static const std::string meta_BC3_text("{\"profiles\": {\"default\": {\"compression\": \"BC3\"}}}");
+	static const std::string meta_BC4_text("{\"profiles\": {\"default\": {\"compression\": \"BC4\"}}}");
+	static const std::string meta_BC6_text("{\"profiles\": {\"default\": {\"compression\": \"BC6\"}}}");
+	static const std::string meta_BC7_text("{\"profiles\": {\"default\": {\"compression\": \"BC7\"}}}");
+#endif
+	static const std::string meta_BC5_text("{\"profiles\": {\"default\": {\"compression\": \"BC5\"}}}");
+	static const std::string meta_BC7_srgb_text("{\"profiles\": {\"default\": {\"compression\": \"BC7\", \"srgb\": 1}}}");
 
 	//
 	std::string dst_path;
@@ -706,7 +710,6 @@ static hg::Material ExportMaterial(const Model &model, const Material &gltf_mat,
 	if (metallicRoughnessTexture != hg::InvalidTextureRef) {
 		hg::debug(hg::format("    - uOcclusionRoughnessMetalnessMap: %1").arg(resources.textures.GetName(metallicRoughnessTexture)));
 
-		std::string dst_path;
 		if (GetOutputPath(dst_path, config.prj_path, resources.textures.GetName(metallicRoughnessTexture), {}, "meta",	config.import_policy_texture)) {
 			if (std::FILE *f = std::fopen(dst_path.c_str(), "w")) {
 				std::fwrite(meta_occlusionTexture.data(), sizeof meta_occlusionTexture[0], meta_occlusionTexture.size(), f);
@@ -721,8 +724,7 @@ static hg::Material ExportMaterial(const Model &model, const Material &gltf_mat,
 	if (normalTexture != hg::InvalidTextureRef) {
 		hg::debug(hg::format("    - uNormalMap: %1").arg(resources.textures.GetName(normalTexture)));
 
-		if (GetOutputPath(
-				dst_path, config.prj_path, resources.textures.GetName(normalTexture), {}, "meta", config.import_policy_texture)) {
+		if (GetOutputPath(dst_path, config.prj_path, resources.textures.GetName(normalTexture), {}, "meta", config.import_policy_texture)) {
 			if (std::FILE *f = std::fopen(dst_path.c_str(), "w")) {
 				std::fwrite(meta_BC5_text.data(), sizeof meta_BC5_text[0], meta_BC5_text.size(), f);
 				std::fclose(f);
@@ -829,13 +831,13 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 				break;
 		}
 	}
-	const auto &indices = *indicesArrayPtr;
 
 	size_t start_id_pol = geo.pol.size();
 	size_t start_id_binding = geo.binding.size();
 	size_t start_id_vtx = geo.vtx.size();
 
 	if (indicesArrayPtr) {
+		const auto &indices = *indicesArrayPtr;
 		// hg::debug("indices: ");
 		// they are all triangles
 		geo.pol.resize(start_id_pol + indices.size() / 3);
@@ -914,39 +916,42 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 				if (attribute.first == "POSITION") {
 					writter = &w_position;
 					max_components = 3;
-				}
-				else if (attribute.first == "NORMAL") {
+				} else if (attribute.first == "NORMAL") {
 					writter = &w_normal;
 					max_components = 3;
-				}
-				else if (attribute.first == "TEXCOORD_0") {
+				} else if (attribute.first == "TEXCOORD_0") {
 					writter = &w_texcoord0;
 					max_components = 2;
-				}
-				else if (attribute.first == "TEXCOORD_1") {
+				} else if (attribute.first == "TEXCOORD_1") {
 					writter = &w_texcoord1;
 					max_components = 2;
-				}
-				else if (attribute.first == "TANGENT") {
+				} else if (attribute.first == "TANGENT") {
 					writter = &w_tangent;
 					max_components = 4;
-				}
-				else if (attribute.first == "JOINTS_0") {
+				} else if (attribute.first == "JOINTS_0") {
 					writter = &w_joints0;
 					max_components = 4;
-				}
-				else if (attribute.first == "WEIGHTS_0") {
+				} else if (attribute.first == "WEIGHTS_0") {
 					writter = &w_weights0;
 					max_components = 4;
 				}
 
-				if (!writter) continue;
+				if (!writter)
+					continue;
 
 				switch (attribAccessor.type) {
-				case TINYGLTF_TYPE_SCALAR: max_components = std::min(max_components, 1u); break;
-				case TINYGLTF_TYPE_VEC2:   max_components = std::min(max_components, 2u); break;
-				case TINYGLTF_TYPE_VEC3:   max_components = std::min(max_components, 3u); break;
-				case TINYGLTF_TYPE_VEC4:   max_components = std::min(max_components, 4u); break;
+					case TINYGLTF_TYPE_SCALAR:
+						max_components = std::min(max_components, 1u);
+						break;
+					case TINYGLTF_TYPE_VEC2:
+						max_components = std::min(max_components, 2u);
+						break;
+					case TINYGLTF_TYPE_VEC3:
+						max_components = std::min(max_components, 3u);
+						break;
+					case TINYGLTF_TYPE_VEC4:
+						max_components = std::min(max_components, 4u);
+						break;
 				}
 
 				switch (attribAccessor.componentType) {
@@ -1203,6 +1208,7 @@ static void ExportObject(const Model &model, const Node &gltf_node, hg::Node &no
 
 			path += hg::format("%1").arg( already_saved_geo_itr->second.ids.size()).str();
 			already_saved_geo_itr->second.ids.push_back(ids);
+			already_saved_geo_with_primitives_ids[path] = {object, {ids}};
 		} else {
 			int index = it - already_saved_geo_itr->second.ids.begin();
 			if (index)
@@ -1241,8 +1247,7 @@ static void ExportObject(const Model &model, const Node &gltf_node, hg::Node &no
 		if (recalculate_normal) {
 			hg::debug("    - Recalculate normals");
 			geo.normal = vtx_normal;
-		}
-		else
+		} else
 			vtx_normal = geo.normal;
 
 		// recalculate tangent frame
@@ -1281,8 +1286,9 @@ static void ExportObject(const Model &model, const Node &gltf_node, hg::Node &no
 				floatArray<float> value(arrayAdapter<float>(dataPtr, count*16, sizeof(float)));
 
 				for (size_t k{ 0 }; k < count; ++k) {
-					hg::Mat4 m_InverseBindMatrices(value[k*16], value[k*16 + 1], value[k*16 + 2], value[k*16 + 4], value[k*16 + 5], value[k*16 + 6],
-						value[k*16 + 8], value[k*16 + 9], value[k*16 + 10], value[k*16 + 12], value[k*16 + 13], value[k*16 + 14]);
+					hg::Mat4 m_InverseBindMatrices(value[k * 16], value[k * 16 + 1], value[k * 16 + 2], value[k * 16 + 4], value[k * 16 + 5],
+						value[k * 16 + 6], value[k * 16 + 8], value[k * 16 + 9], value[k * 16 + 10], value[k * 16 + 12], value[k * 16 + 13],
+						value[k * 16 + 14]);
 
 					m_InverseBindMatrices = hg::InverseFast(m_InverseBindMatrices);
 
@@ -1409,8 +1415,8 @@ static hg::Node ExportNode(const Model &model, const int &gltf_id_node, hg::Scen
 	return node;
 }
 
-bool LoadImageDataEx(Image *image, const int image_idx, std::string *err, std::string *warn, int req_width, int req_height, const unsigned char *bytes, int size,
-	void *user_data) {
+bool LoadImageDataEx(Image *image, const int image_idx, std::string *err, std::string *warn, int req_width, int req_height, const unsigned char *bytes,
+	int size, void *user_data) {
 	(void)user_data;
 	(void)warn;
 
@@ -1458,6 +1464,9 @@ bool LoadImageDataEx(Image *image, const int image_idx, std::string *err, std::s
 static bool ImportGltfScene(const std::string &path, const Config &config) {
 	const auto t_start = hg::time_now();
 
+	if (config.base_output_path.empty())
+		return false;
+
 	// create output directory if missing
 	if (hg::Exists(config.base_output_path.c_str())) {
 		if (!hg::IsDir(config.base_output_path.c_str()))
@@ -1474,13 +1483,20 @@ static bool ImportGltfScene(const std::string &path, const Config &config) {
 	std::string warn;
 
 	// set our own save picture
-	loader.SetImageLoader(LoadImageDataEx, (void*)&config);
-
+	loader.SetImageLoader(LoadImageDataEx, const_cast<Config*>(&config));
 	bool ret;
 	if (hg::tolower(hg::GetFileExtension(path)) == "gltf")
 		ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
 	else
 		ret = loader.LoadBinaryFromFile(&model, &err, &warn, path); // for binary glTF(.glb)
+	if (!ret) {
+		hg::error(hg::format("failed to load %1: %2").arg(path.c_str()).arg(err.c_str()));
+		return false;
+	}
+
+	if (!warn.empty()) {
+		hg::log(hg::format("warning %1: %2").arg(path.c_str()).arg(warn.c_str()));
+	}
 
 	hg::log("loaded glTF file has:");
 	hg::log(hg::format("%1 accessors").arg(model.accessors.size()).c_str());
@@ -1497,9 +1513,6 @@ static bool ImportGltfScene(const std::string &path, const Config &config) {
 	hg::log(hg::format("%1 cameras").arg(model.cameras.size()).c_str());
 	hg::log(hg::format("%1 scenes").arg(model.scenes.size()).c_str());
 	hg::log(hg::format("%1 lights").arg(model.lights.size()).c_str());
-
-	if (config.base_output_path.empty())
-		return false;
 
 	if (!config.finalizer_script.empty())
 		if (!LoadFinalizerScript(config.finalizer_script))
@@ -1669,5 +1682,5 @@ int main(int argc, const char **argv) {
 	const auto msg = std::string("[ImportScene") + std::string(res ? ": OK]" : ": KO]");
 	hg::log(msg.c_str());
 
-	return res ? 0 : 1;
+	return res ? EXIT_SUCCESS : EXIT_FAILURE;
 }

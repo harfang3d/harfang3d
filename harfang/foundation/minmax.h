@@ -58,7 +58,7 @@ bool IntersectRay(const MinMax &mm, const Vec3 &o, const Vec3 &d);
 /// Returns whether a line intersect with the MinMax.
 bool ClassifyLine(const MinMax &mm, const Vec3 &p, const Vec3 &d, Vec3 &i, Vec3 *n = nullptr);
 /// Returns whether a segment intersect with the MinMax.
-bool ClassifySegment(const MinMax &mm, const Vec3 &p0, const Vec3 &p1, Vec3 &i, Vec3 *n = nullptr);
+bool ClassifySegment(const MinMax &mm, const Vec3 &p1, const Vec3 &p2, Vec3 &itr, Vec3 *n = nullptr);
 
 /// Set from position and size.
 inline MinMax MinMaxFromPositionSize(const Vec3 &p, const Vec3 &s) { return {p - s * 0.5f, p + s * 0.5f}; }

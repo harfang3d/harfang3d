@@ -64,6 +64,7 @@ struct Config {
 	bool calculate_normal_if_missing{false}, calculate_tangent_if_missing{false};
 	//bool detect_geometry_instances{false};
 	//bool anim_to_file{false};
+	bool merge_meshes{false};
 
 	std::string finalizer_script;
 };
@@ -191,7 +192,7 @@ static std::string MakeRelativeResourceName(const std::string &name, const std::
 }
 
 static void ExportMotions(const aiScene *ai_scene, hg::Scene &scene, ExportMap &export_map, const Config &config, hg::PipelineResources &resources) {
-	if (!config.import_animation)
+	if (!config.import_animation || config.merge_meshes)
 		return;
 
 	
@@ -1456,20 +1457,22 @@ static const aiScene* LoadAssimpScene(Assimp::Importer* importer, const Config &
 	
 	importer->SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	importer->SetPropertyBool(AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION, true);
-	importer->SetPropertyBool(AI_CONFIG_PP_PTV_KEEP_HIERARCHY, true);
+
+	if (!config.merge_meshes)
+		importer->SetPropertyBool(AI_CONFIG_PP_PTV_KEEP_HIERARCHY, true);
 
 	// importer->SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false); // see https://gamedev.stackexchange.com/questions/175044/assimp-skeletal-animation-with-some-fbx-files-has-issues-weird-node-added
 
 	importer->SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, config.scene_scale);
 
 	auto scene = importer->ReadFile(hg::ansi_to_utf8(ai_path),
-		// aiProcess_OptimizeGraph | // this removes almost all nodes, which we may want to keep in some cases
 		aiProcess_PopulateArmatureData | 
 		aiProcess_ConvertToLeftHanded |
 		aiProcess_CalcTangentSpace | 
 		aiProcess_GlobalScale |
 		aiProcess_FindInstances | aiProcess_OptimizeMeshes | aiProcess_JoinIdenticalVertices |
-		aiProcess_ImproveCacheLocality | aiProcess_SortByPType
+		aiProcess_ImproveCacheLocality | aiProcess_SortByPType | 
+		(config.merge_meshes ? aiProcess_PreTransformVertices : 0)
 		// aiProcess_Triangulate
 	);
 
@@ -1546,6 +1549,10 @@ static bool ImportAssimpScene(const std::string &path, const Config &config) {
 		export_map.all_nodes = ListAllNodes(ai_scene);
 	}
 
+	if (config.merge_meshes) {
+		ai_scene = importer.ApplyPostProcessing(aiProcess_OptimizeGraph); // can't combine it with aiProcess_PreTransformVertices so we use a 2nd pass
+	}
+
 	// FBX/gltf seem to be in ms. // see https://github.com/assimp/assimp/issues/3462
 	export_map.fps_workaround =
 		hg::ends_with(path, ".fbx", hg::insensitive) || hg::ends_with(path, ".gltf", hg::insensitive) || hg::ends_with(path, ".glb", hg::insensitive);
@@ -1620,7 +1627,7 @@ int main(int argc, const char **argv) {
 		nullptr);
 	hg::set_log_level(hg::LL_All);
 
-	std::cout << hg::format("FBX->GS Converter %1 (%2)").arg(hg::get_version_string()).arg(hg::get_build_sha()).str() << std::endl;
+	std::cout << hg::format("Assimp Converter %1 (%2)").arg(hg::get_version_string()).arg(hg::get_build_sha()).str() << std::endl;
 
 	hg::CmdLineFormat cmd_format = {
 		{
@@ -1631,6 +1638,7 @@ int main(int argc, const char **argv) {
 			//{"-detect-geometry-instances", "Detect and optimize geometry instances"},
 			{"-import-animation", "Detect and optimize geometry instances"},
 			//{"-anim-to-file", "Scene animations will be exported to separate files and not embedded in scene", true}, // not supported for now
+			{"-merge-meshes", "Merge meshes if possible"},
 			{"-quiet", "Quiet log, only log errors"},
 		},
 		{
@@ -1699,8 +1707,8 @@ int main(int argc, const char **argv) {
 
 	config.max_smoothing_angle = hg::GetCmdLineSingleValue(cmd_content, "-max-smoothing-angle", 0.7f);
 
-	config.calculate_tangent_if_missing = hg::GetCmdLineFlagValue(cmd_content, "-calculate-tangent-if-missing");
 	//config.detect_geometry_instances = hg::GetCmdLineFlagValue(cmd_content, "-detect-geometry-instances");
+	config.merge_meshes = hg::GetCmdLineFlagValue(cmd_content, "-merge-meshes");
 
 	config.finalizer_script = hg::GetCmdLineSingleValue(cmd_content, "-finalizer-script", "");
 

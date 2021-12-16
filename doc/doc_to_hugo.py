@@ -1,7 +1,7 @@
 import os
 import re
 import argparse
-import datetime
+import shutil
 
 import xml.etree.ElementTree as ETree
 import doc_utils.doc_tools as doc_tools
@@ -430,8 +430,7 @@ def convert(api, doc, out):
 			if page == '':
 				man_pages_spacing.append(man_pages[-1])
 			else:
-				if page not in ['man.Classes', 'man.Constants', 'man.Functions', 'man.Enums', 'man.Tutorials']:
-					man_pages.append(page)
+				man_pages.append(page)
 
 	for page in man_pages:
 		parse_man_page(page)
@@ -589,6 +588,9 @@ if __name__ == '__main__':
 	parser.add_argument('--out', type=str, help="Output folder (hugo content/ folder)", required=True)
 	parser.add_argument('--version', type=str, help="Documentation version", required=True)
 	args = parser.parse_args()
+
+	static_img = os.path.join(args.out, '..', 'static', 'images', 'docs', args.version)
+	shutil.copytree('img', static_img)
 
 	with open(args.api, "r") as file:
 		api = ETree.fromstring(file.read())

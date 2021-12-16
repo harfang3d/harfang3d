@@ -69,9 +69,9 @@ void DirectoryWatchPull::Update(const std::string &root, const std::string &path
 
 	auto new_entries = ListDir(PathJoin({root, path}).c_str());
 
-	const auto &i = path_entries.find(path);
+	const auto &current_entry = path_entries.find(path);
 
-	if (i == std::end(path_entries)) {
+	if (current_entry == std::end(path_entries)) {
 #if ENABLE_HASH_CONFIRMATION
 		{
 			auto &hashes = path_hashes[path];
@@ -85,7 +85,7 @@ void DirectoryWatchPull::Update(const std::string &root, const std::string &path
 #endif
 		path_entries[path] = std::move(new_entries);
 	} else {
-		const auto &old_entries = i->second;
+		const auto &old_entries = current_entry->second;
 
 		//
 		std::map<std::string, DirEntry> old_;
@@ -136,11 +136,11 @@ void DirectoryWatchPull::Update(const std::string &root, const std::string &path
 		}
 
 		// update state
-		i->second = std::move(new_entries);
+		current_entry->second = std::move(new_entries);
 
 		//
 		if (recursive)
-			for (auto &j : i->second)
+			for (auto &j : current_entry->second)
 				if (j.type == DE_Dir)
 					Update(root, PathJoin({path, j.name}), recursive);
 	}

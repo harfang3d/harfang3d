@@ -28,4 +28,6 @@ void DestroySSR(SSR &ssr);
 void ComputeSSR(bgfx::ViewId &view_id, const iRect &rect, bgfx::BackbufferRatio::Enum ratio, const Texture &color, const Texture &attr0, const Texture &attr1,
 	const Texture &probe, const Texture &noise, const HiZ &hiz, bgfx::FrameBufferHandle output, const SSR &ssr);
 
+bool IsValid(const SSR &ssr);
+
 } // namespace hg

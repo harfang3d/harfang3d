@@ -57,6 +57,8 @@ static inline const hg::Material::Value *GetMaterialValue(const hg::Material &ma
 
 std::map<hg::NodeRef, int> NodeRef_to_IdNode;
 
+#if 0
+// CWE 561: The function 'Indent' is never used.
 static std::string Indent(const int indent) {
 	std::string s;
 	for (int i = 0; i < indent; i++) {
@@ -64,6 +66,7 @@ static std::string Indent(const int indent) {
 	}
 	return s;
 }
+#endif
 
 /// Adapts an array of bytes to an array of T. Will advace of byte_stride each
 /// elements.
@@ -109,7 +112,7 @@ struct floatArrayBase {
 template <class T> struct intArray : public intArrayBase {
 	arrayAdapter<T> adapter;
 
-	intArray(const arrayAdapter<T> &a) : adapter(a) {}
+	explicit intArray(const arrayAdapter<T> &a) : adapter(a) {}
 	unsigned int operator[](size_t position) const override { return static_cast<unsigned int>(adapter[position]); }
 
 	size_t size() const override { return adapter.elemCount; }
@@ -118,7 +121,7 @@ template <class T> struct intArray : public intArrayBase {
 template <class T> struct floatArray : public floatArrayBase {
 	arrayAdapter<T> adapter;
 
-	floatArray(const arrayAdapter<T> &a) : adapter(a) {}
+	explicit floatArray(const arrayAdapter<T> &a) : adapter(a) {}
 	float operator[](size_t position) const override { return static_cast<float>(adapter[position]); }
 
 	size_t size() const override { return adapter.elemCount; }
@@ -126,7 +129,7 @@ template <class T> struct floatArray : public floatArrayBase {
 
 struct v2fArray {
 	arrayAdapter<hg::Vec2> adapter;
-	v2fArray(const arrayAdapter<hg::Vec2> &a) : adapter(a) {}
+	explicit v2fArray(const arrayAdapter<hg::Vec2> &a) : adapter(a) {}
 
 	hg::Vec2 operator[](size_t position) const { return adapter[position]; }
 	size_t size() const { return adapter.elemCount; }
@@ -134,7 +137,7 @@ struct v2fArray {
 
 struct v3fArray {
 	arrayAdapter<hg::Vec3> adapter;
-	v3fArray(const arrayAdapter<hg::Vec3> &a) : adapter(a) {}
+	explicit v3fArray(const arrayAdapter<hg::Vec3> &a) : adapter(a) {}
 
 	hg::Vec3 operator[](size_t position) const { return adapter[position]; }
 	size_t size() const { return adapter.elemCount; }
@@ -142,7 +145,7 @@ struct v3fArray {
 
 struct v4fArray {
 	arrayAdapter<hg::Vec4> adapter;
-	v4fArray(const arrayAdapter<hg::Vec4> &a) : adapter(a) {}
+	explicit v4fArray(const arrayAdapter<hg::Vec4> &a) : adapter(a) {}
 
 	hg::Vec4 operator[](size_t position) const { return adapter[position]; }
 	size_t size() const { return adapter.elemCount; }
@@ -167,7 +170,8 @@ static bool GetOutputPath(std::string &path, const std::string &base, const std:
 	return true;
 }
 
-//
+#if 0
+// CWE 561: The function 'MakeRelativeResourceName' is never used.
 static std::string MakeRelativeResourceName(const std::string &name, const std::string &base_path, const std::string &prefix) {
 	if (hg::starts_with(name, base_path, hg::case_sensitivity::insensitive)) {
 		const auto stripped_name = hg::lstrip(hg::slice(name, base_path.length()), "/");
@@ -175,6 +179,7 @@ static std::string MakeRelativeResourceName(const std::string &name, const std::
 	}
 	return name;
 }
+#endif
 
 #define for_with_index(V, ...)                                                                                                                                 \
 	for (size_t V = 0, _brk_ = 0, _i_ = 1; _i_; _i_ = 0)                                                                                                       \
@@ -869,6 +874,7 @@ static void ExportGeometry(Model &model, Mesh &mesh, const int &nb_materials, co
 }
 
 std::map<std::string, std::vector<Primitive>> geo_to_primitives;
+static const size_t EmptyMeshID = static_cast<size_t>(-1);
 
 static const size_t ExportObject(Model &model, const hg::Object &object, const Config &config, hg::PipelineResources &resources) {
 	Mesh mesh;
@@ -890,12 +896,12 @@ static const size_t ExportObject(Model &model, const hg::Object &object, const C
 				ExportGeometry(model, mesh, object.GetMaterialCount(), geo, config);
 				geo_to_primitives[geo_name] = mesh.primitives;
 			} else
-				return -1; // no geo, no mesh
+				return EmptyMeshID; // no geo, no mesh
 		} else {
 			mesh.primitives = geo_to_primitives[geo_name];
 		}
 	} else
-		return -1; // no geo, no mesh
+		return EmptyMeshID; // no geo, no mesh
 
 	// export materials
 	for (int i = 0; i < object.GetMaterialCount(); ++i) {
@@ -950,7 +956,7 @@ static const size_t ExportNode(Model &model, const hg::NodeRef nodeRef, const st
 	//
 	if (node.HasObject()) {
 		auto id_mesh = ExportObject(model, node.GetObject(), config, resources);
-		if (id_mesh != -1)
+		if (id_mesh != EmptyMeshID)
 			n.mesh = id_mesh;
 	}
 
@@ -1022,20 +1028,19 @@ static bool ExportGltfScene(const std::string &path, const Config &config) {
 	model.scenes.push_back(scn);
 
 	std::string out_path;
-	if (config.binary) {
-		if (GetOutputPath(out_path, config.base_output_path, config.name.empty() ? hg::GetFileName(path) : config.name, {}, "glb")) {
-			bool embedImages = true;
-			bool embedBuffers = true;
-			bool prettyPrint = true;
-			bool writeBinary = true;
-			bool ret = saver.WriteGltfSceneToFile(&model, out_path, embedImages, embedBuffers, prettyPrint, writeBinary);
-		}
-	} else if (GetOutputPath(out_path, config.base_output_path, config.name.empty() ? hg::GetFileName(path) : config.name, {}, "gltf")) {
-		bool embedImages = true;
-		bool embedBuffers = true;
-		bool prettyPrint = true;
-		bool writeBinary = false;
-		bool ret = saver.WriteGltfSceneToFile(&model, out_path, embedImages, embedBuffers, prettyPrint, writeBinary);
+	bool embedImages = true;
+	bool embedBuffers = true;
+	bool prettyPrint = true;
+	bool writeBinary = config.binary;
+	if (!GetOutputPath(out_path, config.base_output_path, config.name.empty() ? hg::GetFileName(path) : config.name, {}, writeBinary ? "glb" : "gltf")) {
+		hg::error("failed to compute output path");
+		return false;
+	}
+
+	bool ret = saver.WriteGltfSceneToFile(&model, out_path, embedImages, embedBuffers, prettyPrint, writeBinary);
+	if(!ret) {
+		hg::error(hg::format("failed to write scene to %1").arg(out_path.c_str()));
+		return false;
 	}
 
 	hg::log(hg::format("Export complete, took %1 ms").arg(hg::time_to_ms(hg::time_now() - t_start)));

@@ -1,0 +1,1 @@
+Retrieves color texture attachment.

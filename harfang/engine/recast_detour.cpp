@@ -177,21 +177,21 @@ void DrawNavMesh(const dtNavMesh *mesh, bgfx::ViewId view_id, const bgfx::Vertex
 
 		int tileNum = mesh->decodePolyIdTile(base);
 
-		for (int i = 0; i < tile->header->polyCount; ++i) {
-			const dtPoly *p = &tile->polys[i];
+		for (int j = 0; j < tile->header->polyCount; ++j) {
+			const dtPoly *p = &tile->polys[j];
 			if (p->getType() == DT_POLYTYPE_OFFMESH_CONNECTION) // Skip off-mesh links.
 				continue;
 
-			const dtPolyDetail *pd = &tile->detailMeshes[i];
+			const dtPolyDetail *pd = &tile->detailMeshes[j];
 
-			for (int j = 0; j < pd->triCount; ++j) {
-				const unsigned char *t = &tile->detailTris[(pd->triBase + j) * 4];
-				for (int k = 0; k < 3; ++k) {
-					if (t[k] < p->vertCount) {
-						float *v = &tile->verts[p->verts[t[k]] * 3];
+			for (int k = 0; k < pd->triCount; ++k) {
+				const unsigned char *t = &tile->detailTris[(pd->triBase + k) * 4];
+				for (int l = 0; l < 3; ++l) {
+					if (t[l] < p->vertCount) {
+						float *v = &tile->verts[p->verts[t[l]] * 3];
 						vtx.Begin(vtx_count++).SetPos(Vec3(v[0], v[1], v[2])).SetColor0(col).End();
 					} else {
-						float *v = &tile->detailVerts[(pd->vertBase + t[k] - p->vertCount) * 3];
+						float *v = &tile->detailVerts[(pd->vertBase + t[l] - p->vertCount) * 3];
 						vtx.Begin(vtx_count++).SetPos(Vec3(v[0], v[1], v[2])).SetColor0(col).End();
 					}
 				}

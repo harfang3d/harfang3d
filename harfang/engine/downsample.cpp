@@ -10,6 +10,12 @@
 
 namespace hg {
 
+bool IsValid(const Downsample &downsample) {
+	return bgfx::isValid(downsample.compute) && bgfx::isValid(downsample.u_color) && bgfx::isValid(downsample.u_attr0) && bgfx::isValid(downsample.u_depth) &&
+		   bgfx::isValid(downsample.fb) && bgfx::isValid(downsample.color.handle) && bgfx::isValid(downsample.attr0.handle) &&
+		   bgfx::isValid(downsample.depth.handle);
+}
+
 static Downsample _CreateDownsample(const Reader &ir, const ReadProvider &ip, const char *path) {
     Downsample down;
 	down.compute = hg::LoadProgram(ir, ip, hg::format("%1/shader/aaa_downsample").arg(path));
@@ -21,16 +27,22 @@ static Downsample _CreateDownsample(const Reader &ir, const ReadProvider &ip, co
 		0 | BGFX_TEXTURE_RT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
 	down.color = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Half, false, 1, bgfx::TextureFormat::RGBA32F, flags)};
-	bgfx::setName(down.color.handle, "color.downsampled");
-    
+	
 	down.attr0 = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Half, false, 1, bgfx::TextureFormat::RGBA16F, flags)};
-	bgfx::setName(down.attr0.handle, "attr0.downsampled");
-
+	
 	down.depth = {flags, bgfx::createTexture2D(bgfx::BackbufferRatio::Half, false, 1, bgfx::TextureFormat::R32F, flags)};
-	bgfx::setName(down.depth.handle, "depth.downsampled");
-
+	
 	bgfx::TextureHandle texs[] = {down.color.handle, down.attr0.handle, down.depth.handle};
 	down.fb = bgfx::createFrameBuffer(3, texs, true);
+	
+	if (!IsValid(down)) {
+		DestroyDownsample(down);
+		return down;
+	}
+
+	bgfx::setName(down.depth.handle, "depth.downsampled");
+	bgfx::setName(down.color.handle, "color.downsampled");
+	bgfx::setName(down.attr0.handle, "attr0.downsampled");
 	bgfx::setName(down.fb, "Downsample FB");
 
     return down;
@@ -45,18 +57,15 @@ void DestroyDownsample(Downsample &down) {
 	bgfx_Destroy(down.u_attr0);
 	bgfx_Destroy(down.u_depth);
 	bgfx_Destroy(down.fb);
-
-	down.compute = BGFX_INVALID_HANDLE;
-	down.u_color = BGFX_INVALID_HANDLE;
-	down.u_attr0 = BGFX_INVALID_HANDLE;
-	down.fb = BGFX_INVALID_HANDLE;
+	down.depth = BGFX_INVALID_HANDLE;
 	down.color = BGFX_INVALID_HANDLE;
 	down.attr0 = BGFX_INVALID_HANDLE;
-	down.depth = BGFX_INVALID_HANDLE;
 }
 
 // [todo] use a pyramid
 void ComputeDownsample(bgfx::ViewId &view_id, const iRect &rect, const Texture &color, const Texture &attr0, const Texture &depth, const Downsample &down) {
+	__ASSERT__(IsValid(down));
+
 	const bgfx::Caps *caps = bgfx::getCaps();
 
 	bgfx::TransientIndexBuffer idx;

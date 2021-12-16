@@ -22,6 +22,10 @@ constexpr int64_t time_to_ms(time_ns t) { return t / 1000000LL; }
 constexpr int64_t time_to_us(time_ns t) { return t / 1000LL; }
 constexpr int64_t time_to_ns(time_ns t) { return t; }
 
+constexpr time_ns time_from_sec_d(double sec) { return time_ns(double(sec) * 1000000000.0); }
+constexpr time_ns time_from_ms_d(double ms) { return time_ns(double(ms) * 1000000.0); }
+constexpr time_ns time_from_us_d(double us) { return time_ns(double(us) * 1000.0); }
+
 constexpr time_ns time_from_sec_f(float sec) { return time_ns(double(sec) * 1000000000.0); }
 constexpr time_ns time_from_ms_f(float ms) { return time_ns(double(ms) * 1000000.0); }
 constexpr time_ns time_from_us_f(float us) { return time_ns(double(us) * 1000.0); }

@@ -43,15 +43,28 @@ static bool LoadShaders(Bloom &bloom, const Reader &ir, const ReadProvider &ip, 
 
 static const uint64_t g_bloom_tex_flags = 0 | BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
+bool IsValid(const Bloom &bloom) {
+	return bgfx::isValid(bloom.in_fb) && bgfx::isValid(bloom.out_fb) && bgfx::isValid(bloom.u_source) && bgfx::isValid(bloom.u_input) &&
+		   bgfx::isValid(bloom.u_params) && bgfx::isValid(bloom.u_source_rect) && bgfx::isValid(bloom.prg_threshold) && bgfx::isValid(bloom.prg_downsample) &&
+		   bgfx::isValid(bloom.prg_upsample) && bgfx::isValid(bloom.prg_combine);
+}
+
 static Bloom CreateBloom(const Reader &ir, const ReadProvider &ip, const char *path, bgfx::BackbufferRatio::Enum ratio) {
 	Bloom bloom;
+	if (!LoadShaders(bloom, ir, ip, path)) {
+		DestroyBloom(bloom);
+		return bloom;
+	}
 
 	bloom.in_fb = bgfx::createFrameBuffer(ratio, bgfx::TextureFormat::RGBA16F, g_bloom_tex_flags);
-	bgfx::setName(bloom.in_fb, "Bloom IN FB");
 	bloom.out_fb = bgfx::createFrameBuffer(ratio, bgfx::TextureFormat::RGBA16F, g_bloom_tex_flags);
-	bgfx::setName(bloom.out_fb, "Bloom OUT FB");
+	if (!(bgfx::isValid(bloom.in_fb) && bgfx::isValid(bloom.out_fb))) {
+		DestroyBloom(bloom);
+		return bloom;
+	}
 
-	LoadShaders(bloom, ir, ip, path);
+	bgfx::setName(bloom.in_fb, "Bloom IN FB");
+	bgfx::setName(bloom.out_fb, "Bloom OUT FB");
 	return bloom;
 }
 
@@ -75,6 +88,8 @@ void DestroyBloom(Bloom &bloom) {
 
 void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, bgfx::FrameBufferHandle output, const Bloom &bloom, float threshold,
 	float smoothness, float intensity) {
+	__ASSERT__(IsValid(bloom));
+
 	const bgfx::Caps *caps = bgfx::getCaps();
 
 	bgfx::TransientIndexBuffer idx;

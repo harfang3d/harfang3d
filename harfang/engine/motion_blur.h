@@ -24,4 +24,6 @@ void DestroyMotionBlur(MotionBlur &motion_blur);
 void ApplyMotionBlur(bgfx::ViewId &view_id, const iRect &rect, const Texture &color, const Texture &attr0, const Texture &attr1, const Texture &noise,
 	bgfx::FrameBufferHandle output, const MotionBlur &motion_blur);
 
+bool IsValid(const MotionBlur &motion_blur);
+
 } // namespace hg

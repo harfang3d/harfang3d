@@ -443,7 +443,7 @@ static KeyboardState ReadRawKeyboard() {
 //
 #if ((GLFW_VERSION_MAJOR >= 3) && (GLFW_VERSION_MINOR >= 3))
 
-static int GamepadSlotToGLFWJoystick(const std::string name) {
+static int GamepadSlotToGLFWJoystick(const std::string& name) {
 	if (name == "gamepad_slot_0")
 		return GLFW_JOYSTICK_1;
 	else if (name == "gamepad_slot_1")
@@ -511,7 +511,7 @@ template <int ID> GamepadState ReadGamepad() {
 	return state;
 }
 
-static int JoystickSlotToGLFWJoystick(const std::string name) {
+static int JoystickSlotToGLFWJoystick(const std::string& name) {
 	if (name == "joystick_slot_0")
 		return GLFW_JOYSTICK_1;
 	else if (name == "joystick_slot_1")
@@ -554,7 +554,7 @@ template <int ID> JoystickState ReadJoystick() {
 	int buttons_count = 0;
 	auto buttons = glfwGetJoystickButtons(ID, &buttons_count);
 
-	JoystickState state{axis_count, buttons_count};
+	JoystickState state{static_cast<short>(axis_count), static_cast<short>(buttons_count)};
 	state.connected = axis_count && buttons_count;
 
 	for (int i = 0; i < axis_count; ++i)

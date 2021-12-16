@@ -977,6 +977,8 @@ def bind_scene(gen):
 	gen.bind_method(rigid_body, 'SetRestitution', 'void', ['float restitution'])
 	gen.bind_method(rigid_body, 'GetFriction', 'float', [])
 	gen.bind_method(rigid_body, 'SetFriction', 'void', ['float friction'])
+	gen.bind_method(rigid_body, 'GetRollingFriction', 'float', [])
+	gen.bind_method(rigid_body, 'SetRollingFriction', 'void', ['float rolling_friction'])
 
 	gen.end_class(rigid_body)
 
@@ -990,6 +992,8 @@ def bind_scene(gen):
 
 	gen.bind_method(collision, 'GetType', 'hg::CollisionType', [])
 	gen.bind_method(collision, 'SetType', 'void', ['hg::CollisionType type'])
+	gen.bind_method(collision, 'GetLocalTransform', 'hg::Mat4', [])
+	gen.bind_method(collision, 'SetLocalTransform', 'void', ['hg::Mat4 m'])
 	gen.bind_method(collision, 'GetMass', 'float', [])
 	gen.bind_method(collision, 'SetMass', 'void', ['float mass'])
 	gen.bind_method(collision, 'GetRadius', 'float', [])
@@ -1307,8 +1311,8 @@ def bind_scene(gen):
 	protos = [('hg::Node', ['hg::Scene &scene', 'const hg::Mat4 &mtx', 'const hg::ModelRef &model', 'const std::vector<hg::Material> &materials'], [])]
 	gen.bind_function_overloads('hg::CreateObject', expand_std_vector_proto(gen, protos))
 
-	gen.bind_function('hg::CreateInstanceFromFile', 'hg::Node', ['hg::Scene &scene', 'const hg::Mat4 &mtx', 'const std::string &name', 'hg::PipelineResources &resources', 'const hg::PipelineInfo &pipeline', '?uint32_t flags'], {'constants_group': {'flags': 'LoadSaveSceneFlags'}})
-	gen.bind_function('hg::CreateInstanceFromAssets', 'hg::Node', ['hg::Scene &scene', 'const hg::Mat4 &mtx', 'const std::string &name', 'hg::PipelineResources &resources', 'const hg::PipelineInfo &pipeline', '?uint32_t flags'], {'constants_group': {'flags': 'LoadSaveSceneFlags'}})
+	gen.bind_function('hg::CreateInstanceFromFile', 'hg::Node', ['hg::Scene &scene', 'const hg::Mat4 &mtx', 'const std::string &name', 'hg::PipelineResources &resources', 'const hg::PipelineInfo &pipeline', 'bool &success', '?uint32_t flags'], {'constants_group': {'flags': 'LoadSaveSceneFlags'}, 'arg_out': ['success']})
+	gen.bind_function('hg::CreateInstanceFromAssets', 'hg::Node', ['hg::Scene &scene', 'const hg::Mat4 &mtx', 'const std::string &name', 'hg::PipelineResources &resources', 'const hg::PipelineInfo &pipeline', 'bool &success', '?uint32_t flags'], {'constants_group': {'flags': 'LoadSaveSceneFlags'}, 'arg_out': ['success']})
 
 	gen.bind_function('hg::CreateScript', 'hg::Node', ['hg::Scene &scene', '?const std::string &path'])
 
@@ -1497,6 +1501,7 @@ static std::vector<hg::ForwardPipelineLight> _GetSceneForwardPipelineLights(cons
 	gen.bind_function('hg::CreateForwardPipelineAAAFromFile', 'hg::ForwardPipelineAAA', ['const char *path', 'const hg::ForwardPipelineAAAConfig &config', '?bgfx::BackbufferRatio::Enum ssgi_ratio', '?bgfx::BackbufferRatio::Enum ssr_ratio'])
 	gen.bind_function('hg::CreateForwardPipelineAAAFromAssets', 'hg::ForwardPipelineAAA', ['const char *path', 'const hg::ForwardPipelineAAAConfig &config', '?bgfx::BackbufferRatio::Enum ssgi_ratio', '?bgfx::BackbufferRatio::Enum ssr_ratio'])
 	gen.bind_function('hg::DestroyForwardPipelineAAA', 'void', ['hg::ForwardPipelineAAA &pipeline'])
+	gen.bind_function('hg::IsValid', 'bool', ['const hg::ForwardPipelineAAA &pipeline'])
 
 	gen.bind_function('hg::UpdateForwardPipelineAAA', 'void', ['hg::ForwardPipeline &pipeline', 'const hg::Rect<int> &rect', 'const hg::Mat4 &view', 'const hg::Mat44 &proj', 
 		'const hg::Mat4 &prv_view', 'const hg::Mat44 &prv_proj', 'const hg::tVec2<float> &jitter', 'bgfx::BackbufferRatio::Enum ssgi_ratio', 'bgfx::BackbufferRatio::Enum ssr_ratio', 'float temporal_aa_weight', 'float motion_blur_strength',
@@ -1544,7 +1549,7 @@ def bind_bullet3_physics(gen):
 
 #	gen.bind_method(newton, 'CollectCollisionEvents', 'void', ['const hg::Scene &scene', 'hg::NodeNodeContacts &node_node_contacts'])
 
-	gen.bind_method(bullet, 'SyncKinematicBodiesFromScene', 'void', ['const hg::Scene &scene'])
+	gen.bind_method(bullet, 'SyncBodiesFromScene', 'void', ['const hg::Scene &scene'])
 
 	gen.bind_method(bullet, 'GarbageCollect', 'size_t', ['const hg::Scene &scene'])
 	gen.bind_method(bullet, 'GarbageCollectResources', 'size_t', [])
@@ -1555,6 +1560,11 @@ def bind_bullet3_physics(gen):
 	#
 	gen.bind_method(bullet, 'NodeWake', 'void', ['const hg::Node &node'])
 
+	gen.bind_method(bullet, 'NodeSetDeactivation', 'void', ['const hg::Node &node', 'bool enable'])
+	gen.bind_method(bullet, 'NodeGetDeactivation', 'bool', ['const hg::Node &node'])
+
+	gen.bind_method(bullet, 'NodeResetWorld', 'void', ['const hg::Node &node', 'const hg::Mat4 &world'])
+
 	gen.bind_method(bullet, 'NodeAddForce', 'void', ['const hg::Node &node', 'const hg::Vec3 &F', '?const hg::Vec3 &world_pos'])
 	gen.bind_method(bullet, 'NodeAddImpulse', 'void', ['const hg::Node &node', 'const hg::Vec3 &dt_velocity', '?const hg::Vec3 &world_pos'])
 	gen.bind_method(bullet, 'NodeGetPointVelocity', 'hg::Vec3', ['const hg::Node &node', 'const hg::Vec3 &world_pos'])
@@ -1564,6 +1574,11 @@ def bind_bullet3_physics(gen):
 	gen.bind_method(bullet, 'NodeGetAngularVelocity', 'hg::Vec3', ['const hg::Node &node'])
 	gen.bind_method(bullet, 'NodeSetAngularVelocity', 'void', ['const hg::Node &node', 'const hg::Vec3 &W'])
 
+	gen.bind_method(bullet, 'NodeGetLinearLockAxes', 'void', ['const hg::Node &node', 'bool &X', 'bool &Y', 'bool &Z'], {'arg_out': ['X', 'Y', 'Z']})
+	gen.bind_method(bullet, 'NodeSetLinearLockAxes', 'void', ['const hg::Node &node', 'bool X', 'bool Y', 'bool Z'])
+	gen.bind_method(bullet, 'NodeGetAngularLockAxes', 'void', ['const hg::Node &node', 'bool &X', 'bool &Y', 'bool &Z'], {'arg_out': ['X', 'Y', 'Z']})
+	gen.bind_method(bullet, 'NodeSetAngularLockAxes', 'void', ['const hg::Node &node', 'bool X', 'bool Y', 'bool Z'])
+	
 	#
 	node_contacts = gen.begin_class('hg::NodeContacts')
 	gen.end_class(node_contacts)
@@ -1594,6 +1609,7 @@ static std::vector<hg::Contact> __GetNodeContacts(const hg::NodeContacts &ctcs, 
 
 	#
 	gen.bind_method(bullet, 'RaycastFirstHit', 'hg::RaycastOut', ['const hg::Scene &scene', 'const hg::Vec3 &p0', 'const hg::Vec3 &p1'])
+	gen.bind_method(bullet, 'RaycastAllHits', 'std::vector<hg::RaycastOut>', ['const hg::Scene &scene', 'const hg::Vec3 &p0', 'const hg::Vec3 &p1'])
 
 	#
 	gen.bind_method(bullet, 'RenderCollision', 'void', ['bgfx::ViewId view_id', 'const bgfx::VertexLayout &vtx_layout', 'bgfx::ProgramHandle prg', 'hg::RenderState render_state', 'uint32_t depth'])
@@ -2114,6 +2130,8 @@ static void _SetViewTransform(bgfx::ViewId view_id, const hg::Mat4 &view, const 
 		('TF_SamplerMinAnisotropic', 'BGFX_SAMPLER_MIN_ANISOTROPIC'),
 		('TF_SamplerMagPoint', 'BGFX_SAMPLER_MAG_POINT'),
 		('TF_SamplerMagAnisotropic', 'BGFX_SAMPLER_MAG_ANISOTROPIC'),
+		('TF_BlitDestination', 'BGFX_TEXTURE_BLIT_DST'),
+		('TF_ReadBack', 'BGFX_TEXTURE_READ_BACK'),
 	], 'TextureFlags')
 
 	gen.bind_function('hg::LoadTextureFlagsFromFile', 'uint64_t', ['const std::string &path'], {'rval_constants_group': 'TextureFlags'})
@@ -2394,16 +2412,27 @@ static bgfx::TextureInfo _PipelineResources_GetTextureInfo(hg::PipelineResources
 	gen.bind_function('hg::CreateMissingMaterialProgramValuesFromAssets', 'void', ['hg::Material &mat', 'const hg::PipelineResources &resources'])
 
 	#
-	pipeline_frame_buffer = gen.begin_class('hg::PipelineFrameBuffer')
-	gen.bind_members(pipeline_frame_buffer, ['bgfx::FrameBufferHandle handle', 'hg::TextureRef color', 'hg::TextureRef depth'])
-	gen.end_class(pipeline_frame_buffer)
+	frame_buffer = gen.begin_class('hg::FrameBuffer')
+	gen.bind_member(frame_buffer, 'bgfx::FrameBufferHandle handle')
+	gen.end_class(frame_buffer)
 
 	gen.bind_function_overloads('hg::CreateFrameBuffer', [
-		('hg::PipelineFrameBuffer', ['bgfx::TextureFormat::Enum color_format', 'bgfx::TextureFormat::Enum depth_format', 'int aa', 'hg::PipelineResources &res', 'const char *name'], []),
-		('hg::PipelineFrameBuffer', ['int width', 'int height', 'bgfx::TextureFormat::Enum color_format', 'bgfx::TextureFormat::Enum depth_format', 'int aa', 'hg::PipelineResources &res', 'const char *name'], [])
+		('hg::FrameBuffer', ['const hg::Texture &color', 'const hg::Texture &depth', 'const char *name'], []),
+		('hg::FrameBuffer', ['bgfx::TextureFormat::Enum color_format', 'bgfx::TextureFormat::Enum depth_format', 'int aa', 'const char *name'], []),
+		('hg::FrameBuffer', ['int width', 'int height', 'bgfx::TextureFormat::Enum color_format', 'bgfx::TextureFormat::Enum depth_format', 'int aa', 'const char *name'], [])
 	])
+
+	gen.bind_function('hg::GetColorTexture', 'hg::Texture', ['hg::FrameBuffer &frameBuffer'])
+	gen.bind_function('hg::GetDepthTexture', 'hg::Texture', ['hg::FrameBuffer &frameBuffer'])
 	
-	gen.bind_function('hg::DestroyFrameBuffer', 'void', ['hg::PipelineResources &res', 'hg::PipelineFrameBuffer &frameBuffer'])
+	gen.insert_binding_code('''
+static void _FrameBuffer_GetTextures(hg::FrameBuffer &framebuffer, hg::Texture &color, hg::Texture &depth) {
+	color = hg::GetColorTexture(framebuffer);
+	depth = hg::GetDepthTexture(framebuffer);
+}
+''')	
+	gen.bind_function('GetTextures', 'void', ['hg::FrameBuffer &framebuffer', 'hg::Texture &color', 'hg::Texture &depth'], {'route': route_lambda('_FrameBuffer_GetTextures'),  'arg_out': ['color', 'depth']})
+	gen.bind_function('hg::DestroyFrameBuffer', 'void', ['hg::FrameBuffer &frameBuffer'])
 
 	#
 	vertices = gen.begin_class('hg::Vertices')
@@ -2785,6 +2814,11 @@ def bind_color(gen):
 	gen.bind_function('hg::ColorFromVector4', 'hg::Color', ['const hg::Vec4 &v'])
 
 	gen.bind_function('hg::ColorI', 'hg::Color', ['int r', 'int g', 'int b', '?int a'])
+
+	gen.bind_function('hg::ToHLS', 'hg::Color', ['const hg::Color &color'])
+	gen.bind_function('hg::FromHLS', 'hg::Color', ['const hg::Color &color'])
+
+	gen.bind_function('hg::SetSaturation', 'hg::Color', ['const hg::Color &color', 'float saturation'])
 
 	bind_std_vector(gen, color)
 

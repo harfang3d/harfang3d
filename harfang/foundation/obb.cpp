@@ -11,7 +11,7 @@ OBB OBBFromMinMax(const MinMax &minmax) { return {(minmax.mn + minmax.mx) * 0.5f
 
 MinMax MinMaxFromOBB(const OBB &obb) {
 	Vec3 xtd = obb.scl * 0.5f;
-	Vec3 smt[4] = {
+	const Vec3 smt[4] = {
 		{xtd.x, xtd.y, xtd.z},
 		{-xtd.x, xtd.y, xtd.z},
 		{xtd.x, -xtd.y, xtd.z},

@@ -240,8 +240,8 @@ enum GamepadButton {
 
 struct GamepadState {
 	bool connected = false;
-	float axes[GA_Count];
 	std::bitset<GB_Count> button;
+	float axes[GA_Count];
 };
 
 using GamepadReader = GamepadState (*)();
@@ -274,8 +274,8 @@ struct Gamepad {
 	const GamepadState &GetOldState() const { return old_state; }
 
 private:
-	std::string name;
 	GamepadState state{}, old_state{};
+	std::string name;
 };
 
 //

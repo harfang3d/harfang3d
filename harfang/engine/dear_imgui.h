@@ -95,3 +95,8 @@ void AddImageRounded(ImDrawList *draw_list, const hg::Texture &tex, const ImVec2
 	float rounding, int rounding_corners = ImDrawCornerFlags_All);
 
 } // namespace ImGui
+
+inline ImVec2 operator+(const ImVec2 &a, const ImVec2 &b) { return {a.x + b.x, a.y + b.y}; }
+inline ImVec2 operator-(const ImVec2 &a, const ImVec2 &b) { return {a.x - b.x, a.y - b.y}; }
+inline ImVec2 operator*(const ImVec2 &a, const ImVec2 &b) { return {a.x * b.x, a.y * b.y}; }
+inline ImVec2 operator/(const ImVec2 &a, const ImVec2 &b) { return {a.x / b.x, a.y / b.y}; }

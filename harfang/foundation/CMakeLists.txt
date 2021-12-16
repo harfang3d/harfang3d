@@ -41,6 +41,7 @@ set(HDRS
 	intrusive_shared_ptr_st.h
 	kv_store.h
 	log.h
+	log_file.h
 	math.h
 	matrix3.h
 	matrix4.h
@@ -107,6 +108,7 @@ set(SRCS
 	intersection.cpp
 	kv_store.cpp
 	log.cpp
+	log_file.cpp
 	math.cpp
 	matrix3.cpp
 	matrix4.cpp

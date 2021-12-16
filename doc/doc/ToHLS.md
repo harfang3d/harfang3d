@@ -1,0 +1,1 @@
+Convert input RGBA color to hue/luminance/saturation, alpha channel is left unmodified.

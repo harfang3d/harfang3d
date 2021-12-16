@@ -29,10 +29,3 @@ man.Scripting
 
 man.Navigation
 man.VR
-
-man.Classes
-man.Functions
-man.Constants
-man.Enums
-
-man.Tutorials

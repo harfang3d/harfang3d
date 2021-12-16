@@ -28,4 +28,6 @@ void DestroySSGI(SSGI &ssgi);
 void ComputeSSGI(bgfx::ViewId &view_id, const iRect &rect, bgfx::BackbufferRatio::Enum ratio, const Texture &color, const Texture &attr0, const Texture &attr1,
 	const Texture &probe, const Texture &noise, const HiZ &hiz, bgfx::FrameBufferHandle output, const SSGI &ssgi);
 
+bool IsValid(const SSGI &ssgi);
+
 } // namespace hg

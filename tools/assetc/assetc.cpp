@@ -133,8 +133,7 @@ static void SetToolchain(const std::string &path) {
 	toolchain = {PathJoin({path, "shaderc.exe"}), PathJoin({path, "texturec.exe"}), PathJoin({path, "luac.exe"}), PathJoin({path, "cmft.exe"}),
 		PathJoin({path, "recastc.exe"}), PathJoin({path, "texconv.exe"})};
 #else
-	toolchain = { PathJoin({path, "shaderc"}), PathJoin({path, "texturec"}), PathJoin({path, "luac"}), PathJoin({path, "cmft"}),
-		PathJoin({path, "texconv"})};
+	toolchain = {PathJoin({path, "shaderc"}), PathJoin({path, "texturec"}), PathJoin({path, "luac"}), PathJoin({path, "cmft"}), PathJoin({path, "texconv"})};
 #endif
 }
 
@@ -172,8 +171,10 @@ static std::string api = HG_GRAPHIC_API; // DX11/DX12/GL
 
 static std::string platform = ASSSETC_DEFAULT_PLATFORM;
 
+#if 0
+// CWE 561: The function 'SetAPI' is never used.
 void SetAPI(const char *api_) { api = api_; }
-
+#endif
 //
 static std::string input_dir;
 static std::string output_dir;
@@ -181,11 +182,8 @@ static std::string output_dir;
 static std::string FullInputPath(const std::string &path) { return PathJoin({input_dir, path}); }
 static std::string FullOutputPath(const std::string &path) { return PathJoin({output_dir, path}); }
 
-static std::string ReadyFullOutputPath(const std::string &path) {
-	const auto full_path = FullOutputPath(path);
-	MkTree(CutFileName(full_path).c_str());
-	return full_path;
-}
+static std::string FullOutputDir(const std::string &path) { return CutFileName(FullOutputPath(path)); }
+static void MkOutputTree(const std::string &path) { MkTree(FullOutputDir(path).c_str()); }
 
 #if HASH_METHOD == 0
 using Hash = SHA1Hash;
@@ -314,6 +312,13 @@ static bool NeedsCompilation(
 	return need_refresh;
 }
 
+static void CleanOutputs(const std::set<std::string> &outputs) {
+	ProfilerPerfSection perf("Manage/CleanOutputs");
+
+	for (const auto &output : outputs)
+		Unlink(FullOutputPath(output).c_str());
+}
+
 //
 void Reset() {
 	compilation_db.source_hashes.clear();
@@ -345,7 +350,7 @@ static void RunProcess(const std::string &name, const std::string &cmd, const st
 	const auto cmd_elms = hg::split(cmd, " ");
 	ProfilerPerfSection perf(hg::format("Command/RunProcess/%1").arg(cmd_elms[0]));
 
-	log(format("    Spawning compile process for %1").arg(name));
+	hg::log(format("    Spawning compile process for %1").arg(name));
 
 	TinyProcessLib::Process process(
 		cmd, cwd,
@@ -442,7 +447,7 @@ static void RunTaskQueue() {
 			const auto t_now = time_now();
 
 			if (t_now - t_ref >= time_from_sec(5)) {
-				log(format("  %1 tasks running, %2 queued...").arg(task_running.size()).arg(task_queue.size()));
+				hg::log(format("  %1 tasks running, %2 queued...").arg(task_running.size()).arg(task_queue.size()));
 				t_ref = t_now;
 			}
 		}
@@ -456,19 +461,17 @@ static void RunTaskQueue() {
 //
 static const uint16_t CAB1 = 0xCAB1;
 
-bool LoadCompilationDB(const char *path) {
+bool LoadCompilationDB(const char *filename) {
 	ProfilerPerfSection perf("Manage/LoadCompilationDB");
 
 	Reset();
 
-	if (!Exists(path))
+	if (!Exists(filename))
 		return false;
 
-	ScopedFile file(Open(path));
+	ScopedFile file(Open(filename));
 	if (!file)
 		return false;
-
-	const auto size = GetSize(file);
 
 	//
 	if (Read<uint16_t>(file) != CAB1)
@@ -480,8 +483,8 @@ bool LoadCompilationDB(const char *path) {
 
 	//
 	if (version >= 2) {
-		const auto build_sha = ReadString(file);
-		const auto version_string = ReadString(file);
+		(void)ReadString(file); // build_sha
+		(void)ReadString(file); // version_string
 	}
 
 	//
@@ -500,7 +503,7 @@ bool LoadCompilationDB(const char *path) {
 		const auto name = ReadString(file);
 		const auto src_count = Read<uint32_t>(file);
 
-		for (uint32_t i = 0; i < src_count; ++i) {
+		for (uint32_t j = 0; j < src_count; ++j) {
 			const auto path = ReadString(file);
 			compilation_db.output_to_inputs[name].insert(path);
 		}
@@ -611,10 +614,13 @@ static void Copy(std::map<std::string, Hash> &hashes, const std::string &path) {
 
 	__ASSERT__(!IsDir(path.c_str()));
 
-	log(format("  Copy '%1'").arg(path));
+	hg::log(format("  Copy '%1'").arg(path));
 
 	if (NeedsCompilation(hashes, {path}, {path}, {})) {
-		const auto src = FullInputPath(path), dst = ReadyFullOutputPath(path);
+		const auto src = FullInputPath(path), dst = FullOutputPath(path);
+
+		MkOutputTree(path);
+		CleanOutputs({path});
 
 		if (!CopyFile(src.c_str(), dst.c_str())) {
 			ReportFailedInput(src);
@@ -655,14 +661,18 @@ static void ProcessScene(const std::string &src, const std::string &dst) {
 void Scene(std::map<std::string, Hash> &hashes, const std::string &path) {
 	ProfilerPerfSection perf("Command/Scene");
 
-	log(format("  Scene '%1'").arg(path));
+	hg::log(format("  Scene '%1'").arg(path));
 
 	Data build_ctx;
 	Write(build_ctx, std::string(get_version_string()));
 	Write(build_ctx, GetSceneBinaryFormatVersion());
 
 	if (NeedsCompilation(hashes, {path}, {path}, build_ctx)) {
-		const auto src = FullInputPath(path), dst = ReadyFullOutputPath(path);
+		const auto src = FullInputPath(path), dst = FullOutputPath(path);
+
+		MkOutputTree(path);
+		CleanOutputs({path});
+
 		task_queue.emplace_back(task{path, [=]() { return std::async(std::launch::async, ProcessScene, src, dst); }});
 	} else {
 		debug("    [O] Scene up to date");
@@ -834,7 +844,7 @@ static bool PreprocessTexture(const json &i_preprocess_texture, std::map<std::st
 						auto &in_pic = picture_dependencies[channel_v];
 
 						if (GetChannelCount(in_pic.GetFormat()) <= channel_count) {
-							static const char *channel_names[] = {"R", "G", "B", "A"};
+							const char *channel_names[] = {"R", "G", "B", "A"};
 							error(
 								hg::format("Cannot construct '%1' due to '%2' missing %3 channel").arg(path).arg(channel_v).arg(channel_names[channel_count]));
 							return false;
@@ -867,7 +877,7 @@ static bool PreprocessTexture(const json &i_preprocess_texture, std::map<std::st
 void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 	ProfilerPerfSection perf("Command/Texture");
 
-	log(format("  Texture '%1'").arg(path));
+	hg::log(format("  Texture '%1'").arg(path));
 
 	std::string in_path = path; // may be changed by a construct directive
 
@@ -907,7 +917,7 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 		if (type == "Copy") {
 			Copy(hashes, in_path);
 		} else if (type != "Ignore") {
-			const auto dst = ReadyFullOutputPath(path);
+			const auto dst = FullOutputPath(path);
 
 			Data build_ctx;
 			Write(build_ctx, max_size);
@@ -921,9 +931,12 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 				Write(build_ctx, "texconv");
 
 			if (toolchain.texturec.empty()) {
-				log("    Skipping, no compiler found for texture resource");
+				hg::warn("    Skipping, no compiler found for texture resource");
 			} else {
 				if (NeedsCompilation(hashes, {in_path}, {path}, build_ctx)) {
+					MkOutputTree(path);
+					CleanOutputs({path});
+
 					std::string cmd;
 
 					if (use_texconv) { // favor the much faster texconv over texturec
@@ -955,16 +968,19 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 		}
 
 		if (generate_probe) {
-			const auto dst = ReadyFullOutputPath(path + ".radiance");
+			const auto dst = FullOutputPath(path + ".radiance");
 
 			Data build_ctx;
 			Write(build_ctx, max_probe_size);
 			Write(build_ctx, radiance_edge_fixup);
 
 			if (toolchain.cmft.empty()) {
-				log("    Skipping, no compiler found for radiance probe resource");
+				hg::warn("    Skipping, no compiler found for radiance probe resource");
 			} else {
 				if (NeedsCompilation(hashes, {in_path}, {path + ".radiance"}, build_ctx)) {
+					MkOutputTree(path + ".radiance");
+					CleanOutputs({path + ".radiance"});
+
 					const auto cmd = format("%1 --input \"%2\" --output0 \"%3\" --output0params dds,rgba16f,cubemap --useOpenCL false --filter radiance "
 											"--srcFaceSize %4 --edgeFixup %5")
 										 .arg(toolchain.cmft)
@@ -982,15 +998,18 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 		}
 
 		if (generate_probe) {
-			const auto dst = ReadyFullOutputPath(path + ".irradiance");
+			const auto dst = FullOutputPath(path + ".irradiance");
 
 			Data build_ctx;
 			Write(build_ctx, max_probe_size);
 
 			if (toolchain.cmft.empty()) {
-				log("    Skipping, no compiler found for irradiance probe resource");
+				hg::warn("    Skipping, no compiler found for irradiance probe resource");
 			} else {
 				if (NeedsCompilation(hashes, {in_path}, {path + ".irradiance"}, build_ctx)) {
+					MkOutputTree(path + ".irradiance");
+					CleanOutputs({path + ".irradiance"});
+
 					const auto cmd =
 						format("%1 --input \"%2\" --output0 \"%3\" --output0params dds,rgba16f,cubemap --useOpenCL false --filter irradiance --srcFaceSize %4")
 							.arg(toolchain.cmft)
@@ -1025,7 +1044,7 @@ static void ProcessGeometry(const std::string &src, const std::string &dst, Mode
 void Geometry(std::map<std::string, Hash> &hashes, const std::string &path) {
 	ProfilerPerfSection perf("Command/Geometry");
 
-	log(format("  Geometry '%1'").arg(path));
+	hg::log(format("  Geometry '%1'").arg(path));
 
 	const auto meta_db = LoadMeta(path);
 
@@ -1041,7 +1060,11 @@ void Geometry(std::map<std::string, Hash> &hashes, const std::string &path) {
 	Write(build_ctx, optimisation_level);
 
 	if (NeedsCompilation(hashes, {path}, {path}, build_ctx)) {
-		const auto src = FullInputPath(path), dst = ReadyFullOutputPath(path);
+		const auto src = FullInputPath(path), dst = FullOutputPath(path);
+
+		MkOutputTree(path);
+		CleanOutputs({path});
+
 		task_queue.emplace_back(task{path, [=]() { return std::async(std::launch::async, ProcessGeometry, src, dst, optimisation_level); }});
 	} else {
 		debug("    [O] Geometry up to date");
@@ -1078,13 +1101,17 @@ static void BuildComputeShader(std::map<std::string, Hash> &hashes, const std::s
 	Write(cs_build_ctx, vs_defines);
 
 	if (toolchain.shaderc.empty()) {
-		log("    Skipping, no compiler found for compute resource");
+		hg::warn("    Skipping, no compiler found for compute resource");
 	} else {
 		if (NeedsCompilation(hashes, {cs_path}, {cs_path}, cs_build_ctx)) {
-			if (!cs_profile.empty()) { // GLES profile must be empty...
+			if (!cs_profile.empty()) // GLES profile must be empty...
 				cs_profile = "-p " + cs_profile;
-			}
-			const auto cs_out = ReadyFullOutputPath(cs_path);
+
+			const auto cs_out = FullOutputPath(cs_path);
+
+			MkOutputTree(cs_path);
+			CleanOutputs({cs_path});
+
 			const auto cs_cmd = format("%1 -f \"%2\" -o \"%3\" --platform %4 %5 %6 --type compute --define \"%7\"")
 									.arg(toolchain.shaderc)
 									.arg(FullInputPath(cs_path))
@@ -1102,7 +1129,7 @@ static void BuildComputeShader(std::map<std::string, Hash> &hashes, const std::s
 }
 
 static void ComputeShader(std::map<std::string, Hash> &hashes, const std::string &cs_path) {
-	log(format("  Compute Shader '%1'").arg(cs_path));
+	hg::log(format("  Compute Shader '%1'").arg(cs_path));
 	BuildComputeShader(hashes, cs_path, global_shader_defines);
 }
 
@@ -1140,13 +1167,17 @@ static void BuildShader(std::map<std::string, Hash> &hashes, const std::string &
 	const auto vs_name = format("%1.vsb").arg(name);
 
 	if (toolchain.shaderc.empty()) {
-		log("    Skipping, no compiler found for shader resource");
+		hg::warn("    Skipping, no compiler found for shader resource");
 	} else {
 		if (NeedsCompilation(hashes, {vs_path, varying_path}, {vs_name}, vs_build_ctx)) {
-			if (!vs_profile.empty()) { // GLES profile must be empty...
+			if (!vs_profile.empty()) // GLES profile must be empty...
 				vs_profile = "-p " + vs_profile;
-			}
-			const auto vs_out = ReadyFullOutputPath(vs_name);
+
+			const auto vs_out = FullOutputPath(vs_name);
+
+			MkOutputTree(vs_name);
+			CleanOutputs({vs_name});
+
 			const auto vs_cmd = format("%1 -f \"%2\" -o \"%3\" --varyingdef \"%4\" --type v --platform %5 %6 %7 --define \"%8\"")
 									.arg(toolchain.shaderc)
 									.arg(FullInputPath(vs_path))
@@ -1174,13 +1205,17 @@ static void BuildShader(std::map<std::string, Hash> &hashes, const std::string &
 	const auto fs_name = format("%1.fsb").arg(name);
 
 	if (toolchain.shaderc.empty()) {
-		log("    Skipping, no compiler found for shader resource");
+		hg::warn("    Skipping, no compiler found for shader resource");
 	} else {
 		if (NeedsCompilation(hashes, {fs_path, varying_path}, {fs_name}, fs_build_ctx)) {
-			if (!fs_profile.empty()) {
+			if (!fs_profile.empty())
 				fs_profile = "-p " + fs_profile;
-			}
-			const auto fs_out = ReadyFullOutputPath(fs_name);
+
+			const auto fs_out = FullOutputPath(fs_name);
+
+			MkOutputTree(fs_name);
+			CleanOutputs({fs_name});
+
 			const auto fs_cmd = format("%1 -f \"%2\" -o \"%3\" --varyingdef \"%4\" --type f --platform %5 %6 %7 --define \"%8\"")
 									.arg(toolchain.shaderc)
 									.arg(FullInputPath(fs_path))
@@ -1200,7 +1235,7 @@ static void BuildShader(std::map<std::string, Hash> &hashes, const std::string &
 
 static void Shader(std::map<std::string, Hash> &hashes, const std::string &vs_path, const std::string &fs_path, const std::string &varying_path) {
 	const auto name = slice(vs_path, 0, -6);
-	log(format("  Shader '%1'").arg(name));
+	hg::log(format("  Shader '%1'").arg(name));
 	BuildShader(hashes, name, vs_path, fs_path, varying_path, global_shader_defines);
 }
 
@@ -1211,7 +1246,7 @@ static void BuildPipelineShaderVariant(std::map<std::string, Hash> &hashes, cons
 
 	size_t stage = 0;
 	for (auto &variant : pipeline.configs) {
-		log(format("    Pipeline shader variant '%1' for pipeline config %2").arg(name).arg(stage));
+		hg::log(format("    Pipeline shader variant '%1' for pipeline config %2").arg(name).arg(stage));
 		const auto variant_name = format("%1_pipe-%2-cfg-%3").arg(name).arg(pipeline.name).arg(stage++);
 		const auto variant_defines = join(std::begin(variant), std::end(variant), ";") + ";" + defines;
 		BuildShader(hashes, variant_name, vs_path, fs_path, varying_path, global_shader_defines + variant_defines);
@@ -1281,7 +1316,7 @@ static void PipelineShader(
 	std::map<std::string, Hash> &hashes, const std::string &hps_path, const std::string &vs_path, const std::string &fs_path, const std::string &varying_path) {
 	ProfilerPerfSection perf("Command/PipelineShader");
 
-	log(format("  Pipeline shader '%1' for pipeline '%2'").arg(hps_path).arg(pipeline.name));
+	hg::log(format("  Pipeline shader '%1' for pipeline '%2'").arg(hps_path).arg(pipeline.name));
 
 	Copy(hashes, hps_path);
 
@@ -1305,13 +1340,17 @@ static void PipelineShader(
 static void LuaScript(std::map<std::string, Hash> &hashes, const std::string &path) {
 	ProfilerPerfSection perf("Command/LuaScript");
 
-	log(format("  Lua script '%1'").arg(path));
+	hg::log(format("  Lua script '%1'").arg(path));
 
 	if (toolchain.luac.empty()) {
-		log("    Skipping, no compiler found for Lua script resource");
+		hg::warn("    Skipping, no compiler found for Lua script resource");
 	} else {
 		if (NeedsCompilation(hashes, {path}, {path}, {})) {
-			const auto src = FullInputPath(path), dst = ReadyFullOutputPath(path);
+			const auto src = FullInputPath(path), dst = FullOutputPath(path);
+
+			MkOutputTree(path);
+			CleanOutputs({path});
+
 			const auto cmd = format("%1 -o %3 -s %2").arg(toolchain.luac).arg(src).arg(dst);
 			PushAsyncProcessTask(path, cmd, cwd);
 		} else {
@@ -1324,7 +1363,7 @@ static void LuaScript(std::map<std::string, Hash> &hashes, const std::string &pa
 static void Physics(std::map<std::string, Hash> &hashes, const std::string &path) {
 	ProfilerPerfSection perf("Command/Physics");
 
-	log(format("  Physics resource '%1'").arg(path));
+	hg::log(format("  Physics resource '%1'").arg(path));
 	// [todo]
 	debug("    Skipping, no compiler found for physics resource");
 }
@@ -1332,16 +1371,19 @@ static void Physics(std::map<std::string, Hash> &hashes, const std::string &path
 static void PathFinding(std::map<std::string, Hash> &hashes, const std::string &path) {
 	ProfilerPerfSection perf("Command/PathFinding");
 
-	log(format("  Pathfinding resource '%1'").arg(path));
+	hg::log(format("  Pathfinding resource '%1'").arg(path));
 
 	if (toolchain.recastc.empty()) {
 		debug("    Skipping, no compiler found for pathfinding resource");
 	} else {
 		if (NeedsCompilation(hashes, {path}, {path}, {})) {
-			const auto cwd = GetCurrentWorkingDirectory();
-			const auto src = FullInputPath(path), dst = ReadyFullOutputPath(path);
+			const auto src = FullInputPath(path), dst = FullOutputPath(path);
+
+			MkOutputTree(path);
+			CleanOutputs({path});
+
 			const auto cmd = format("%1 %2 %3 -root %4").arg(toolchain.recastc).arg(src).arg(dst).arg(input_dir);
-			PushAsyncProcessTask(path, cmd, cwd);
+			PushAsyncProcessTask(path, cmd, GetCurrentWorkingDirectory());
 		} else {
 			debug("  [O] Pathfinding resource up to date");
 		}
@@ -1351,19 +1393,22 @@ static void PathFinding(std::map<std::string, Hash> &hashes, const std::string &
 //
 enum class AssetType { Unprocessed, Ignore, Broken, Scene, Texture, Geometry, Lua, Shader, PipelineShader, Physics, PathFinding, ComputeShader, Count };
 
-static std::string AssetTypeToString(AssetType type) {
-	static std::string types[] = {
-		"Unprocessed", "Ignore", "Broken", "Scene", "Texture", "Geometry", "Lua", "Shader", "PipelineShader", "Physics", "PathFinding", "ComputeShader"};
+#if 0
+// CWE 561: The function 'AssetTypeToString' is never used.
+static const std::string& AssetTypeToString(AssetType type) {
+	static const std::string types[static_cast<int>(AssetType::Count) + 1] = {
+		"Unprocessed", "Ignore", "Broken", "Scene", "Texture", "Geometry", "Lua", "Shader", "PipelineShader", "Physics", "PathFinding", "ComputeShader", "Undefined"};
 	return types[int(type)];
 }
+#endif
 
 struct AssetConfig {
 	AssetType type;
 };
 
 static AssetType GetAssetFileType(std::string path, const std::vector<std::string> &all_files, std::vector<std::string> &out_files) {
-	static std::set<std::string> texture_exts = {"bmp", "exr", "gif", "jpg", "hdr", "png", "psd", "tga"};
-	static std::set<std::string> ignored_exts = {"tmp"};
+	static const std::set<std::string> texture_exts = {"bmp", "exr", "gif", "jpg", "hdr", "png", "psd", "tga"};
+	static const std::set<std::string> ignored_exts = {"tmp"};
 
 	const auto ext = tolower(GetFileExtension(path));
 
@@ -1544,8 +1589,6 @@ static bool CompileClassifiedInputs(const std::map<std::vector<std::string>, Ass
 				std::cout << "-> Progress: " << j * compile_progress_weight / input_count + classify_progress_weight << "% (" << names[0] << ")" << std::endl;
 			++j;
 
-			std::vector<std::string> outputs;
-
 			if (config.type == AssetType::Unprocessed)
 				Copy(updated_hashes, names[0]);
 			else if (config.type == AssetType::Scene)
@@ -1587,8 +1630,32 @@ static bool CompileClassifiedInputs(const std::map<std::vector<std::string>, Ass
 }
 
 //
+static bool clean_outputs_for_removed_inputs = true;
+
+static void CleanOutputsForRemovedInputs() {
+	ProfilerPerfSection perf("Manage/CleanOutputsForRemovedInputs");
+
+	std::map<std::string, std::set<std::string>> db_input_to_outputs;
+	for (const auto &i : compilation_db.output_to_inputs)
+		for (const auto &input : i.second)
+			db_input_to_outputs[input].insert(i.first);
+
+	const auto input_files = GetInputDirFiles(); // available inputs
+
+	size_t removed = 0;
+	for (const auto &i : db_input_to_outputs)
+		if (std::find(std::begin(input_files), std::end(input_files), i.first) == std::end(input_files)) {
+			for (const auto &output : i.second) // DB input is missing from input files, remove its associated outputs
+				if (hg::Unlink(FullOutputPath(output).c_str()))
+					++removed;
+		}
+
+	std::cout << "Removed " << removed << " outputs due to missing input" << std::endl;
+}
+
+//
 static void DaemonMode() {
-	log("Entering daemon mode, press Ctrl+C to close\n");
+	hg::log("Entering daemon mode, press Ctrl+C to close\n");
 
 	WatchDirectory(input_dir, true);
 
@@ -1612,13 +1679,16 @@ static void DaemonMode() {
 		}
 
 		if (!modified_files_.empty()) {
-			log(format("File system changes detected (%1):").arg(modified_files_.size()));
+			hg::log(format("File system changes detected (%1):").arg(modified_files_.size()));
 			for (const auto &f : modified_files_)
-				log((std::string("    - ") + f).c_str());
+				hg::log((std::string("    - ") + f).c_str());
+
+			if (assetc::clean_outputs_for_removed_inputs)
+				assetc::CleanOutputsForRemovedInputs();
 
 			if (!CompileClassifiedInputs(ClassifyInputs(GetInputDirFiles(), {std::begin(modified_files_), std::end(modified_files_)})))
 				break;
-			log("Press Ctrl+C to close\n");
+			hg::log("Press Ctrl+C to close\n");
 		}
 	}
 
@@ -1629,16 +1699,16 @@ static void DaemonMode() {
 static void OutputPerfReport() {
 	EndProfilerFrame();
 
-	const auto profile = GetLastFrameProfile();
+	const auto last_profile = GetLastFrameProfile();
 
 	time_ns total = 0;
-	for (auto &task : profile.tasks)
+	for (auto &task : last_profile.tasks)
 		if (task.name == "Total")
 			total = task.duration;
 
 	if (total) {
 		std::cout << std::endl << "Performance report" << std::endl;
-		for (auto &task : profile.tasks)
+		for (auto &task : last_profile.tasks)
 			std::cout << "  - " << task.name << ": "
 					  << "(" << (task.duration * 100 / total) << "%) " << FormatTime(task.duration) << " (" << task.section_indexes.size() << " call)"
 					  << std::endl;
@@ -1673,6 +1743,7 @@ int main(int narg, const char **args) {
 			{"-quiet", "Disable all build information but errors"},
 			{"-verbose", "Output additional information about the compilation process"},
 			{"-fast_check", "Perform modification detection using input file timestamp"},
+			{"-no_clean_removed_inputs", "Do not remove outputs for removed input files"},
 		},
 		{
 			{"-job", "Maximum number of parallel job (0 - automatic)", true},
@@ -1696,6 +1767,7 @@ int main(int narg, const char **args) {
 			{"-v", "-verbose"},
 			{"-D", "-defines"},
 			{"-f", "-fast_check"},
+			{"-n", "-no_clean_removed_inputs"},
 		},
 	};
 
@@ -1737,6 +1809,7 @@ int main(int narg, const char **args) {
 	assetc::fast_check = GetCmdLineFlagValue(cmd_content, "-fast_check");
 
 	assetc::poll_process_id = GetCmdLineSingleValue(cmd_content, "-poll_pid", 0);
+	assetc::clean_outputs_for_removed_inputs = !GetCmdLineFlagValue(cmd_content, "-no_clean_removed_inputs");
 
 	assetc::SetRenderPipeline(GetForwardPipelineInfo());
 
@@ -1774,27 +1847,31 @@ int main(int narg, const char **args) {
 	//
 	auto exe_path_or_nothing = [](const std::string &path) { return path.empty() ? "-" : path; };
 
-	log(format("> Input dir: %1").arg(assetc::input_dir));
-	log(format("> Output dir: %1").arg(assetc::output_dir));
-	log("");
-	log(format("> Target platform: %1").arg(assetc::platform));
-	log(format("> Target graphics API: %1").arg(assetc::api));
-	log(format("> Target pipeline: %1").arg(assetc::pipeline.name));
-	log("");
-	log(format("> Using %1 parallel job").arg(assetc::max_async_jobs));
-	log(format("> Toolchain compilers (%1):").arg(toolchain_path));
-	log(format("  - Shader      %1").arg(exe_path_or_nothing(assetc::toolchain.shaderc)));
-	log(format("  - Texture     %1").arg(exe_path_or_nothing(assetc::toolchain.texturec)));
-	log(format("  - Probe       %1").arg(exe_path_or_nothing(assetc::toolchain.cmft)));
-	log(format("  - Lua         %1").arg(exe_path_or_nothing(assetc::toolchain.luac)));
-	log(format("  - Pathfinding %1").arg(exe_path_or_nothing(assetc::toolchain.recastc)));
-	log("");
+	hg::log(format("> Input dir: %1").arg(assetc::input_dir));
+	hg::log(format("> Output dir: %1").arg(assetc::output_dir));
+	hg::log("");
+	hg::log(format("> Target platform: %1").arg(assetc::platform));
+	hg::log(format("> Target graphics API: %1").arg(assetc::api));
+	hg::log(format("> Target pipeline: %1").arg(assetc::pipeline.name));
+	hg::log("");
+	hg::log(format("> Using %1 parallel job").arg(assetc::max_async_jobs));
+	hg::log(format("> Toolchain compilers (%1):").arg(toolchain_path));
+	hg::log(format("  - Shader      %1").arg(exe_path_or_nothing(assetc::toolchain.shaderc)));
+	hg::log(format("  - Texture     %1").arg(exe_path_or_nothing(assetc::toolchain.texturec)));
+	hg::log(format("  - Probe       %1").arg(exe_path_or_nothing(assetc::toolchain.cmft)));
+	hg::log(format("  - Lua         %1").arg(exe_path_or_nothing(assetc::toolchain.luac)));
+	hg::log(format("  - Pathfinding %1").arg(exe_path_or_nothing(assetc::toolchain.recastc)));
+	hg::log("");
 
 	// initial run over input directory (process all files)
 	{
 		ProfilerPerfSection perf("Total");
 
 		assetc::LoadCompilationDB();
+
+		if (assetc::clean_outputs_for_removed_inputs)
+			assetc::CleanOutputsForRemovedInputs();
+
 		if (assetc::CompileClassifiedInputs(assetc::ClassifyInputDir())) {
 			// enter daemon mode, process input dir files as they change
 			if (GetCmdLineFlagValue(cmd_content, "-daemon"))

@@ -10,13 +10,20 @@
 
 namespace hg {
 
+bool IsValid(const Upsample &upsample) {
+	return bgfx::isValid(upsample.compute) && bgfx::isValid(upsample.u_input) && bgfx::isValid(upsample.u_attr_lo) && bgfx::isValid(upsample.u_attr_hi);
+}
+
 static Upsample _CreateUpsample(const Reader &ir, const ReadProvider &ip, const char *path) {
     Upsample up;
 	up.compute = hg::LoadProgram(ir, ip, hg::format("%1/shader/aaa_upsample").arg(path));
 	up.u_input = bgfx::createUniform("u_input", bgfx::UniformType::Sampler);
 	up.u_attr_lo = bgfx::createUniform("u_attr_lo", bgfx::UniformType::Sampler);
 	up.u_attr_hi = bgfx::createUniform("u_attr_hi", bgfx::UniformType::Sampler);
-    return up;
+	if (!IsValid(up)) {
+		DestroyUpsample(up);
+	}
+	return up;
 }
 
 Upsample CreateUpsampleFromFile(const char *path) { return _CreateUpsample(g_file_reader, g_file_read_provider, path); }
@@ -30,7 +37,7 @@ void DestroyUpsample(Upsample &up) {
 }
 
 void ComputeUpsample(bgfx::ViewId &view_id, const iRect &rect, const Texture &input, const Texture &attr_lo, const Texture &attr_hi, bgfx::FrameBufferHandle output, const Upsample &up) {
-	const bgfx::Caps *caps = bgfx::getCaps();
+	__ASSERT__(IsValid(up));
 
 	bgfx::TransientIndexBuffer idx;
 	bgfx::TransientVertexBuffer vtx;

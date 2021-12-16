@@ -51,14 +51,13 @@ public:
 
 	bool NodeHasBody(NodeRef ref) const { return nodes.find(ref) != std::end(nodes); }
 	bool NodeHasBody(const Node &node) const { return NodeHasBody(node.ref); }
-
-	void StoreInterpolationRefs(time_ns clock);
+	
 	/// Step physics world
 	void StepSimulation(time_ns dt, time_ns step = time_from_ms(16), int max_step = 8);
 
 	void CollectCollisionEvents(const Scene &scene, NodeNodeContacts &node_node_contacts);
 
-	void SyncKinematicBodiesFromScene(const Scene &scene);
+	void SyncBodiesFromScene(const Scene &scene);
 
 	//
 	size_t GarbageCollect(const Scene &scene);
@@ -70,6 +69,14 @@ public:
 	//
 	void NodeWake(NodeRef ref) const;
 	void NodeWake(const Node &node) const { NodeWake(node.ref); }
+
+	void NodeSetDeactivation(NodeRef ref, bool enable) const;
+	void NodeSetDeactivation(const Node &node, bool enable) const { NodeSetDeactivation(node.ref, enable); }
+	bool NodeGetDeactivation(NodeRef ref) const;
+	bool NodeGetDeactivation(const Node &node) const { return NodeGetDeactivation(node.ref); }
+
+	void NodeResetWorld(NodeRef ref, const Mat4 &world) const;
+	void NodeResetWorld(const Node &node, const Mat4 &world) { NodeResetWorld(node.ref, world); }
 
 	void NodeAddForce(NodeRef ref, const Vec3 &F);
 	void NodeAddForce(NodeRef ref, const Vec3 &F, const Vec3 &world_pos);
@@ -94,6 +101,16 @@ public:
 	Vec3 NodeGetAngularVelocity(const Node &node) const { return NodeGetAngularVelocity(node.ref); }
 	void NodeSetAngularVelocity(const Node &node, const Vec3 &W) { NodeSetAngularVelocity(node.ref, W); }
 
+	void NodeGetLinearLockAxes(NodeRef ref, bool &X, bool &Y, bool &Z) const;
+	void NodeSetLinearLockAxes(NodeRef ref, bool X, bool Y, bool Z);
+	void NodeGetAngularLockAxes(NodeRef ref, bool &X, bool &Y, bool &Z) const;
+	void NodeSetAngularLockAxes(NodeRef ref, bool X, bool Y, bool Z);
+
+	void NodeGetLinearLockAxes(const Node &node, bool &X, bool &Y, bool &Z) const { return NodeGetLinearLockAxes(node.ref, X, Y, Z); }
+	void NodeSetLinearLockAxes(const Node &node, bool X, bool Y, bool Z) { NodeSetLinearLockAxes(node.ref, X, Y, Z); }
+	void NodeGetAngularLockAxes(const Node &node, bool &X, bool &Y, bool &Z) const { return NodeGetAngularLockAxes(node.ref, X, Y, Z); }
+	void NodeSetAngularLockAxes(const Node &node, bool X, bool Y, bool Z) { NodeSetAngularLockAxes(node.ref, X, Y, Z); }
+
 	//
 	btCollisionShape *LoadCollisionTree(const Reader &ir, const ReadProvider &ip, const char *name, int shape_id = 0);
 
@@ -105,6 +122,7 @@ public:
 	NodeContacts NodeCollideWorld(const Node &node, const Mat4 &world, int max_contact = 1) const;
 
 	RaycastOut RaycastFirstHit(const Scene &scene, const Vec3 &world_p0, const Vec3 &world_p1) const;
+	std::vector<RaycastOut> RaycastAllHits(const Scene &scene, const Vec3 &world_p0, const Vec3 &world_p1) const;
 
 	//
 	void RenderCollision(bgfx::ViewId view_id, const bgfx::VertexLayout &vtx_decl, bgfx::ProgramHandle program, RenderState state, uint32_t depth);

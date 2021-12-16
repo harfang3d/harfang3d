@@ -155,4 +155,15 @@ Color ColorFromVector4(const Vec4 &);
 
 inline Color ColorI(int r, int g, int b, int a = 255) { return {float(r) / 255.f, float(g) / 255.f, float(b) / 255.f, float(a) / 255.f}; }
 
+//
+Color ToHLS(const Color &);
+Color FromHLS(const Color &);
+
+Color SetHue(const Color &c, float h);
+Color SetSaturation(const Color &c, float s);
+Color SetLuminance(const Color &c, float l);
+Color ScaleHue(const Color &c, float k);
+Color ScaleSaturation(const Color &c, float k);
+Color ScaleLuminance(const Color &c, float k);
+
 } // namespace hg

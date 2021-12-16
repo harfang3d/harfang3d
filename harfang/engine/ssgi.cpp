@@ -10,6 +10,11 @@
 
 namespace hg {
 
+bool IsValid(const SSGI &ssgi) {
+	return bgfx::isValid(ssgi.compute) && bgfx::isValid(ssgi.u_color) && bgfx::isValid(ssgi.u_attr0) && bgfx::isValid(ssgi.u_attr1) &&
+		   bgfx::isValid(ssgi.u_noise) && bgfx::isValid(ssgi.u_probe) && bgfx::isValid(ssgi.u_depthTex) && bgfx::isValid(ssgi.u_depthTexInfos);
+}
+
 static SSGI _CreateSSGI(const Reader &ir, const ReadProvider &ip, const char *path) {
 	SSGI ssgi;
 	ssgi.compute = hg::LoadProgram(ir, ip, hg::format("%1/shader/ssgi").arg(path));
@@ -20,6 +25,10 @@ static SSGI _CreateSSGI(const Reader &ir, const ReadProvider &ip, const char *pa
 	ssgi.u_probe = bgfx::createUniform("u_probe", bgfx::UniformType::Sampler);
 	ssgi.u_depthTex = bgfx::createUniform("u_depthTex", bgfx::UniformType::Sampler);
 	ssgi.u_depthTexInfos = bgfx::createUniform("u_depthTexInfos", bgfx::UniformType::Vec4);
+
+	if (!IsValid(ssgi)) {
+		DestroySSGI(ssgi);
+	}
 	return ssgi;
 }
 
@@ -39,7 +48,7 @@ void DestroySSGI(SSGI &ssgi) {
 
 void ComputeSSGI(bgfx::ViewId &view_id, const iRect &rect, bgfx::BackbufferRatio::Enum ratio, const Texture &color, const Texture &attr0, 
 	const Texture &attr1, const Texture &probe, const Texture &noise, const HiZ &hiz, bgfx::FrameBufferHandle output, const SSGI &ssgi) {
-	const bgfx::Caps *caps = bgfx::getCaps();
+	__ASSERT__(IsValid(ssgi));
 
 	bgfx::TransientIndexBuffer idx;
 	bgfx::TransientVertexBuffer vtx;

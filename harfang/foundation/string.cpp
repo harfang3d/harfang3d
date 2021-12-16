@@ -247,30 +247,26 @@ std::string strip_suffix(const std::string &str, const std::string &suffix) { re
 
 //
 std::string utf16_to_utf8(const std::u16string &str) {
-	auto utf16string = (char16_t *)str.data();
 	std::vector<unsigned char> utf8string;
-	utf8::utf16to8(utf16string, utf16string + str.size(), std::back_inserter(utf8string));
+	utf8::utf16to8(str.begin(), str.end(), std::back_inserter(utf8string));
 	return std::string((char *)utf8string.data(), utf8string.size());
 }
 
 std::u16string utf8_to_utf16(const std::string &str) {
-	auto utf8string = (char *)str.data();
 	std::vector<uint16_t> utf16string;
-	utf8::utf8to16(utf8string, utf8string + str.size(), std::back_inserter(utf16string));
+	utf8::utf8to16(str.begin(), str.end(), std::back_inserter(utf16string));
 	return std::u16string(reinterpret_cast<char16_t *>(utf16string.data()), utf16string.size());
 }
 
 std::string utf32_to_utf8(const std::u32string &str) {
-	auto utf32string = (char32_t *)str.data();
 	std::vector<unsigned char> utf8string;
-	utf8::utf32to8(utf32string, utf32string + str.size(), std::back_inserter(utf8string));
+	utf8::utf32to8(str.begin(), str.end(), std::back_inserter(utf8string));
 	return std::string((char *)utf8string.data(), utf8string.size());
 }
 
 std::u32string utf8_to_utf32(const std::string &str) {
-	auto utf8string = (char *)str.data();
 	std::vector<char32_t> utf32string;
-	utf8::utf8to32(utf8string, utf8string + str.size(), std::back_inserter(utf32string));
+	utf8::utf8to32(str.begin(), str.end(), std::back_inserter(utf32string));
 	return std::u32string(utf32string.data(), utf32string.size());
 }
 

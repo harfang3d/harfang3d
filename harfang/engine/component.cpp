@@ -887,6 +887,12 @@ void RigidBody::SetFriction(float friction) {
 	if (scene_ref && scene_ref->scene)
 		scene_ref->scene->SetRigidBodyFriction(ref, friction);
 }
+float RigidBody::GetRollingFriction() const { return scene_ref && scene_ref->scene ? scene_ref->scene->GetRigidBodyRollingFriction(ref) : 0.f; }
+
+void RigidBody::SetRollingFriction(float rolling_friction) {
+	if (scene_ref && scene_ref->scene)
+		scene_ref->scene->SetRigidBodyRollingFriction(ref, rolling_friction);
+}
 
 //
 bool Collision::IsValid() const { return scene_ref && scene_ref->scene ? scene_ref->scene->IsValidCollisionRef(ref) : false; }
@@ -896,6 +902,13 @@ CollisionType Collision::GetType() const { return scene_ref && scene_ref->scene 
 void Collision::SetType(CollisionType type) {
 	if (scene_ref && scene_ref->scene)
 		scene_ref->scene->SetCollisionType(ref, type);
+}
+
+Mat4 Collision::GetLocalTransform() const { return scene_ref && scene_ref->scene ? scene_ref->scene->GetCollisionLocalTransform(ref) : Mat4::Identity; }
+
+void Collision::SetLocalTransform(Mat4 m) {
+	if (scene_ref && scene_ref->scene)
+		scene_ref->scene->SetCollisionLocalTransform(ref, m);
 }
 
 float Collision::GetMass() const { return scene_ref && scene_ref->scene ? scene_ref->scene->GetCollisionMass(ref) : 0.f; }

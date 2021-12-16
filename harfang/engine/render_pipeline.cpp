@@ -694,7 +694,7 @@ std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromAssets(const 
 //
 bool LoadPipelineProgramUniforms(const Reader &ir, const ReadProvider &ip, const char *name, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs,
 	PipelineResources &resources) {
-	const auto json_text = LoadString(ir, ScopedReadHandle(ip, name));
+	const auto json_text = LoadString(ir, ScopedReadHandle(ip, name, true));
 	if (json_text.empty())
 		return false;
 
@@ -702,7 +702,7 @@ bool LoadPipelineProgramUniforms(const Reader &ir, const ReadProvider &ip, const
 
 	const auto i = js.find("uniforms");
 	if (i == std::end(js))
-		return false;
+		return true; // [EJ] if there's no uniforms declared look no further
 
 	for (const auto &j : *i) {
 		const auto uname = j["name"].get<std::string>();
@@ -2223,7 +2223,8 @@ void Vertices::End(bool validate) {
 			"Weight", "TexCoord0", "TexCoord1", "TexCoord2", "TexCoord3", "TexCoord4", "TexCoord5", "TexCoord6", "TexCoord7"};
 
 		for (int attr = 0; attr < bgfx::Attrib::Count; ++attr)
-			if (decl.has(bgfx::Attrib::Enum(attr)) && !(vtx_attr_flag & (1 << attr))) // attribute expected by the vertex layout but missing from vertex declaration
+			if (decl.has(bgfx::Attrib::Enum(attr)) &&
+				!(vtx_attr_flag & (1 << attr))) // attribute expected by the vertex layout but missing from vertex declaration
 				warn(format("Incomplete vertex #%1 declaration: missing %2 attribute").arg(idx).arg(attr_name[attr]));
 	}
 
@@ -2490,8 +2491,8 @@ void SetView2D(bgfx::ViewId id, int x, int y, int res_x, int res_y, float znear,
 	bgfx::setViewTransform(id, _view.data(), _proj.data());
 }
 
-void SetViewPerspective(bgfx::ViewId id, int x, int y, int res_x, int res_y, const Mat4 &world, float znear, float zfar, float zoom_factor, uint16_t clear_flags,
-	const Color &clear_color, float depth, uint8_t stencil, const Vec2 &aspect_ratio) {
+void SetViewPerspective(bgfx::ViewId id, int x, int y, int res_x, int res_y, const Mat4 &world, float znear, float zfar, float zoom_factor,
+	uint16_t clear_flags, const Color &clear_color, float depth, uint8_t stencil, const Vec2 &aspect_ratio) {
 	const bgfx::Caps *caps = bgfx::getCaps();
 
 	bgfx::setViewClear(id, clear_flags, ColorToABGR32(clear_color), depth, stencil);
@@ -2521,6 +2522,24 @@ void SetViewOrthographic(bgfx::ViewId id, int x, int y, int res_x, int res_y, co
 }
 
 //
+static inline FrameBuffer CreateFrameBuffer(bgfx::TextureHandle color, bgfx::TextureHandle depth, const char *name, bool own_textures) {
+	bgfx::TextureHandle texs[] = {color, depth};
+
+	if (own_textures) {
+		bgfx::setName(color, format("FrameBuffer.color (%1)").arg(name).c_str());
+		bgfx::setName(depth, format("FrameBuffer.depth (%1)").arg(name).c_str());
+	}
+
+	bgfx::FrameBufferHandle handle = bgfx::createFrameBuffer(2, texs, own_textures);
+	bgfx::setName(handle, format("FrameBuffer (%1)").arg(name).c_str());
+
+	return {handle};
+}
+
+FrameBuffer CreateFrameBuffer(const hg::Texture &color, const hg::Texture &depth, const char *name) {
+	return CreateFrameBuffer(color.handle, depth.handle, name, false);
+}
+
 static inline uint64_t ComputeTextureRTMSAAFlag(int aa) {
 	switch (aa) {
 		case 2:
@@ -2536,60 +2555,31 @@ static inline uint64_t ComputeTextureRTMSAAFlag(int aa) {
 	}
 }
 
-static inline PipelineFrameBuffer CreateFrameBuffer(hg::Texture &color, hg::Texture &depth, PipelineResources &res, const char *name) {
-	auto color_name = format("FrameBuffer.color (%1)").arg(name);
-	auto depth_name = format("FrameBuffer.depth (%1)").arg(name);
-
-	bgfx::setName(color.handle, color_name.c_str());
-	bgfx::setName(depth.handle, depth_name.c_str());
-
-	PipelineFrameBuffer frame_buffer;
-	bgfx::TextureHandle texs[] = {color.handle, depth.handle};
-	frame_buffer.handle = bgfx::createFrameBuffer(2, texs);
-	bgfx::setName(frame_buffer.handle, format("FrameBuffer (%1)").arg(name).c_str());
-
-	res.textures.Destroy(res.textures.Has(color_name.c_str()));
-	frame_buffer.color = res.textures.Add(color_name.c_str(), color);
-	res.textures.Destroy(res.textures.Has(depth_name.c_str()));
-	frame_buffer.depth = res.textures.Add(depth_name.c_str(), depth);
-
-	return frame_buffer;
-}
-
-PipelineFrameBuffer CreateFrameBuffer(
-	bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, PipelineResources &res, const char *name) {
+FrameBuffer CreateFrameBuffer(bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, const char *name) {
 	uint64_t flags = ComputeTextureRTMSAAFlag(aa);
-	hg::Texture color, depth;
 
-	color.flags = flags;
-	color.handle = bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, color_format, color.flags);
+	const auto color = bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, color_format, flags);
+	const auto depth = bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, depth_format, flags | BGFX_TEXTURE_RT_WRITE_ONLY);
 
-	depth.flags = BGFX_TEXTURE_RT_WRITE_ONLY | flags;
-	depth.handle = bgfx::createTexture2D(bgfx::BackbufferRatio::Equal, false, 1, depth_format, depth.flags);
-
-	return CreateFrameBuffer(color, depth, res, name);
+	return CreateFrameBuffer(color, depth, name, true);
 }
 
-PipelineFrameBuffer CreateFrameBuffer(
-	int width, int height, bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, PipelineResources &res, const char *name) {
+FrameBuffer CreateFrameBuffer(int width, int height, bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, const char *name) {
 	uint64_t flags = ComputeTextureRTMSAAFlag(aa);
-	hg::Texture color, depth;
 
-	color.flags = flags;
-	color.handle = bgfx::createTexture2D(width, height, false, 1, color_format, color.flags);
+	const auto color = bgfx::createTexture2D(width, height, false, 1, color_format, flags);
+	const auto depth = bgfx::createTexture2D(width, height, false, 1, depth_format, flags | BGFX_TEXTURE_RT_WRITE_ONLY);
 
-	depth.flags = BGFX_TEXTURE_RT_WRITE_ONLY | flags;
-	depth.handle = bgfx::createTexture2D(width, height, false, 1, depth_format, depth.flags);
-
-	return CreateFrameBuffer(color, depth, res, name);
+	return CreateFrameBuffer(color, depth, name, true);
 }
 
-void DestroyFrameBuffer(PipelineResources &res, PipelineFrameBuffer &frameBuffer) {
-	res.textures.Destroy(frameBuffer.color);
-	res.textures.Destroy(frameBuffer.depth);
-	bgfx::destroy(frameBuffer.handle);
-}
+Texture GetColorTexture(FrameBuffer &frameBuffer) { return MakeTexture(bgfx::getTexture(frameBuffer.handle, 0)); }
+Texture GetDepthTexture(FrameBuffer &frameBuffer) { return MakeTexture(bgfx::getTexture(frameBuffer.handle, 1)); }
 
+
+void DestroyFrameBuffer(FrameBuffer &frameBuffer) { bgfx::destroy(frameBuffer.handle); }
+
+//
 bool CreateFullscreenQuad(bgfx::TransientIndexBuffer &idx, bgfx::TransientVertexBuffer &vtx) {
 	bgfx::VertexLayout layout;
 	layout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float).end();

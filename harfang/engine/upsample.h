@@ -21,4 +21,6 @@ void DestroyUpsample(Upsample &upsample);
 
 void ComputeUpsample(bgfx::ViewId &view_id, const iRect &rect, const Texture &input, const Texture &attr0_lo, const Texture &attr0_hi, bgfx::FrameBufferHandle output, const Upsample &upsample);
 
+bool IsValid(const Upsample &upsample);
+
 } // namespace hg
