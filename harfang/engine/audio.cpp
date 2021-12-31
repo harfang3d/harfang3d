@@ -96,7 +96,18 @@ static bool CheckALSuccess(const char *file = "unknown", ALuint line = 0) {
 	} while (0);
 
 //
-static const ALenum AFF_ALFormat[AFF_Count] = {AL_FORMAT_MONO16, AL_FORMAT_MONO16, AL_FORMAT_STEREO16, AL_FORMAT_STEREO16};
+static inline int AFF_ALFormat(AudioFrameFormat fmt) {
+	switch (fmt) {
+		case AFF_LPCM_44KHZ_S16_Mono:
+		case AFF_LPCM_48KHZ_S16_Mono:
+			return AL_FORMAT_MONO16; 
+		case AFF_LPCM_44KHZ_S16_Stereo:
+		case AFF_LPCM_48KHZ_S16_Stereo:
+			return AL_FORMAT_STEREO16;
+		default:
+			return 0;
+	};
+}
 
 //
 static void AllocStream(ALStream &stream) {
@@ -172,16 +183,19 @@ static bool UpdateSourceStream(SourceRef src_ref) {
 			stream.buffers_format[stream.put] = pcm_format;
 
 			__AL_CALL(
-				alBufferData(stream.buffers[stream.put], AFF_ALFormat[pcm_format], pcm_buffer, numeric_cast<ALsizei>(pcm_size), AFF_Frequency[pcm_format]));
+				alBufferData(stream.buffers[stream.put], AFF_ALFormat(pcm_format), pcm_buffer, numeric_cast<ALsizei>(pcm_size), AFF_Frequency[pcm_format]));
 			__AL_CALL(alSourceQueueBuffers(src, 1, &stream.buffers[stream.put]));
 
 			stream.put = (stream.put + 1) % stream.buffers.size();
 			--stream.free_buffer_count;
 		} else {
 			if (stream.streamer.IsEnded(stream.ref)) { // stream is EOF
-				if (stream.loop) // handle loop
+				if (stream.loop) { // handle loop
 					if (!stream.streamer.Seek(stream.ref, 0)) // FIXME seek to sample_start
 						return false;
+				} else {
+					break; // EOF
+				}
 			} else {
 				return false; // stream error
 			}
@@ -347,7 +361,7 @@ static SoundRef LoadSound(IAudioStreamer streamer, const char *path) {
 		sound.buffers.push_back(AL_INVALID_VALUE);
 		__AL_CALL(alGenBuffers(1, &sound.buffers.back()));
 		__AL_CALL(alBufferData(
-			sound.buffers.back(), AFF_ALFormat[pcm_format], (const ALvoid *)pcm_buffer, numeric_cast<ALsizei>(pcm_size), AFF_Frequency[pcm_format]));
+			sound.buffers.back(), AFF_ALFormat(pcm_format), (const ALvoid *)pcm_buffer, numeric_cast<ALsizei>(pcm_size), AFF_Frequency[pcm_format]));
 	}
 
 	streamer.Close(stream_ref);
@@ -463,7 +477,6 @@ time_ns GetSourceDuration(SourceRef src_ref) {
 	if (src_ref < 0 || src_ref >= max_source)
 		return 0;
 
-	std::lock_guard<std::mutex> lock(al_mixer.lock);
 	ALStream &stream = al_mixer.streams[src_ref];
 	if (stream.ref == InvalidAudioStreamRef)
 		return 0;
@@ -472,12 +485,21 @@ time_ns GetSourceDuration(SourceRef src_ref) {
 	return stream.streamer.GetDuration(stream.ref);
 }
 
-#if 0
-// [todo]
-bool SetSourceStreamTimecode(SourceRef src_ref, time_ns t) {
-	return false;
+bool SetSourceTimecode(SourceRef src_ref, time_ns t) {
+	std::lock_guard<std::mutex> mixer_lock(al_mixer.lock);
+	if (src_ref < 0 || src_ref >= max_source)
+		return false;
+	
+	ALStream &stream = al_mixer.streams[src_ref];
+	if (stream.ref == InvalidAudioStreamRef)
+		return 0;
+
+	if (stream.streamer.Seek(stream.ref, t) == 0) {
+		return false;
+	}
+
+	return true;
 }
-#endif
 
 void SetSourceVolume(SourceRef src_ref, float volume) {
 	if (src_ref < 0 || src_ref >= max_source)
@@ -546,6 +568,8 @@ SourceState GetSourceState(SourceRef src_ref) {
 		return SS_Playing;
 	if (state == AL_PAUSED)
 		return SS_Paused;
+	if (state == AL_STOPPED)
+		return SS_Stopped;
 
 	return SS_Invalid;
 }
@@ -570,7 +594,6 @@ void StopSource(SourceRef src_ref) {
 
 	__AL_CALL(alSourceStop(src));
 	__AL_CALL(alSourcei(src, AL_BUFFER, 0));
-	__AL_CALL(alSourceRewind(src));
 
 	auto &stream = al_mixer.streams[src_ref];
 

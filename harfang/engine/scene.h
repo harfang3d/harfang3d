@@ -407,8 +407,8 @@ public:
 
 	float GetRigidBodyLinearDamping(ComponentRef ref) const;
 	void SetRigidBodyLinearDamping(ComponentRef ref, float damping);
-	Vec3 GetRigidBodyAngularDamping(ComponentRef ref) const;
-	void SetRigidBodyAngularDamping(ComponentRef ref, const Vec3 &damping);
+	float GetRigidBodyAngularDamping(ComponentRef ref) const;
+	void SetRigidBodyAngularDamping(ComponentRef ref, float damping);
 
 	float GetRigidBodyRestitution(ComponentRef ref) const;
 	void SetRigidBodyRestitution(ComponentRef ref, float restitution);
@@ -730,8 +730,8 @@ private:
 		Mat4 prv{Mat4::Identity}, cur{Mat4::Identity};
 		Vec3 scl{Vec3::One};
 
-		uint8_t linear_damping{pack_float<uint8_t>(1.f)};
-		std::array<uint8_t, 3> angular_damping = {pack_float<uint8_t>(1.f), pack_float<uint8_t>(1.f), pack_float<uint8_t>(1.f)};
+		uint8_t linear_damping{pack_float<uint8_t>(0.f)};
+		uint8_t angular_damping{pack_float<uint8_t>(0.f)};
 
 		float restitution{0.f}, friction{0.5f}, rolling_friction{0.f};
 	};
@@ -785,7 +785,7 @@ private:
 	friend void LoadComponent(Object_ *data_, const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip,
 		PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, uint32_t version);
 	friend void LoadComponent(Light_ *data_, const Reader &ir, const Handle &h);
-	friend void LoadComponent(RigidBody_ *data_, const Reader &ir, const Handle &h);
+	friend void LoadComponent(RigidBody_ *data_, const Reader &ir, const Handle &h, uint32_t version);
 	friend void LoadComponent(Collision_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Instance_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Script_ *data_, const Reader &ir, const Handle &h);

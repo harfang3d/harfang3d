@@ -180,8 +180,8 @@ struct RigidBody { // 16B on 64 bit
 
 	float GetLinearDamping() const;
 	void SetLinearDamping(float damping);
-	Vec3 GetAngularDamping() const;
-	void SetAngularDamping(const Vec3 &damping);
+	float GetAngularDamping() const;
+	void SetAngularDamping(float damping);
 
 	float GetRestitution() const;
 	void SetRestitution(float restitution);

@@ -57,6 +57,12 @@ void SaveComponent(const Scene::Light_ *data_, const Writer &iw, const Handle &h
 void SaveComponent(const Scene::RigidBody_ *data_, const Writer &iw, const Handle &h) {
 	Write(iw, h, data_->type);
 	iw.write(h, &data_->cur.m[0][0], sizeof(float) * 4 * 3);
+	Write(iw, h, data_->scl);
+	Write(iw, h, data_->linear_damping);
+	Write(iw, h, data_->angular_damping);
+	Write(iw, h, data_->restitution);
+	Write(iw, h, data_->friction);
+	Write(iw, h, data_->rolling_friction);
 }
 
 void SaveComponent(const Scene::Script_ *data_, const Writer &iw, const Handle &h) {
@@ -143,9 +149,18 @@ void LoadComponent(Scene::Light_ *data_, const Reader &ir, const Handle &h) {
 	Read(ir, h, data_->shadow_bias);
 }
 
-void LoadComponent(Scene::RigidBody_ *data_, const Reader &ir, const Handle &h) {
+void LoadComponent(Scene::RigidBody_ *data_, const Reader &ir, const Handle &h, uint32_t version) {
 	Read(ir, h, data_->type);
 	ir.read(h, &data_->cur.m[0][0], sizeof(float) * 4 * 3);
+
+	if (version >= 5) {
+		Read(ir, h, data_->scl);
+		Read(ir, h, data_->linear_damping);
+		Read(ir, h, data_->angular_damping);
+		Read(ir, h, data_->restitution);
+		Read(ir, h, data_->friction);
+		Read(ir, h, data_->rolling_friction);
+	}
 }
 
 void LoadComponent(Scene::Script_ *data_, const Reader &ir, const Handle &h) {
@@ -179,7 +194,7 @@ void LoadComponent(Scene::Instance_ *data_, const Reader &ir, const Handle &h) {
 }
 
 //
-uint32_t GetSceneBinaryFormatVersion() { return 4; }
+uint32_t GetSceneBinaryFormatVersion() { return 5; }
 
 bool Scene::Save_binary(
 	const Writer &iw, const Handle &h, const PipelineResources &resources, uint32_t save_flags, const std::vector<NodeRef> *nodes_to_save) const {
@@ -195,6 +210,7 @@ bool Scene::Save_binary(
 		version 2: add skinning support in Object component
 		version 3: add support for arbitrary number of bones
 		version 4: light intensity factors
+		version 5: save rigid body properties
 	*/
 	const auto version = GetSceneBinaryFormatVersion();
 	Write<uint32_t>(iw, h, version);
@@ -520,7 +536,7 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 		rigid_body_refs.resize(rigid_body_count);
 		for (size_t i = 0; i < rigid_body_count; ++i) {
 			const auto ref = rigid_body_refs[i] = CreateRigidBody().ref;
-			LoadComponent(&rigid_bodies[ref.idx], ir, h);
+			LoadComponent(&rigid_bodies[ref.idx], ir, h, version);
 		}
 	}
 

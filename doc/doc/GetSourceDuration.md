@@ -1,0 +1,1 @@
+ Return the duration of an audio source.

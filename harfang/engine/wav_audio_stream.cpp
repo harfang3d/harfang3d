@@ -221,8 +221,9 @@ static int WavAudioStreamGetFrame(AudioStreamRef ref, uintptr_t *data, int *size
 
 	const auto data_cursor = stream.reader->tell(stream.handle) - stream.data_offset; // position in data chunk
 	const auto data_left = stream.data_size - data_cursor; // data left in chunk
-	if (data_left == 0)
+	if (data_left == 0) {
 		return 0;
+	}
 
 	const auto data_to_read = Min(data_left, stream.frame.capacity()); // amount of data to read
 	if (stream.reader->read(stream.handle, stream.frame.data(), data_to_read) != data_to_read)

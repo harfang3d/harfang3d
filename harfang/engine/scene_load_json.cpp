@@ -71,6 +71,12 @@ void SaveComponent(const Scene::Light_ *data_, json &js) {
 void SaveComponent(const Scene::RigidBody_ *data_, json &js) {
 	js["type"] = data_->type;
 	js["world"] = data_->cur;
+	js["scale"] = data_->scl;
+	js["linear_damping"] = data_->linear_damping;
+	js["angular_damping"] = data_->angular_damping;
+	js["restitution"] = data_->restitution;
+	js["friction"] = data_->friction;
+	js["rolling_friction"] = data_->rolling_friction;
 }
 
 void SaveComponent(const Scene::Script_ *data_, json &js) {
@@ -186,6 +192,18 @@ void LoadComponent(Scene::Light_ *data_, const json &js) {
 void LoadComponent(Scene::RigidBody_ *data_, const json &js) {
 	data_->type = js.at("type");
 	data_->cur = js.at("world");
+	if (js.find("scale") != std::end(js))
+		data_->scl = js.at("scale");
+	if (js.find("linear_damping") != std::end(js))
+		data_->linear_damping = js.at("linear_damping");
+	if (js.find("angular_damping") != std::end(js))
+		data_->angular_damping = js.at("angular_damping");
+	if (js.find("restitution") != std::end(js))
+		data_->restitution = js.at("restitution");
+	if (js.find("friction") != std::end(js))
+		data_->friction = js.at("friction");
+	if (js.find("rolling_friction") != std::end(js))
+		data_->rolling_friction = js.at("rolling_friction");
 }
 
 void LoadComponent(Scene::Script_ *data_, const json &js) {

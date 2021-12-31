@@ -1,3 +1,22 @@
+# [3.1.1] - 2021-12-31
+
+This minor release brings several fixes, mainly in the Bullet Physics API.
+
+### Engine
+
+- Added a missing texture render target flag (`TF_RenderTarget`).
+- Added  `SetSourceStreamTimecode()` to the audio API.
+
+### Physics
+
+- Updated the Physics unit tests.
+- Fixed an issue in the `Kinematic` physics matrix.
+- `SetRigidBodyAngularDamping()` now takes a `float` instead of a `Vec3`.
+
+### Documentation
+
+- Fixed several typos in the documentation.
+
 # [3.1.0] - 2021-12-13
 
 This minor release brings several improvements and fixes, mainly in the Bullet Physics API.
