@@ -43,14 +43,14 @@ static const SoundRef InvalidSoundRef = -1;
 SoundRef LoadWAVSoundFile(const char *path);
 SoundRef LoadWAVSoundAsset(const char *name);
 
-void UnloadSound(SoundRef snd);
+void UnloadSound(SoundRef snd_ref);
 
 //
 using SourceRef = int;
 static const SourceRef InvalidSourceRef = -1;
 
-SourceRef PlayStereo(SoundRef snd, const StereoSourceState &state);
-SourceRef PlaySpatialized(SoundRef snd, const SpatializedSourceState &state);
+SourceRef PlayStereo(SoundRef snd_ref, const StereoSourceState &state);
+SourceRef PlaySpatialized(SoundRef snd_ref, const SpatializedSourceState &state);
 
 SourceRef StreamWAVFileStereo(const char *path, const StereoSourceState &state);
 SourceRef StreamWAVAssetStereo(const char *name, const StereoSourceState &state);
@@ -58,24 +58,24 @@ SourceRef StreamWAVFileSpatialized(const char *path, const SpatializedSourceStat
 SourceRef StreamWAVAssetSpatialized(const char *name, const SpatializedSourceState &state);
 
 //
-// time_ns GetSourceDuration(SourceRef source);
-time_ns GetSourceTimecode(SourceRef src);
-// [unimplemented] bool SetSourceStreamTimecode(SourceRef source, time_ns t);
+time_ns GetSourceDuration(SourceRef src_ref);
+time_ns GetSourceTimecode(SourceRef src_ref);
+bool SetSourceTimecode(SourceRef src_ref, time_ns t);
 
 //
-void SetSourceVolume(SourceRef src, float volume);
-void SetSourcePanning(SourceRef src, float panning);
-void SetSourceRepeat(SourceRef src, SourceRepeat repeat);
-void SetSourceTransform(SourceRef src, const hg::Mat4 &world, const hg::Vec3 &velocity);
+void SetSourceVolume(SourceRef src_ref, float volume);
+void SetSourcePanning(SourceRef src_ref, float panning);
+void SetSourceRepeat(SourceRef src_ref, SourceRepeat repeat);
+void SetSourceTransform(SourceRef src_ref, const hg::Mat4 &world, const hg::Vec3 &velocity);
 
 //
 enum SourceState { SS_Initial, SS_Playing, SS_Paused, SS_Stopped, SS_Invalid };
 
-SourceState GetSourceState(SourceRef src);
+SourceState GetSourceState(SourceRef src_ref);
 
-void PauseSource(SourceRef src);
+void PauseSource(SourceRef src_ref);
 
-void StopSource(SourceRef src);
+void StopSource(SourceRef src_ref);
 void StopAllSources();
 
 // [todo] loop point?

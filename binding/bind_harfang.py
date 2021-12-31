@@ -971,8 +971,8 @@ def bind_scene(gen):
 
 	gen.bind_method(rigid_body, 'GetLinearDamping', 'float', [])
 	gen.bind_method(rigid_body, 'SetLinearDamping', 'void', ['float damping'])
-	gen.bind_method(rigid_body, 'GetAngularDamping', 'hg::Vec3', [])
-	gen.bind_method(rigid_body, 'SetAngularDamping', 'void', ['const hg::Vec3 &damping'])
+	gen.bind_method(rigid_body, 'GetAngularDamping', 'float', [])
+	gen.bind_method(rigid_body, 'SetAngularDamping', 'void', ['float damping'])
 	gen.bind_method(rigid_body, 'GetRestitution', 'float', [])
 	gen.bind_method(rigid_body, 'SetRestitution', 'void', ['float restitution'])
 	gen.bind_method(rigid_body, 'GetFriction', 'float', [])
@@ -2132,6 +2132,7 @@ static void _SetViewTransform(bgfx::ViewId view_id, const hg::Mat4 &view, const 
 		('TF_SamplerMagAnisotropic', 'BGFX_SAMPLER_MAG_ANISOTROPIC'),
 		('TF_BlitDestination', 'BGFX_TEXTURE_BLIT_DST'),
 		('TF_ReadBack', 'BGFX_TEXTURE_READ_BACK'),
+		('TF_RenderTarget', 'BGFX_TEXTURE_RT')
 	], 'TextureFlags')
 
 	gen.bind_function('hg::LoadTextureFlagsFromFile', 'uint64_t', ['const std::string &path'], {'rval_constants_group': 'TextureFlags'})
@@ -2430,10 +2431,11 @@ static void _FrameBuffer_GetTextures(hg::FrameBuffer &framebuffer, hg::Texture &
 	color = hg::GetColorTexture(framebuffer);
 	depth = hg::GetDepthTexture(framebuffer);
 }
+static bool _IsValid(const hg::FrameBuffer &fb) { return bgfx::isValid(fb.handle); }
 ''')	
 	gen.bind_function('GetTextures', 'void', ['hg::FrameBuffer &framebuffer', 'hg::Texture &color', 'hg::Texture &depth'], {'route': route_lambda('_FrameBuffer_GetTextures'),  'arg_out': ['color', 'depth']})
 	gen.bind_function('hg::DestroyFrameBuffer', 'void', ['hg::FrameBuffer &frameBuffer'])
-
+	gen.bind_function('hg::IsValid', 'bool', ['const hg::FrameBuffer &fb'], {'route': route_lambda('_IsValid')})
 	#
 	vertices = gen.begin_class('hg::Vertices')
 	gen.bind_constructor(vertices, ['const bgfx::VertexLayout &decl', 'size_t count'])
@@ -4166,8 +4168,9 @@ static hg::SpatializedSourceState *__ConstructSpatializedSourceState(hg::Mat4 mt
 	gen.bind_function('hg::StreamWAVFileSpatialized', 'hg::SourceRef', ['const char *path', 'const hg::SpatializedSourceState &state'], {'rval_constants_group': 'SourceRef'})
 	gen.bind_function('hg::StreamWAVAssetSpatialized', 'hg::SourceRef', ['const char *name', 'const hg::SpatializedSourceState &state'], {'rval_constants_group': 'SourceRef'})
 
+	gen.bind_function('hg::GetSourceDuration', 'hg::time_ns', ['hg::SourceRef source'], {'constants_group': {'source': 'SourceRef'}})
 	gen.bind_function('hg::GetSourceTimecode', 'hg::time_ns', ['hg::SourceRef source'], {'constants_group': {'source': 'SourceRef'}})
-	# [unimplemented] gen.bind_function('hg::SetSourceStreamTimecode', 'bool', ['hg::SourceRef source', 'hg::time_ns t'])
+	gen.bind_function('hg::SetSourceTimecode', 'bool', ['hg::SourceRef source', 'hg::time_ns t'], {'constants_group': {'source': 'SourceRef'}})
 
 	gen.bind_function('hg::SetSourceVolume', 'void', ['hg::SourceRef source', 'float volume'], {'constants_group': {'source': 'SourceRef'}})
 	gen.bind_function('hg::SetSourcePanning', 'void', ['hg::SourceRef source', 'float panning'], {'constants_group': {'source': 'SourceRef'}})

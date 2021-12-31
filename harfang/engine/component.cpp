@@ -867,9 +867,9 @@ void RigidBody::SetLinearDamping(float damping) {
 		scene_ref->scene->SetRigidBodyLinearDamping(ref, damping);
 }
 
-Vec3 RigidBody::GetAngularDamping() const { return scene_ref && scene_ref->scene ? scene_ref->scene->GetRigidBodyAngularDamping(ref) : Vec3{}; }
+float RigidBody::GetAngularDamping() const { return scene_ref && scene_ref->scene ? scene_ref->scene->GetRigidBodyAngularDamping(ref) : 0.f; }
 
-void RigidBody::SetAngularDamping(const Vec3 &damping) {
+void RigidBody::SetAngularDamping(float damping) {
 	if (scene_ref && scene_ref->scene)
 		scene_ref->scene->SetRigidBodyAngularDamping(ref, damping);
 }

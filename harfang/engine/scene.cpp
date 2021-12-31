@@ -832,15 +832,15 @@ void Scene::SetRigidBodyLinearDamping(ComponentRef ref, float damping) {
 		rb->linear_damping = pack_float<uint8_t>(damping);
 }
 
-Vec3 Scene::GetRigidBodyAngularDamping(ComponentRef ref) const {
+float Scene::GetRigidBodyAngularDamping(ComponentRef ref) const {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
-		return {unpack_float<uint8_t>(rb->angular_damping[0]), unpack_float<uint8_t>(rb->angular_damping[1]), unpack_float<uint8_t>(rb->angular_damping[2])};
+		return unpack_float<uint8_t>(rb->angular_damping);
 	return {};
 }
 
-void Scene::SetRigidBodyAngularDamping(ComponentRef ref, const Vec3 &damping) {
+void Scene::SetRigidBodyAngularDamping(ComponentRef ref, float damping) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
-		rb->angular_damping = {pack_float<uint8_t>(damping.x), pack_float<uint8_t>(damping.y), pack_float<uint8_t>(damping.z)};
+		rb->angular_damping = pack_float<uint8_t>(damping);
 }
 
 float Scene::GetRigidBodyRestitution(ComponentRef ref) const {

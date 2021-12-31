@@ -13,6 +13,9 @@
 #include "engine/scene_forward_pipeline.h"
 #include "engine/scene_lua_vm.h"
 #include "engine/scene_systems.h"
+#if HG_ENABLE_BULLET3_SCENE_PHYSICS
+#include "engine/scene_bullet3_physics.h"
+#endif
 
 #include "gtest/gtest.h"
 
@@ -604,18 +607,20 @@ TEST(Scene, LuaScriptWriteToG) {
 }
 
 //
-#if HG_ENABLE_SCENE_PHYSICS_API
+#if HG_ENABLE_BULLET3_SCENE_PHYSICS
 TEST(Scene, PhysicDynamicRigidBodyFreefall) {
 	Scene scene;
 	auto sphere = CreatePhysicSphere(scene, 0.5, Mat4::Identity, {}, {}, 1.f);
 
-	SceneNewtonPhysics physics;
-	SceneSyncToSystemsFromAssets(scene, &physics);
+	SceneBullet3Physics physics;
+	SceneSyncToSystemsFromAssets(scene, physics);
 
 	SceneClocks clocks;
-	for (int i = 0; i < 16; ++i)
-		SceneUpdateSystems(scene, clocks, time_from_ms(16), &physics);
-
+	time_ns physics_step = time_from_ms(10);
+	int max_physics_step = 64;
+	for (int i = 0; i < 16; ++i) {
+		SceneUpdateSystems(scene, clocks, time_from_ms(16), physics, physics_step, max_physics_step);
+	}
 	EXPECT_LT(GetT(sphere.GetTransform().GetWorld()).y, -0.3f);
 }
 
@@ -624,13 +629,14 @@ TEST(Scene, PhysicKinematicRigidBodyNoFreefall) {
 	auto sphere = CreatePhysicSphere(scene, 0.5, Mat4::Identity, {}, {}, 1.f);
 	sphere.GetRigidBody().SetType(RBT_Kinematic);
 
-	SceneNewtonPhysics physics;
+	SceneBullet3Physics physics;
 	physics.SceneCreatePhysicsFromAssets(scene);
 
+	time_ns dt = time_from_ms(10);
 	for (int i = 0; i < 16; ++i) {
 		scene.ReadyWorldMatrices();
-		physics.StepSimulation();
-		physics.SyncDynamicBodiesToScene(scene);
+		physics.StepSimulation(dt);
+		physics.SyncBodiesFromScene(scene);
 	}
 
 	EXPECT_EQ(GetT(sphere.GetTransform().GetWorld()).y, 0.f);
@@ -641,13 +647,14 @@ TEST(Scene, PhysicDynamicVsStaticRigidBodyCollisionCallback) {
 	auto sphere = CreatePhysicSphere(scene, 0.5, TranslationMat4({0, 5, 0}), {}, {}, 1.f);
 	auto ground = CreatePhysicCube(scene, {10, 1, 10}, TranslationMat4({0, -0.5f, 0}), {}, {}, 0.f);
 
-	SceneNewtonPhysics physics;
+	SceneBullet3Physics physics;
 	physics.SceneCreatePhysicsFromAssets(scene);
 	physics.NodeStartTrackingCollisionEvents(sphere.ref);
 
+	time_ns dt = time_from_ms(10);
 	size_t collision_count = 0;
 	for (int i = 0; i < 256; ++i) {
-		physics.StepSimulation();
+		physics.StepSimulation(dt);
 		NodeNodeContacts node_node_contacts;
 		physics.CollectCollisionEvents(scene, node_node_contacts);
 		collision_count += node_node_contacts.size();
@@ -662,21 +669,20 @@ TEST(Scene, PhysicKinematicRigidBodyCollideWorld) {
 	sphere.GetRigidBody().SetType(RBT_Kinematic);
 	auto ground = CreatePhysicCube(scene, {10, 1, 10}, TranslationMat4({0, -0.5f, 0}), {}, {}, 0.f);
 
-	SceneNewtonPhysics physics;
+	SceneBullet3Physics physics;
 	physics.SceneCreatePhysicsFromAssets(scene);
 
-	const auto collisions = physics.NodeCollideWorld(sphere.ref, sphere.GetTransform().GetWorld());
+	const auto collisions = physics.NodeCollideWorld(sphere, sphere.GetTransform().GetWorld());
 	EXPECT_GT(collisions.size(), 0);
 }
 
-//
 TEST(Scene, PhysicRaycastFirstHit) {
 	Scene scene;
 	CreatePhysicCube(scene, {1, 1, 1}, Mat4::Identity, InvalidModelRef, {}, 0.f);
 	const auto closest_node = CreatePhysicCube(scene, {.1f, .1f, .1f}, TranslationMat4({0, 0, -1.f}), InvalidModelRef, {}, 0.f);
 	CreatePhysicCube(scene, {.1f, .1f, .1f}, TranslationMat4({0, 0, 1.f}), InvalidModelRef, {}, 0.f);
 
-	SceneNewtonPhysics physics;
+	SceneBullet3Physics physics;
 	physics.SceneCreatePhysicsFromAssets(scene);
 
 	const auto out = physics.RaycastFirstHit(scene, {0, 0, -10.f}, {0, 0, 10.f});
@@ -690,7 +696,7 @@ TEST(Scene, PhysicRaycastFirstHitOutOfReach) {
 	const auto closest_node = CreatePhysicCube(scene, {.1f, .1f, .1f}, TranslationMat4({0, 0, -1.f}), InvalidModelRef, {}, 0.f);
 	CreatePhysicCube(scene, {.1f, .1f, .1f}, TranslationMat4({0, 0, 1.f}), InvalidModelRef, {}, 0.f);
 
-	SceneNewtonPhysics physics;
+	SceneBullet3Physics physics;
 	physics.SceneCreatePhysicsFromAssets(scene);
 
 	const auto out = physics.RaycastFirstHit(scene, {0, 0, -10.f}, {0, 0, -2.f});
@@ -703,14 +709,24 @@ TEST(Scene, PhysicRaycastAllHits) {
 	const auto closest_node = CreatePhysicCube(scene, {.1f, .1f, .1f}, TranslationMat4({0, 0, -1.f}), InvalidModelRef, {}, 0.f);
 	const auto farthest_node = CreatePhysicCube(scene, {.1f, .1f, .1f}, TranslationMat4({0, 0, 1.f}), InvalidModelRef, {}, 0.f);
 
-	SceneNewtonPhysics physics;
+	SceneBullet3Physics physics;
 	physics.SceneCreatePhysicsFromAssets(scene);
 
 	const auto out = physics.RaycastAllHits(scene, {0, 0, -10.f}, {0, 0, 10.f});
 	EXPECT_EQ(out.size(), 3);
-	EXPECT_EQ(out[0].node, closest_node);
-	EXPECT_EQ(out[1].node, middle_node);
-	EXPECT_EQ(out[2].node, farthest_node);
+
+	// Nodes are not returned in distance order.
+	// Here we just check if there's no duplicates/weird result (it should not).
+	int found = 0;
+	const hg::Node nodes[] = {middle_node, closest_node, farthest_node};
+	for (int j = 0; j < 3; j++) {
+		for (int i = 0; i < out.size(); i++) {
+			if (out[i].node == nodes[j]) {
+				found++;
+			}
+		}
+		EXPECT_EQ(found, j+1);
+	}
 }
 
 TEST(Scene, PhysicRaycastAllHitsOutOfReach) {
@@ -719,13 +735,13 @@ TEST(Scene, PhysicRaycastAllHitsOutOfReach) {
 	CreatePhysicCube(scene, {.1f, .1f, .1f}, TranslationMat4({0, 0, -1.f}), InvalidModelRef, {}, 0.f);
 	CreatePhysicCube(scene, {.1f, .1f, .1f}, TranslationMat4({0, 0, 1.f}), InvalidModelRef, {}, 0.f);
 
-	SceneNewtonPhysics physics;
+	SceneBullet3Physics physics;
 	physics.SceneCreatePhysicsFromAssets(scene);
 
 	const auto out = physics.RaycastAllHits(scene, {0, 0, -10.f}, {0, 0, -2.f});
 	EXPECT_TRUE(out.empty());
 }
-#endif
+#endif // HG_ENABLE_BULLET3_SCENE_PHYSICS
 
 //
 TEST(Scene, ComponentGarbageCollection) {

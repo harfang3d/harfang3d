@@ -55,13 +55,13 @@ Audio API
 <a name="subsection_1b"></a>
 ## Screenshots
 
-The following screenshots were captured on a 1080GTX in 1080P running at 60FPS.
+The following screenshots were captured on a 2070RTX in 1080P running at 60FPS, GI is performed using screen space raytracing and does not require RTX capable hardware.
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/2.0.111/sun_temple_aaa.png)
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cyber_city_aaa.png)
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/2.0.111/sun_temple_aaa_2.png)
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cyber_city_aaa_2.png)
 
-*(Sun Temple, courtesy of the Open Research Content Archive (ORCA))*
+*(CyberPunk City, CyberPunk Girl and Robot R32 by art-equilibrium, ILranch and ZeroArt3d)*
 
 <a name="section_2"></a>
 # Download
@@ -228,4 +228,24 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
 
 Harfang is licensed under the GPLv3, LGPLv3 and a commercial license:<br>
 https://www.harfang3d.com/licenses/
+
+# More screenshots...
+
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sun_temple_aaa.png)
+
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sun_temple_aaa_2.png)
+
+*(Sun Temple, courtesy of the Open Research Content Archive (ORCA))*
+
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cafe_exterior_aaa.png)
+
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cafe_exterior_aaa_2.png)
+
+*(Bistro, courtesy of the Open Research Content Archive (ORCA))*
+
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sponza_atrium_aaa.png)
+
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sponza_atrium_aaa_2.png)
+
+*(Sponza Atrium GLTF, courtesy of Crytek/Themaister)*
 

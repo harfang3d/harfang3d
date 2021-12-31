@@ -286,25 +286,27 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 		rb_info.m_friction = rb.GetFriction();
 		rb_info.m_rollingFriction = rb.GetRollingFriction();
 		rb_info.m_startWorldTransform = bt_trs;
+		rb_info.m_linearDamping = rb.GetLinearDamping();
+		rb_info.m_angularDamping = rb.GetAngularDamping();
 
 		_node.body = new btRigidBody(rb_info);
 
 		_node.body->setCollisionShape(root_shape);
 		_node.body->setUserIndex(node.ref.idx); // ref back to node
 
-		world->addRigidBody(_node.body);
-
 		// configure
 		const auto type = rb.GetType();
 		const auto flags = _node.body->getCollisionFlags();
 
-		if (type == RBT_Dynamic) {
+		if (type == RBT_Dynamic)
 			_node.body->setCollisionFlags(flags & ~(btRigidBody::CF_KINEMATIC_OBJECT | btCollisionObject::CF_STATIC_OBJECT));
-		} else if (type == RBT_Kinematic) {
+		else if (type == RBT_Kinematic)
 			_node.body->setCollisionFlags((flags | btRigidBody::CF_KINEMATIC_OBJECT) & ~btCollisionObject::CF_STATIC_OBJECT);
-		} else {
+		else
 			_node.body->setCollisionFlags((flags & ~btRigidBody::CF_KINEMATIC_OBJECT) | btCollisionObject::CF_STATIC_OBJECT);
-		}
+
+		// add to world
+		world->addRigidBody(_node.body);
 	}
 }
 
@@ -426,9 +428,9 @@ void SceneBullet3Physics::SyncBodiesFromScene(const Scene &scene) {
 				const auto flags = body->getCollisionFlags();
 
 				if (flags == btRigidBody::CF_KINEMATIC_OBJECT) {
-					const auto world = hg::Orthonormalize(trs.GetWorld());
-					// const auto world = TransformationMat4(GetT(w), GetR(w), Vec3::One);
-					body->setWorldTransform(to_btTransform(world));
+					const auto w = trs.GetWorld();
+					const auto w2 = TransformationMat4(GetT(w), GetR(w), Vec3::One);
+					body->setWorldTransform(to_btTransform(w2));
 				} else if (flags == btRigidBody::CF_DYNAMIC_OBJECT) {
 					const auto world = body->getInterpolationWorldTransform();
 					trs.SetWorld(from_btTransform(world));

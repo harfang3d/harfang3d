@@ -1,22 +1,22 @@
 .title Resources & Assets
 
-By convention, production files are called: **resources** (eg. *the project resources*).
+By convention, production files are called **resources** (eg. *the project resources*).
 
-Files issued from the compilation of production files for a specific target are called: **assets** (eg. *the project assets for Windows PC*).
+Files issued from the compilation of production files for a specific target are called **assets** (eg. *the project assets for Windows PC*).
 
 [TOC]
 
 ## Resource Formats
 
-During development resources are stored in *production formats*, these formats are meant for efficient editing. Before they can be loaded at runtime, resources must be compiled into their *runtime formats* as assets which are specific to the target platform.
+During development resources are stored in *production formats*, these formats are meant for editing. Before they can be loaded at runtime, resources must be compiled into their *runtime formats* as assets specific to the target platform.
 
 To compile a project resources use:
 
 ```text
-assetc <input_resources_folder> [<output_assets_folder>]
+assetc <project_resources_folder> [<optional_project_assets_folder>]
 ```
 
-If no output folder is specified the input folder suffixed with *_compiled* is implied as output.
+If no output folder is specified the input folder suffixed with *_compiled* is implied.
 
 Upon execution the assets compiler will scan the input folder and compile all supported resource types to assets. Unsupported resources are copied untransformed to the output folder.
 

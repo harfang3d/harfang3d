@@ -4,7 +4,7 @@ Harfang for Python is distributed as a wheel package `(.whl)` compatible with of
 
 ## Installation
 
-* On Windows, Install from the command line by typing `pip install harfang`.
+* On Windows, install from the command line by typing `pip install harfang`.
 * On Linux, download the wheel for your distribution then install from a terminal by typing `pip install /path/to/harfang.whl`.
 
 ## Testing your Installation
