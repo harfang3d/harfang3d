@@ -270,11 +270,14 @@ std::u32string utf8_to_utf32(const std::string &str) {
 	return std::u32string(utf32string.data(), utf32string.size());
 }
 
-std::string wchar_to_utf8(const std::wstring& str) {
-	std::string ret;
+std::string wchar_to_utf8(const std::wstring &str) {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv;
-	ret = wcv.to_bytes(str);
-	return ret;
+	return wcv.to_bytes(str);
+}
+
+std::wstring utf8_to_wchar(const std::string &str) {
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv;
+	return wcv.from_bytes(str);
 }
 
 std::wstring ansi_to_wchar(const std::string &str) {
@@ -292,10 +295,7 @@ std::wstring ansi_to_wchar(const std::string &str) {
 	return ret;
 }
 
-std::string ansi_to_utf8(const std::string &string) 
-{
-	return wchar_to_utf8(ansi_to_wchar(string));
-}
+std::string ansi_to_utf8(const std::string &string) { return wchar_to_utf8(ansi_to_wchar(string)); }
 
 void tolower_inplace(std::string &str, size_t start, size_t end) {
 	transform(std::begin(str) + start, end ? std::begin(str) + end : std::end(str), std::begin(str) + start,
@@ -358,10 +358,10 @@ std::string word_wrap(const std::string &str, int width, int lead, char lead_cha
 }
 
 std::string name_to_path(std::string name) {
-	name = hg::tolower(name);
+	name = tolower(name);
 	static const std::vector<std::string> blacklist = {" ", "\\", "/", "!", "@"};
 	for (const auto &s : blacklist)
-		hg::replace_all(name, s, "-");
+		replace_all(name, s, "-");
 	return name;
 }
 

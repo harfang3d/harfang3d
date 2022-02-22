@@ -278,7 +278,7 @@ Model CreateCapsuleModel(const bgfx::VertexLayout &decl, float radius, float hei
 		float s0 = radius * Sin(t0);
 		for (int j = 1; j < subdiv_y; j++) {
 			float t1 = Pi * (j / static_cast<float>(subdiv_y)) / 2.f;
-			hg::Vec3 v = {c0 * Sin(t1), radius * Cos(t1), s0 * Sin(t1)};
+			Vec3 v = {c0 * Sin(t1), radius * Cos(t1), s0 * Sin(t1)};
 			cap[k++] = builder.AddVertex({{v.x, v.y + z, v.z}, Normalize(v)});
 			v.y = -v.y;
 			cap[k++] = builder.AddVertex({{v.x, v.y - z, v.z}, Normalize(v)});

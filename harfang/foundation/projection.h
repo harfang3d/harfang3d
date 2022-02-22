@@ -3,18 +3,18 @@
 #pragma once
 
 #include "foundation/math.h"
+#include "foundation/matrix4.h"
+#include "foundation/matrix44.h"
 #include "foundation/vector2.h"
 #include "foundation/vector3.h"
 #include "foundation/vector4.h"
-#include "foundation/matrix4.h"
-#include "foundation/matrix44.h"
 
 namespace hg {
 
 /// Normalized device coordinates infos.
 struct NDCInfos {
 	bool origin_bottom_left; ///< if @true the origin is at the bottom left.
-	bool homogeneous_depth;  ///< if @true the depth range is [-1,1], otherwise it is [0,1].
+	bool homogeneous_depth; ///< if @true the depth range is [-1,1], otherwise it is [0,1].
 };
 
 void SetNDCInfos(bool origin_bottom_left, bool homogeneous_depth);
@@ -25,8 +25,8 @@ float ZoomFactorToFov(float zoom_factor);
 /// Computes zoom factor from field of view angle (in radians).
 float FovToZoomFactor(float fov);
 
-Mat44 ComputeOrthographicProjectionMatrix(float znear, float zfar, float size, const Vec2 &aspect_ratio, const Vec2 &offset = hg::Vec2::Zero);
-Mat44 ComputePerspectiveProjectionMatrix(float znear, float zfar, float zoom_factor, const Vec2 &aspect_ratio, const Vec2 &offset = hg::Vec2::Zero);
+Mat44 ComputeOrthographicProjectionMatrix(float znear, float zfar, float size, const Vec2 &aspect_ratio, const Vec2 &offset = Vec2::Zero);
+Mat44 ComputePerspectiveProjectionMatrix(float znear, float zfar, float zoom_factor, const Vec2 &aspect_ratio, const Vec2 &offset = Vec2::Zero);
 Mat44 Compute2DProjectionMatrix(float znear, float zfar, float res_x, float res_y, bool y_up);
 
 /// Extract zoom factor from a projection matrix.
@@ -51,6 +51,6 @@ Vec2 ComputeAspectRatioX(float width, float height);
 Vec2 ComputeAspectRatioY(float width, float height);
 
 /// Compute world-space ray start and direction from a 2d screen position
-bool WorldRaycastScreenPos(float x, float y, float width, float height, const hg::Mat44 &inv_proj, const hg::Mat4 &inv_view, hg::Vec3 &ray_o, hg::Vec3 &ray_d);
+bool WorldRaycastScreenPos(float x, float y, float width, float height, const Mat44 &inv_proj, const Mat4 &inv_view, Vec3 &ray_o, Vec3 &ray_d);
 
 } // namespace hg

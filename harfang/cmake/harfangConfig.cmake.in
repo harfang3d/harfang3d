@@ -64,13 +64,15 @@ add_compile_definitions(HG_DEFAULT_RENDERER_TYPE=${HG_DEFAULT_RENDERER_TYPE})
 
 # Unix/Linux specific dependencies
 if(UNIX)
-	find_dependency(glfw3 3.2)
-	
+	if(NOT @HG_REBUILD_GLFW@)
+		find_dependency(glfw3 3.2)
+	endif()
+
 	if(NOT APPLE AND NOT ANDROID AND NOT EMSCRIPTEN)
 		find_dependency(Threads REQUIRED)
 
-		find_dependency(PulseAudio)
-		find_dependency(ALSA)
+		find_package(PulseAudio)
+		find_package(ALSA)
 		find_library(JACK_LIBRARY jack)
 		find_library(SNDIO_LIBRARY sndio)
 
@@ -84,7 +86,13 @@ if(UNIX)
 			find_dependency(Wayland REQUIRED)
 		endif()
 
-		find_dependency(OpenGL)
+		find_package(OpenGL)
+		if(NOT OPENGL_FOUND)
+			find_package(OpenGLES3)
+			if(NOT OPENGLES3_FOUND)
+				find_package(OpenGLES2 REQUIRED)
+			endif()
+		endif()
 
 		if(NOT HG_EMBEDDED)
 			find_dependency(PkgConfig REQUIRED)
@@ -165,9 +173,4 @@ function(install_cppsdk_dependencies destination component)
 			endif()
 		endif()
 	endforeach()
-
-	# copy glfw shared library even if it is part of the system
-	if(NOT TARGET hg::glfw)
-		install(FILES $<TARGET_FILE:glfw> DESTINATION ${destination} COMPONENT ${component})
-	endif()
 endfunction()

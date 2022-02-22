@@ -12,7 +12,7 @@ class Scene;
 struct Node;
 struct PipelineResources;
 
-std::string ExportNodesToOBJ(const Scene &scene, const std::vector<Node> &nodes, const std::string &model_dir, const hg::PipelineResources &resources);
-std::string ExportSceneToOBJ(const Scene &scene, const std::string &model_dir, const hg::PipelineResources &resources);
+std::string ExportNodesToOBJ(const Scene &scene, const std::vector<Node> &nodes, const std::string &model_dir, const PipelineResources &resources);
+std::string ExportSceneToOBJ(const Scene &scene, const std::string &model_dir, const PipelineResources &resources);
 
 } // namespace hg

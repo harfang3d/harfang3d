@@ -191,7 +191,7 @@ void CubicCatmullRom(
 		strength[0] = 0.f;
 		prev = first;
 		for (i = 0; i < p.size(); i++) {
-			acc += sqrt(hg::Dist(prev, p[i]));
+			acc += sqrt(Dist(prev, p[i]));
 			strength[i + 1] = acc;
 			prev = p[i];
 		}
@@ -212,7 +212,7 @@ void CubicCatmullRom(
 		float s[4] = {0.f, strength[j + 1] - strength[j], strength[j + 2] - strength[j], strength[j + 3] - strength[j]};
 
 		for (; (t < t_max) && (i < count); i++, t += dt) {
-			hg::CubicCatmullRom(pt, s, t - t_0, position[i], derivative[i]);
+			CubicCatmullRom(pt, s, t - t_0, position[i], derivative[i]);
 		}
 	}
 }
@@ -254,9 +254,9 @@ void CubicCatmullRomEq(
 	derivative.clear();
 	if (p.size() < 3) {
 		if (p.size() == 2) {
-			size_t count = size_t(hg::Dist(p[0], p[1]) / distance);
+			size_t count = size_t(Dist(p[0], p[1]) / distance);
 			if (count > 1) {
-				hg::LinearInterpolate(p[0], p[1], count, position, derivative);
+				LinearInterpolate(p[0], p[1], count, position, derivative);
 			}
 		} else if (p.size()) {
 			position.push_back(p[0]);
@@ -314,12 +314,12 @@ void CubicCatmullRomEq(
 			CubicCatmullRom(pt, s, t - t0, current, dp, d2p);
 			Vec delta = current - start;
 
-			float f = hg::Dot(delta, delta) - (distance * distance);
-			float df = 2.f * hg::Dot(delta, dp);
-			float d2f = 2.f * (hg::Dot(delta, d2p) + hg::Dot(dp, dp));
+			float f = Dot(delta, delta) - (distance * distance);
+			float df = 2.f * Dot(delta, dp);
+			float d2f = 2.f * (Dot(delta, d2p) + Dot(dp, dp));
 			float d = 2.f * f * df / (2.f * df * df - f * d2f);
 
-			if (hg::Abs(d) < 0.0001) {
+			if (Abs(d) < 0.0001) {
 				position.push_back(current);
 				derivative.push_back(dp);
 				break;

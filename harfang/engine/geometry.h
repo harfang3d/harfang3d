@@ -100,7 +100,7 @@ bool Validate(const Geometry &geo);
 void SmoothVertexColor(Geometry &geo, const std::vector<uint32_t> &pol_index, const std::vector<VertexToVertex> &vtx_to_vtx);
 
 //
-Model GeometryToModel(const hg::Geometry &geo, ModelOptimisationLevel optimisation_level = MOL_None);
+Model GeometryToModel(const Geometry &geo, ModelOptimisationLevel optimisation_level = MOL_None);
 
 //
 Geometry LoadGeometry(const Reader &ir, const Handle &h, const char *name);
@@ -110,6 +110,6 @@ bool SaveGeometry(const Writer &iw, const Handle &h, const Geometry &geo);
 bool SaveGeometryToFile(const char *path, const Geometry &geo);
 
 // Convert a geometry to a model and save it to file.
-bool SaveGeometryModelToFile(const char *path, const hg::Geometry &geo, ModelOptimisationLevel optimisation_level = MOL_None);
+bool SaveGeometryModelToFile(const char *path, const Geometry &geo, ModelOptimisationLevel optimisation_level = MOL_None);
 
 } // namespace hg

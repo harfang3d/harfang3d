@@ -30,6 +30,12 @@ SharedLib LoadSharedLibrary(const char *path) {
 	return h;
 }
 
-void *GetFunctionPointer(const SharedLib &h, const char *fn) { return GetProcAddress(reinterpret_cast<HMODULE>(h), fn); }
+void *GetFunctionPointer(const SharedLib &h, const char *fn) {
+	FARPROC proc = GetProcAddress(reinterpret_cast<HMODULE>(h), fn); 
+	if (!proc) {
+		error(format("GetProcAddress('%1') failed, reason: %2").arg(fn).arg(GetLastError_Win32()).c_str());
+	}
+	return proc;
+}
 
 } // namespace hg

@@ -49,7 +49,8 @@ static bool CheckImGuiIsInitialized() {
 }
 
 //
-static void ImGuiRender(const DearImguiContext &ctx, bgfx::ViewId viewId, ImDrawData *_drawData) {
+static void ImGuiRender(const DearImguiContext &ctx, bgfx::ViewId m_viewId, ImDrawData *_drawData) {
+#if 0
 	const ImGuiIO &io = ImGui::GetIO();
 	const float width = io.DisplaySize.x;
 	const float height = io.DisplaySize.y;
@@ -99,7 +100,7 @@ static void ImGuiRender(const DearImguiContext &ctx, bgfx::ViewId viewId, ImDraw
 				bgfx::ProgramHandle program = ctx.m_program;
 
 				if (NULL != cmd->TextureId) {
-					hg::TextureBridge texture = {cmd->TextureId};
+					TextureBridge texture = {cmd->TextureId};
 					state |= 0 != (IMGUI_FLAGS_ALPHA_BLEND & texture.s.flags)
 								 ? BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
 								 : BGFX_STATE_NONE;
@@ -127,6 +128,112 @@ static void ImGuiRender(const DearImguiContext &ctx, bgfx::ViewId viewId, ImDraw
 			offset += cmd->ElemCount;
 		}
 	}
+#else
+	// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+	int fb_width = (int)(_drawData->DisplaySize.x * _drawData->FramebufferScale.x);
+	int fb_height = (int)(_drawData->DisplaySize.y * _drawData->FramebufferScale.y);
+	if (fb_width <= 0 || fb_height <= 0)
+		return;
+
+	bgfx::setViewName(m_viewId, "ImGui");
+	bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
+
+	const bgfx::Caps *caps = bgfx::getCaps();
+	{
+		float ortho[16];
+		float x = _drawData->DisplayPos.x;
+		float y = _drawData->DisplayPos.y;
+		float width = _drawData->DisplaySize.x;
+		float height = _drawData->DisplaySize.y;
+
+		bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, caps->homogeneousDepth);
+		bgfx::setViewTransform(m_viewId, NULL, ortho);
+		bgfx::setViewRect(m_viewId, 0, 0, uint16_t(width), uint16_t(height));
+	}
+
+	const ImVec2 clipPos = _drawData->DisplayPos; // (0,0) unless using multi-viewports
+	const ImVec2 clipScale = _drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+	// Render command lists
+	for (int32_t ii = 0, num = _drawData->CmdListsCount; ii < num; ++ii) {
+		bgfx::TransientVertexBuffer tvb;
+		bgfx::TransientIndexBuffer tib;
+
+		const ImDrawList *drawList = _drawData->CmdLists[ii];
+		uint32_t numVertices = (uint32_t)drawList->VtxBuffer.size();
+		uint32_t numIndices = (uint32_t)drawList->IdxBuffer.size();
+
+		if (!checkAvailTransientBuffers(numVertices, ctx.m_decl, numIndices)) {
+			// not enough space in transient buffer just quit drawing the rest...
+			break;
+		}
+
+		bgfx::allocTransientVertexBuffer(&tvb, numVertices, ctx.m_decl);
+		bgfx::allocTransientIndexBuffer(&tib, numIndices, sizeof(ImDrawIdx) == 4);
+
+		ImDrawVert *verts = (ImDrawVert *)tvb.data;
+		bx::memCopy(verts, drawList->VtxBuffer.begin(), numVertices * sizeof(ImDrawVert));
+
+		ImDrawIdx *indices = (ImDrawIdx *)tib.data;
+		bx::memCopy(indices, drawList->IdxBuffer.begin(), numIndices * sizeof(ImDrawIdx));
+
+		bgfx::Encoder *encoder = bgfx::begin();
+
+		for (const ImDrawCmd *cmd = drawList->CmdBuffer.begin(), *cmdEnd = drawList->CmdBuffer.end(); cmd != cmdEnd; ++cmd) {
+			if (cmd->UserCallback) {
+				cmd->UserCallback(drawList, cmd);
+			} else if (0 != cmd->ElemCount) {
+				uint64_t state = 0 | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+
+				bgfx::TextureHandle th = ctx.m_texture;
+				bgfx::ProgramHandle program = ctx.m_program;
+
+				if (NULL != cmd->TextureId) {
+					union {
+						ImTextureID ptr;
+						struct {
+							bgfx::TextureHandle handle;
+							uint8_t flags;
+							uint8_t mip;
+						} s;
+					} texture = {cmd->TextureId};
+					state |= 0 != (IMGUI_FLAGS_ALPHA_BLEND & texture.s.flags)
+								 ? BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
+								 : BGFX_STATE_NONE;
+					th = texture.s.handle;
+					if (0 != texture.s.mip) {
+						const float lodEnabled[4] = {float(texture.s.mip), 1.0f, 0.0f, 0.0f};
+						bgfx::setUniform(ctx.u_imageLodEnabled, lodEnabled);
+						program = ctx.m_imageProgram;
+					}
+				} else {
+					state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
+				}
+
+				// Project scissor/clipping rectangles into framebuffer space
+				ImVec4 clipRect;
+				clipRect.x = (cmd->ClipRect.x - clipPos.x) * clipScale.x;
+				clipRect.y = (cmd->ClipRect.y - clipPos.y) * clipScale.y;
+				clipRect.z = (cmd->ClipRect.z - clipPos.x) * clipScale.x;
+				clipRect.w = (cmd->ClipRect.w - clipPos.y) * clipScale.y;
+
+				if (clipRect.x < fb_width && clipRect.y < fb_height && clipRect.z >= 0.0f && clipRect.w >= 0.0f) {
+					const uint16_t xx = uint16_t(bx::max(clipRect.x, 0.0f));
+					const uint16_t yy = uint16_t(bx::max(clipRect.y, 0.0f));
+					encoder->setScissor(xx, yy, uint16_t(bx::min(clipRect.z, 65535.0f) - xx), uint16_t(bx::min(clipRect.w, 65535.0f) - yy));
+
+					encoder->setState(state);
+					encoder->setTexture(0, ctx.s_tex, th);
+					encoder->setVertexBuffer(0, &tvb, cmd->VtxOffset, numVertices);
+					encoder->setIndexBuffer(&tib, cmd->IdxOffset, cmd->ElemCount);
+					encoder->submit(m_viewId, program);
+				}
+			}
+		}
+
+		bgfx::end(encoder);
+	}
+#endif
 }
 
 void ImGuiEndFrame(const DearImguiContext &ctx, bgfx::ViewId view_id) {
@@ -192,10 +299,10 @@ void ImGuiCreateFontTexture(DearImguiContext &ctx) {
 	int32_t width, height;
 	io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
 
-	if(bgfx::isValid(ctx.m_texture)) {
+	if (bgfx::isValid(ctx.m_texture)) {
 		bgfx::destroy(ctx.m_texture);
 	}
-	
+
 	ctx.m_texture = bgfx::createTexture2D((uint16_t)width, (uint16_t)height, false, 1, bgfx::TextureFormat::BGRA8, 0, bgfx::copy(data, width * height * 4));
 
 	// commented out because we don't want to destroy imgui mouse cursors
@@ -222,7 +329,7 @@ DearImguiContext *ImGuiInitContext(float font_size, bgfx::ProgramHandle imgui_pr
 
 	ImGuiIO &io = ImGui::GetIO();
 
-	io.ConfigFlags |= /*ImGuiConfigFlags_DpiEnableScaleFonts |*/ ImGuiConfigFlags_DpiEnableScaleViewports;
+	//	io.ConfigFlags |= /*ImGuiConfigFlags_DpiEnableScaleFonts |*/ ImGuiConfigFlags_DpiEnableScaleViewports;
 
 	io.DisplaySize = {1280.0f, 720.0f};
 	io.DeltaTime = 1.0f / 60.0f;
@@ -242,7 +349,7 @@ DearImguiContext *ImGuiInitContext(float font_size, bgfx::ProgramHandle imgui_pr
 	io.KeyMap[ImGuiKey_Backspace] = K_Backspace;
 	io.KeyMap[ImGuiKey_Space] = K_Space;
 	io.KeyMap[ImGuiKey_Enter] = K_Return;
-	io.KeyMap[ImGuiKey_KeyPadEnter] = K_Enter;
+	io.KeyMap[ImGuiKey_KeypadEnter] = K_Enter;
 	io.KeyMap[ImGuiKey_Escape] = K_Escape;
 	io.KeyMap[ImGuiKey_A] = K_A;
 	io.KeyMap[ImGuiKey_C] = K_C;

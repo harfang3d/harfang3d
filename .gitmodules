@@ -21,18 +21,15 @@
 [submodule "extern/bgfx/bimg"]
 	path = extern/bgfx/bimg
 	url = https://github.com/bkaradzic/bimg
-[submodule "doc/tutorials"]
-	path = doc/tutorials
-	url = ../tutorials-hg2.git
 [submodule "extern/cmft"]
 	path = extern/cmft
 	url = https://github.com/ejulien/cmft.git
 [submodule "extern/recastnavigation"]
 	path = extern/recastnavigation
 	url = https://github.com/recastnavigation/recastnavigation.git
-[submodule "tools/assimp_converter/assimp"]
-	path = tools/assimp_converter/assimp
-	url = https://github.com/harfang3d/assimp
 [submodule "extern/meshoptimizer"]
 	path = extern/meshoptimizer
 	url = https://github.com/zeux/meshoptimizer.git
+[submodule "tools/assimp_converter/assimp"]
+	path = tools/assimp_converter/assimp
+	url = https://github.com/assimp/assimp

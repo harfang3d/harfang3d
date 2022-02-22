@@ -203,6 +203,11 @@ size_t Scene::GarbageCollectPass() {
 			}
 	}
 
+	// cleanup anims
+	{
+		removed_count += GarbageCollectAnims();
+	}
+
 	return removed_count;
 }
 
@@ -340,7 +345,7 @@ void Scene::GetModelDisplayLists(std::vector<ModelDisplayList> &out_opaque, std:
 			if (mat_idx < obj_->materials.size()) { // FIXME fall back to error material
 				const auto mat = &obj_->materials[mat_idx];
 				const auto &bones_table = mdl.lists[i].bones_table;
-				__ASSERT__(bones_table.size() <= hg::max_skinned_model_matrix_count);
+				__ASSERT__(bones_table.size() <= max_skinned_model_matrix_count);
 
 				const bool is_transparent = GetMaterialBlendMode(*mat) != BM_Opaque;
 
@@ -721,11 +726,24 @@ void Scene::SetNodeTransform(NodeRef ref, ComponentRef cref) {
 }
 
 //
+Mat4 Scene::GetNodeWorldMatrix(NodeRef ref) const {
+	if (auto node_ = this->GetNode_(ref)) {
+		const auto trs_ref = node_->components[NCI_Transform];
+
+		if (transforms.is_valid(trs_ref)) {
+			__ASSERT__(transform_worlds.size() > trs_ref.idx);
+			return transform_worlds[trs_ref.idx];
+		}
+	}
+	return Mat4::Identity;
+}
+
 void Scene::SetNodeWorldMatrix(NodeRef ref, const Mat4 &world) {
 	if (auto node_ = this->GetNode_(ref)) {
 		const auto trs_ref = node_->components[NCI_Transform];
 
 		if (transforms.is_valid(trs_ref)) {
+			__ASSERT__(transform_worlds.size() > trs_ref.idx);
 			transform_worlds[trs_ref.idx] = world;
 			transform_worlds_updated[trs_ref.idx] = true;
 		}
@@ -845,35 +863,35 @@ void Scene::SetRigidBodyAngularDamping(ComponentRef ref, float damping) {
 
 float Scene::GetRigidBodyRestitution(ComponentRef ref) const {
 	if (const auto rb = GetComponent_(rigid_bodies, ref))
-		return rb->restitution;
+		return unpack_float<uint8_t>(rb->restitution);
 	return 0.f;
 }
 
 void Scene::SetRigidBodyRestitution(ComponentRef ref, float restitution) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
-		rb->restitution = restitution;
+		rb->restitution = pack_float<uint8_t>(restitution);
 }
 
 float Scene::GetRigidBodyFriction(ComponentRef ref) const {
 	if (const auto rb = GetComponent_(rigid_bodies, ref))
-		return rb->friction;
+		return unpack_float<uint8_t>(rb->friction);
 	return 0.5f;
 }
 
 void Scene::SetRigidBodyFriction(ComponentRef ref, float friction) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
-		rb->friction = friction;
+		rb->friction = pack_float<uint8_t>(friction);
 }
 
 float Scene::GetRigidBodyRollingFriction(ComponentRef ref) const {
 	if (const auto rb = GetComponent_(rigid_bodies, ref))
-		return rb->rolling_friction;
+		return unpack_float<uint8_t>(rb->rolling_friction);
 	return 0.f;
 }
 
 void Scene::SetRigidBodyRollingFriction(ComponentRef ref, float rolling_friction) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
-		rb->rolling_friction = rolling_friction;
+		rb->rolling_friction = pack_float<uint8_t>(rolling_friction);
 }
 
 //
@@ -980,9 +998,35 @@ Collision Scene::CreateCubeCollision(float x, float y, float z, float mass) {
 	return col;
 }
 
+Collision Scene::CreateCapsuleCollision(float radius, float height, float mass) {
+	auto col = CreateCollision();
+	SetCollisionType(col.ref, CT_Capsule);
+	SetCollisionRadius(col.ref, radius);
+	SetCollisionHeight(col.ref, height);
+	SetCollisionMass(col.ref, mass);
+	return col;
+}
+
+Collision Scene::CreateCylinderCollision(float radius, float height, float mass) {
+	auto col = CreateCollision();
+	SetCollisionType(col.ref, CT_Cylinder);
+	SetCollisionRadius(col.ref, radius);
+	SetCollisionHeight(col.ref, height);
+	SetCollisionMass(col.ref, mass);
+	return col;
+}
+
 Collision Scene::CreateMeshCollision(const std::string &path, float mass) {
 	auto col = CreateCollision();
 	SetCollisionType(col.ref, CT_Mesh);
+	SetCollisionResource(col.ref, path);
+	SetCollisionMass(col.ref, mass);
+	return col;
+}
+
+Collision Scene::CreateMeshConvexCollision(const std::string &path, float mass) {
+	auto col = CreateCollision();
+	SetCollisionType(col.ref, CT_MeshConvex);
 	SetCollisionResource(col.ref, path);
 	SetCollisionMass(col.ref, mass);
 	return col;
@@ -1963,6 +2007,29 @@ const SceneAnimRef InvalidSceneAnimRef;
 SceneAnimRef Scene::AddSceneAnim(SceneAnim anim) { return scene_anims.add_ref(std::move(anim)); }
 void Scene::DestroySceneAnim(SceneAnimRef ref) { scene_anims.remove_ref(ref); }
 
+size_t Scene::GarbageCollectAnims() {
+	std::vector<bool> is_refd(anims.capacity(), false);
+
+	for (const auto &scene_anim : scene_anims) {
+		if (scene_anim.scene_anim != InvalidAnimRef)
+			is_refd[scene_anim.scene_anim.idx] = true;
+
+		for (const auto &node_anim : scene_anim.node_anims)
+			if (node_anim.anim != InvalidAnimRef)
+				is_refd[node_anim.anim.idx] = true;
+	}
+
+	size_t removed_count = 0;
+
+	for (size_t i = 0; i < is_refd.size(); ++i)
+		if (!is_refd[i] && anims.is_used(uint32_t(i))) {
+			anims.remove(uint32_t(i));
+			++removed_count;
+		}
+
+	return removed_count;
+}
+
 std::vector<SceneAnimRef> Scene::GetSceneAnims() const {
 	std::vector<SceneAnimRef> refs;
 	refs.reserve(scene_anims.size());
@@ -2296,11 +2363,11 @@ void SetAnimableNodePropertyString(Scene &scene, NodeRef ref, const std::string 
 //
 void ReverseSceneAnim(Scene &scene, SceneAnim &scene_anim) {
 	if (auto anim = scene.GetAnim(scene_anim.scene_anim))
-		hg::ReverseAnim(*anim, scene_anim.t_start, scene_anim.t_end);
+		ReverseAnim(*anim, scene_anim.t_start, scene_anim.t_end);
 
 	for (auto node_anim : scene_anim.node_anims)
 		if (auto anim = scene.GetAnim(node_anim.anim))
-			hg::ReverseAnim(*anim, scene_anim.t_start, scene_anim.t_end);
+			ReverseAnim(*anim, scene_anim.t_start, scene_anim.t_end);
 }
 
 //

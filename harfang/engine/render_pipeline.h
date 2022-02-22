@@ -138,12 +138,14 @@ enum PipelineProgramFeature {
 	OptionalReflectionMap, // USE_REFLECTION_MAP
 	OptionalNormalMap, // USE_NORMAL_MAP
 
-	NormalMapWorldOrTangent, // USE_WORLD_NORMAL_MAP
+	NormalMapInWorldSpace, // NORMAL_MAP_IN_WORLD_SPACE
 
-	DiffuseUV01, // DIFFUSE_UV_CHANNEL=N
-	SpecularUV01, // SPECULAR_UV_CHANNEL=N
+	DiffuseUV1, // DIFFUSE_UV_CHANNEL=N
+	SpecularUV1, // SPECULAR_UV_CHANNEL=N
+	AmbientUV1, // AMBIENT_UV_CHANNEL=N
 
 	OptionalSkinning, // ENABLE_SKINNING
+	OptionalAlphaCut, // ENABLE_ALPHA_CUT
 
 	Count,
 };
@@ -234,13 +236,26 @@ Texture LoadTextureFromAssets(const char *name, uint64_t flags, bgfx::TextureInf
 
 void Destroy(Texture &texture);
 
-//
 struct Texture { // 8B
 	uint64_t flags = BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE;
 	bgfx::TextureHandle handle = BGFX_INVALID_HANDLE;
 };
 
 inline Texture MakeTexture(bgfx::TextureHandle handle, uint64_t flags = BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE) { return {flags, handle}; }
+
+// for engine internal use
+struct RenderBufferResourceFactory {
+	std::function<bgfx::TextureHandle(bgfx::BackbufferRatio::Enum ratio, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)>
+		create_texture2d;
+
+	std::function<bgfx::FrameBufferHandle(bgfx::BackbufferRatio::Enum ratio, bgfx::TextureFormat::Enum format, uint64_t textureFlags)> create_framebuffer;
+
+	// resources will be created in terms of this custom size
+	static RenderBufferResourceFactory Custom(uint16_t width, uint16_t height);
+
+	// resources will be created in terms of the backbuffer's size
+	static RenderBufferResourceFactory Backbuffer();
+};
 
 //
 struct UniformSetValue { // burn it with fire, complete insanity
@@ -283,6 +298,11 @@ struct RenderState {
 
 //
 static const int MF_EnableSkinning = 0x01;
+static const int MF_DiffuseUV1 = 0x02;
+static const int MF_SpecularUV1 = 0x04;
+static const int MF_AmbientUV1 = 0x08;
+static const int MF_NormalMapInWorldSpace = 0x10;
+static const int MF_EnableAlphaCut = 0x20;
 
 struct Material { // 56B
 	PipelineProgramRef program;
@@ -355,8 +375,20 @@ void SetMaterialWriteRGBA(Material &m_, bool write_r, bool write_g, bool write_b
 bool GetMaterialWriteZ(const Material &m);
 void SetMaterialWriteZ(Material &m, bool enable);
 
+bool GetMaterialNormalMapInWorldSpace(const Material &m);
+void SetMaterialNormalMapInWorldSpace(Material &m, bool enable);
+
+bool GetMaterialDiffuseUsesUV1(const Material &m);
+void SetMaterialDiffuseUsesUV1(Material &m, bool enable);
+bool GetMaterialSpecularUsesUV1(const Material &m);
+void SetMaterialSpecularUsesUV1(Material &m, bool enable);
+bool GetMaterialAmbientUsesUV1(const Material &m);
+void SetMaterialAmbientUsesUV1(Material &m, bool enable);
+
 bool GetMaterialSkinning(const Material &m);
 void SetMaterialSkinning(Material &m, bool enable);
+bool GetMaterialAlphaCut(const Material &m);
+void SetMaterialAlphaCut(Material &m, bool enable);
 
 //
 RenderState ComputeRenderState(BlendMode blend, bool write_z, bool write_r = true, bool write_g = true, bool write_b = true, bool write_a = true);
@@ -401,6 +433,12 @@ struct TextureLoad {
 	TextureRef ref;
 };
 
+struct ModelLoad {
+	Reader ir;
+	ReadProvider ip;
+	ModelRef ref;
+};
+
 struct PipelineResources {
 	PipelineResources() : programs(Destroy), textures(Destroy), materials(Destroy), models(Destroy) {}
 	~PipelineResources() { DestroyAll(); }
@@ -413,15 +451,30 @@ struct PipelineResources {
 	std::deque<TextureLoad> texture_loads;
 	std::map<gen_ref, bgfx::TextureInfo> texture_infos;
 
+	std::deque<ModelLoad> model_loads;
+	std::map<gen_ref, ModelInfo> model_infos;
+
 	void DestroyAll();
 };
 
-size_t ProcessTextureLoadQueue(PipelineResources &resources);
-
 //
+size_t ProcessTextureLoadQueue(PipelineResources &resources, size_t limit = 1);
+
 TextureRef QueueLoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, PipelineResources &resources);
 TextureRef QueueLoadTextureFromFile(const char *path, uint64_t flags, PipelineResources &resources);
 TextureRef QueueLoadTextureFromAssets(const char *name, uint64_t flags, PipelineResources &resources);
+
+TextureRef SkipLoadOrQueueTextureLoad(
+	const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load);
+
+//
+size_t ProcessModelLoadQueue(PipelineResources &resources, size_t limit = 1);
+ModelRef QueueLoadModel(const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources);
+
+ModelRef QueueLoadModelFromFile(const char *path, PipelineResources &resources);
+ModelRef QueueLoadModelFromAssets(const char *name, PipelineResources &resources);
+
+ModelRef SkipLoadOrQueueModelLoad(const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load);
 
 //
 Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources, const PipelineInfo &pipeline,
@@ -459,7 +512,7 @@ TextureRef LoadTexture(const Reader &ir, const ReadProvider &ip, const char *pat
 TextureRef LoadTextureFromFile(const char *path, uint64_t flags, PipelineResources &resources);
 TextureRef LoadTextureFromAssets(const char *path, uint64_t flags, PipelineResources &resources);
 
-uint32_t CaptureTexture(const PipelineResources &resources, const hg::TextureRef &t, Picture &pic);
+uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t, Picture &pic);
 
 MaterialRef LoadMaterialRef(const Reader &ir, const Handle &h, const char *path, const Reader &deps_ir, const ReadProvider &deps_ip,
 	PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
@@ -467,6 +520,9 @@ MaterialRef LoadMaterialRefFromFile(
 	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
 MaterialRef LoadMaterialRefFromAssets(
 	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
+
+//
+size_t ProcessLoadQueues(PipelineResources &res, size_t limit = 1);
 
 //
 std::vector<int> GetMaterialPipelineProgramFeatureStates(const Material &mat, const std::vector<PipelineProgramFeature> &features);
@@ -622,7 +678,7 @@ struct FrameBuffer {
 	bgfx::FrameBufferHandle handle = BGFX_INVALID_HANDLE;
 };
 
-FrameBuffer CreateFrameBuffer(const hg::Texture &color, const hg::Texture &depth, const char *name);
+FrameBuffer CreateFrameBuffer(const Texture &color, const Texture &depth, const char *name);
 FrameBuffer CreateFrameBuffer(bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, const char *name);
 FrameBuffer CreateFrameBuffer(int width, int height, bgfx::TextureFormat::Enum color_format, bgfx::TextureFormat::Enum depth_format, int aa, const char *name);
 
@@ -632,5 +688,10 @@ Texture GetDepthTexture(FrameBuffer &frameBuffer);
 void DestroyFrameBuffer(FrameBuffer &frameBuffer);
 
 bool CreateFullscreenQuad(bgfx::TransientIndexBuffer &idx, bgfx::TransientVertexBuffer &vtx);
+
+bimg::ImageContainer *LoadImage(const Reader &ir, const ReadProvider &ip, const char *name);
+bimg::ImageContainer *LoadImageFromFile(const char *name);
+bimg::ImageContainer *LoadImageFromAssets(const char *name);
+void UpdateTextureFromImage(Texture &tex, bimg::ImageContainer *img, bool auto_delete = true);
 
 } // namespace hg

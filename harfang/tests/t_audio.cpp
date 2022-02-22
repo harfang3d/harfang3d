@@ -119,3 +119,42 @@ TEST_F(Audio, Timestamps) {
 
 	EXPECT_EQ(GetSourceState(src), SS_Stopped);
 }
+
+TEST_F(Audio, StreamOGG) {
+	EXPECT_TRUE(initialized);
+
+	const auto src = StreamOGGFileStereo(GetResPath("audio/Dance_of_the_Sugar_Plum_Fairies_(ISRC_USUAN1100270).ogg").c_str(), {20.f, SR_Once, 0.5f});
+	EXPECT_NE(src, InvalidSourceRef);
+	while (GetSourceState(src) == SS_Initial)
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+	EXPECT_EQ(GetSourceState(src), SS_Playing);
+	while (GetSourceState(src) == SS_Playing)
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+	EXPECT_EQ(GetSourceState(src), SS_Stopped);
+}
+
+TEST_F(Audio, PlayOGG) {
+	EXPECT_TRUE(initialized);
+
+	const auto snd = LoadOGGSoundFile(GetResPath("audio/Dance_of_the_Sugar_Plum_Fairies_(ISRC_USUAN1100270).ogg").c_str());
+	EXPECT_NE(snd, InvalidSourceRef);
+
+	auto src = PlayStereo(snd, {20.f, SR_Once, 0.5f});
+	EXPECT_NE(snd, InvalidSoundRef);
+	EXPECT_EQ(GetSourceState(src), SS_Playing);
+
+	while (GetSourceState(src) == SS_Playing)
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	EXPECT_EQ(GetSourceState(src), SS_Stopped);
+
+	// replay it
+	src = PlayStereo(snd, {20.f, SR_Once, 0.5f});
+	EXPECT_NE(snd, InvalidSoundRef);
+	EXPECT_EQ(GetSourceState(src), SS_Playing);
+
+	while (GetSourceState(src) == SS_Playing)
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	EXPECT_EQ(GetSourceState(src), SS_Stopped);
+}

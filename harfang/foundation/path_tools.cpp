@@ -38,9 +38,9 @@ std::string GetFilePath(const std::string &p) {
 	}
 
 	if (p[i] == '/')
-		return hg::slice(p, 0, i) + "/";
+		return slice(p, 0, i) + "/";
 
-	return hg::slice(p, 0, i) + "\\";
+	return slice(p, 0, i) + "\\";
 }
 
 std::string GetFileName(const std::string &path) { return CutFilePath(CutFileExtension(path)); }
@@ -77,8 +77,8 @@ std::string PathJoin(const std::vector<std::string> &elements) {
 	std::vector<std::string> stripped_elements;
 	stripped_elements.reserve(elements.size());
 #if !defined(_WIN32)
-	if(!elements.empty()) {
-		if(starts_with(elements[0], "/")) {
+	if (!elements.empty()) {
+		if (starts_with(elements[0], "/")) {
 			stripped_elements.push_back("");
 		}
 	}
@@ -86,7 +86,7 @@ std::string PathJoin(const std::vector<std::string> &elements) {
 	for (auto &element : elements)
 		if (!element.empty())
 			stripped_elements.push_back(rstrip(lstrip(element, "/"), "/"));
-	return hg::CleanPath(join(stripped_elements.begin(), stripped_elements.end(), "/"));
+	return CleanPath(join(stripped_elements.begin(), stripped_elements.end(), "/"));
 }
 
 //
@@ -138,8 +138,9 @@ std::string SwapFileExtension(const std::string &path, const std::string &ext) {
 //
 std::string FactorizePath(const std::string &path) {
 	auto dirs = split(path, "/");
-	if (dirs.size() < 2)
-		return path;
+	if (dirs.size() < 2) {
+		return dirs.empty() ? path : dirs[0];
+	}
 
 	bool factorized = false;
 
@@ -204,7 +205,7 @@ std::string CleanFileName(const std::string &filename) {
 
 	const char filename_invalid_chars[] = "<>:\"/\\|?*";
 
-	for (size_t i = 0; i < sizeof(filename_invalid_chars); i++){
+	for (size_t i = 0; i < sizeof(filename_invalid_chars); i++) {
 		std::string str_to_replace(1, filename_invalid_chars[i]);
 		replace_all(out, str_to_replace, "_");
 	}
@@ -233,7 +234,7 @@ std::string GetUserFolder() {
 	if (FAILED(res)) {
 		return {};
 	}
-	std::string ret = hg::wchar_to_utf8(path);
+	std::string ret = wchar_to_utf8(path);
 	CoTaskMemFree(path);
 	return ret;
 }

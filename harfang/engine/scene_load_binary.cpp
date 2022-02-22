@@ -6,6 +6,7 @@
 
 #include "foundation/format.h"
 #include "foundation/log.h"
+#include "foundation/profiler.h"
 
 #include <set>
 
@@ -56,8 +57,6 @@ void SaveComponent(const Scene::Light_ *data_, const Writer &iw, const Handle &h
 
 void SaveComponent(const Scene::RigidBody_ *data_, const Writer &iw, const Handle &h) {
 	Write(iw, h, data_->type);
-	iw.write(h, &data_->cur.m[0][0], sizeof(float) * 4 * 3);
-	Write(iw, h, data_->scl);
 	Write(iw, h, data_->linear_damping);
 	Write(iw, h, data_->angular_damping);
 	Write(iw, h, data_->restitution);
@@ -106,16 +105,12 @@ void LoadComponent(Scene::Camera_ *data_, const Reader &ir, const Handle &h) {
 }
 
 void LoadComponent(Scene::Object_ *data_, const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
-	const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, uint32_t version) {
+	const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources) {
 	std::string name;
 	Read(ir, h, name);
 
-	if (!name.empty()) {
-		if (do_not_load_resources)
-			data_->model = resources.models.Add(name.c_str(), {});
-		else
-			data_->model = LoadModel(deps_ir, deps_ip, name.c_str(), resources);
-	}
+	if (!name.empty())
+		data_->model = SkipLoadOrQueueModelLoad(deps_ir, deps_ip, name.c_str(), resources, queue_model_loads, do_not_load_resources);
 
 	const auto mat_count = Read<uint16_t>(ir, h);
 	data_->materials.resize(mat_count);
@@ -126,12 +121,10 @@ void LoadComponent(Scene::Object_ *data_, const Reader &ir, const Handle &h, con
 	for (auto i = 0; i < mat_count; ++i)
 		Read(ir, h, data_->material_infos[i].name);
 
-	if (version >= 2) {
-		const auto bone_count = Read<uint16_t>(ir, h);
-		data_->bones.resize(bone_count);
-		for (auto i = 0; i < bone_count; ++i)
-			Read(ir, h, data_->bones[i].idx);
-	}
+	const auto bone_count = Read<uint16_t>(ir, h);
+	data_->bones.resize(bone_count);
+	for (auto i = 0; i < bone_count; ++i)
+		Read(ir, h, data_->bones[i].idx);
 }
 
 void LoadComponent(Scene::Light_ *data_, const Reader &ir, const Handle &h) {
@@ -149,18 +142,13 @@ void LoadComponent(Scene::Light_ *data_, const Reader &ir, const Handle &h) {
 	Read(ir, h, data_->shadow_bias);
 }
 
-void LoadComponent(Scene::RigidBody_ *data_, const Reader &ir, const Handle &h, uint32_t version) {
+void LoadComponent(Scene::RigidBody_ *data_, const Reader &ir, const Handle &h) {
 	Read(ir, h, data_->type);
-	ir.read(h, &data_->cur.m[0][0], sizeof(float) * 4 * 3);
-
-	if (version >= 5) {
-		Read(ir, h, data_->scl);
-		Read(ir, h, data_->linear_damping);
-		Read(ir, h, data_->angular_damping);
-		Read(ir, h, data_->restitution);
-		Read(ir, h, data_->friction);
-		Read(ir, h, data_->rolling_friction);
-	}
+	Read(ir, h, data_->linear_damping);
+	Read(ir, h, data_->angular_damping);
+	Read(ir, h, data_->restitution);
+	Read(ir, h, data_->friction);
+	Read(ir, h, data_->rolling_friction);
 }
 
 void LoadComponent(Scene::Script_ *data_, const Reader &ir, const Handle &h) {
@@ -194,7 +182,7 @@ void LoadComponent(Scene::Instance_ *data_, const Reader &ir, const Handle &h) {
 }
 
 //
-uint32_t GetSceneBinaryFormatVersion() { return 5; }
+uint32_t GetSceneBinaryFormatVersion() { return 7; }
 
 bool Scene::Save_binary(
 	const Writer &iw, const Handle &h, const PipelineResources &resources, uint32_t save_flags, const std::vector<NodeRef> *nodes_to_save) const {
@@ -211,6 +199,8 @@ bool Scene::Save_binary(
 		version 3: add support for arbitrary number of bones
 		version 4: light intensity factors
 		version 5: save rigid body properties
+		version 6: remove obsolete rigid properties
+		version 7: store animation chunk size so that it can be jumped over without parsing its content
 	*/
 	const auto version = GetSceneBinaryFormatVersion();
 	Write<uint32_t>(iw, h, version);
@@ -409,6 +399,10 @@ bool Scene::Save_binary(
 	}
 
 	if (save_flags & LSSF_Anims) {
+		DeferredWrite<uint32_t> chunk_size(iw, h);
+
+		const auto anim_start_cursor = Tell(iw, h);
+
 		{
 			uint32_t count = 0;
 			for (auto ref = anims.first_ref(); ref != InvalidAnimRef; ref = anims.next_ref(ref)) {
@@ -457,6 +451,9 @@ bool Scene::Save_binary(
 				}
 			}
 		}
+
+		const auto anim_end_cursor = Tell(iw, h);
+		chunk_size.Commit(numeric_cast<uint32_t>(anim_end_cursor - anim_start_cursor));
 	}
 
 	if (save_flags & LSSF_KeyValues) {
@@ -473,6 +470,7 @@ bool Scene::Save_binary(
 
 bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
 	const PipelineInfo &pipeline, LoadSceneContext &ctx, uint32_t load_flags) {
+	ProfilerPerfSection section("Scene::Load_binary");
 
 	const auto t_start = time_now();
 
@@ -501,6 +499,8 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 	const auto file_flags = Read<uint32_t>(ir, h);
 
 	//
+	const auto load_component_section_index = BeginProfilerSection("Scene::Load_binary: Load Components");
+
 	const auto transform_count = Read<uint32_t>(ir, h);
 	std::vector<ComponentRef> transform_refs(transform_count);
 	for (size_t i = 0; i < transform_count; ++i) {
@@ -519,8 +519,8 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 	std::vector<ComponentRef> object_refs(object_count);
 	for (size_t i = 0; i < object_count; ++i) {
 		const auto ref = object_refs[i] = CreateObject().ref;
-		LoadComponent(&objects[ref.idx], ir, h, deps_ir, deps_ip, resources, pipeline, load_flags & LSSF_QueueTextureLoads,
-			load_flags & LSSF_DoNotLoadResources, version);
+		LoadComponent(&objects[ref.idx], ir, h, deps_ir, deps_ip, resources, pipeline, load_flags & LSSF_QueueModelLoads, load_flags & LSSF_QueueTextureLoads,
+			load_flags & LSSF_DoNotLoadResources);
 	}
 
 	const auto light_count = Read<uint32_t>(ir, h);
@@ -536,7 +536,7 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 		rigid_body_refs.resize(rigid_body_count);
 		for (size_t i = 0; i < rigid_body_count; ++i) {
 			const auto ref = rigid_body_refs[i] = CreateRigidBody().ref;
-			LoadComponent(&rigid_bodies[ref.idx], ir, h, version);
+			LoadComponent(&rigid_bodies[ref.idx], ir, h);
 		}
 	}
 
@@ -557,91 +557,104 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 		LoadComponent(&instances[ref.idx], ir, h);
 	}
 
+	EndProfilerSection(load_component_section_index);
+
 	//
 	std::vector<NodeRef> nodes_to_disable;
 
 	if (file_flags & LSSF_Nodes) {
+		ProfilerPerfSection section("Scene::Load_binary: Load Nodes");
+
 		std::vector<NodeRef> node_with_instance_to_setup;
 		node_with_instance_to_setup.reserve(64);
 
 		const auto node_count = Read<uint32_t>(ir, h);
 		for (uint32_t i = 0; i < node_count; ++i) {
-			auto node = CreateNode();
-			ctx.node_refs[Read<uint32_t>(ir, h)] = node.ref;
-			ctx.view.nodes.push_back(node.ref);
+			auto node_ref = CreateNode().ref;
+			ctx.node_refs[Read<uint32_t>(ir, h)] = node_ref;
+			ctx.view.nodes.push_back(node_ref);
 
-			const auto name = Read<std::string>(ir, h);
-			node.SetName(name);
+			auto &node_ = nodes[node_ref.idx];
+			node_.name = Read<std::string>(ir, h);
 
 			const auto node_flags = Read<uint32_t>(ir, h);
 			if (node_flags & NF_Disabled)
-				nodes_to_disable.push_back(node.ref);
+				nodes_to_disable.push_back(node_ref);
 
 			const auto transform_idx = Read<uint32_t>(ir, h);
 			if (transform_idx != 0xffffffff)
-				nodes[node.ref.idx].components[NCI_Transform] = transform_refs[transform_idx];
+				node_.components[NCI_Transform] = transform_refs[transform_idx];
 
 			const auto camera_idx = Read<uint32_t>(ir, h);
 			if (camera_idx != 0xffffffff)
-				nodes[node.ref.idx].components[NCI_Camera] = camera_refs[camera_idx];
+				node_.components[NCI_Camera] = camera_refs[camera_idx];
 
 			const auto object_idx = Read<uint32_t>(ir, h);
 			if (object_idx != 0xffffffff)
-				nodes[node.ref.idx].components[NCI_Object] = object_refs[object_idx];
+				node_.components[NCI_Object] = object_refs[object_idx];
 
 			const auto light_idx = Read<uint32_t>(ir, h);
 			if (light_idx != 0xffffffff)
-				nodes[node.ref.idx].components[NCI_Light] = light_refs[light_idx];
+				node_.components[NCI_Light] = light_refs[light_idx];
 
 			if (file_flags & LSSF_Physics) {
 				const auto rigid_body_idx = Read<uint32_t>(ir, h);
 				if (rigid_body_idx != 0xffffffff)
-					nodes[node.ref.idx].components[NCI_RigidBody] = rigid_body_refs[rigid_body_idx];
+					node_.components[NCI_RigidBody] = rigid_body_refs[rigid_body_idx];
 			}
 
 			if (file_flags & LSSF_Scripts) {
 				const auto node_script_count = Read<uint32_t>(ir, h);
 				for (uint32_t j = 0; j < node_script_count; ++j) {
 					const auto script_idx = Read<uint32_t>(ir, h);
-					node_scripts[node.ref].push_back(script_refs[script_idx]);
+					node_scripts[node_ref].push_back(script_refs[script_idx]);
 				}
 			}
 
 			const auto instance_idx = Read<uint32_t>(ir, h);
 			if (instance_idx != 0xffffffff) {
-				node_instance[node.ref] = instance_refs[instance_idx];
-				node_with_instance_to_setup.push_back(node.ref);
+				node_instance[node_ref] = instance_refs[instance_idx];
+				node_with_instance_to_setup.push_back(node_ref);
 			}
 		}
 
 		// setup instances
-		if (!(load_flags & LSSF_DoNotLoadResources))
-			for (const auto ref : node_with_instance_to_setup) {
-				NodeSetupInstance(ref, deps_ir, deps_ip, resources, pipeline, LSSF_AllNodeFeatures, ctx.recursion_level + 1);
-				NodeStartOnInstantiateAnim(ref);
-			}
+		if (!(load_flags & LSSF_DoNotLoadResources)) {
+			ProfilerPerfSection section("Scene::Load_binary: Setup Instances");
 
-		// fix parent references
-		for (const auto ref : transform_refs) {
-			auto &c = transforms[ref.idx];
-			if (c.parent != InvalidNodeRef) {
-				const auto &i = ctx.node_refs.find(c.parent.idx);
-				c.parent = i != std::end(ctx.node_refs) ? i->second : InvalidNodeRef;
+			for (const auto ref : node_with_instance_to_setup) {
+				NodeSetupInstance(ref, deps_ir, deps_ip, resources, pipeline, LSSF_AllNodeFeatures | (load_flags & LSSF_OptionsMask), ctx.recursion_level + 1);
+				NodeStartOnInstantiateAnim(ref);
 			}
 		}
 
-		// fix bone references
-		for (const auto ref : object_refs) {
-			auto &c = objects[ref.idx];
-			for (auto &ref : c.bones)
-				if (ref != InvalidNodeRef) {
-					const auto &i = ctx.node_refs.find(ref.idx);
-					ref = i != std::end(ctx.node_refs) ? i->second : InvalidNodeRef;
+		{
+			ProfilerPerfSection section("Scene::Load_binary: Fix References");
+
+			// fix parent references
+			for (const auto ref : transform_refs) {
+				auto &c = transforms[ref.idx];
+				if (c.parent != InvalidNodeRef) {
+					const auto &i = ctx.node_refs.find(c.parent.idx);
+					c.parent = i != std::end(ctx.node_refs) ? i->second : InvalidNodeRef;
 				}
+			}
+
+			// fix bone references
+			for (const auto ref : object_refs) {
+				auto &c = objects[ref.idx];
+				for (auto &ref : c.bones)
+					if (ref != InvalidNodeRef) {
+						const auto &i = ctx.node_refs.find(ref.idx);
+						ref = i != std::end(ctx.node_refs) ? i->second : InvalidNodeRef;
+					}
+			}
 		}
 	}
 
 	if (file_flags & LSSF_Scene) {
+		ProfilerPerfSection section("Scene::Load_binary: Load Scene");
+
 		if (load_flags & LSSF_Scene) {
 			if (file_flags & LSSF_Nodes) {
 				if (load_flags & LSSF_Nodes) {
@@ -662,40 +675,19 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 				std::string name;
 
 				Read(ir, h, name);
-				if (!name.empty()) {
-					if (load_flags & LSSF_DoNotLoadResources) {
-						environment.irradiance_map = resources.textures.Add(name.c_str(), {});
-					} else {
-						if (load_flags & LSSF_QueueTextureLoads)
-							environment.irradiance_map = QueueLoadTexture(deps_ir, deps_ip, name.c_str(), BGFX_SAMPLER_NONE, resources);
-						else
-							environment.irradiance_map = LoadTexture(deps_ir, deps_ip, name.c_str(), BGFX_SAMPLER_NONE, resources);
-					}
-				}
+				if (!name.empty())
+					environment.irradiance_map = SkipLoadOrQueueTextureLoad(
+						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
 
 				Read(ir, h, name);
-				if (!name.empty()) {
-					if (load_flags & LSSF_DoNotLoadResources) {
-						environment.radiance_map = resources.textures.Add(name.c_str(), {});
-					} else {
-						if (load_flags & LSSF_QueueTextureLoads)
-							environment.radiance_map = QueueLoadTexture(deps_ir, deps_ip, name.c_str(), BGFX_SAMPLER_MAG_ANISOTROPIC, resources);
-						else
-							environment.radiance_map = LoadTexture(deps_ir, deps_ip, name.c_str(), BGFX_SAMPLER_MAG_ANISOTROPIC, resources);
-					}
-				}
+				if (!name.empty())
+					environment.radiance_map = SkipLoadOrQueueTextureLoad(
+						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
 
 				Read(ir, h, name);
-				if (!name.empty()) {
-					if (load_flags & LSSF_DoNotLoadResources) {
-						environment.brdf_map = resources.textures.Add(name.c_str(), {});
-					} else {
-						if (load_flags & LSSF_QueueTextureLoads)
-							environment.brdf_map = QueueLoadTexture(deps_ir, deps_ip, name.c_str(), BGFX_SAMPLER_NONE, resources);
-						else
-							environment.brdf_map = LoadTexture(deps_ir, deps_ip, name.c_str(), BGFX_SAMPLER_NONE, resources);
-					}
-				}
+				if (!name.empty())
+					environment.brdf_map = SkipLoadOrQueueTextureLoad(
+						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
 			}
 
 			Read(ir, h, canvas.clear_z);
@@ -716,96 +708,111 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 	}
 
 	if (file_flags & LSSF_Anims) {
-		std::map<uint32_t, AnimRef> anim_refs;
+		ProfilerPerfSection section("Scene::Load_binary: Load Animations");
 
-		{
-			uint32_t count;
-			Read(ir, h, count);
+		const auto anim_chunk_size = Read<uint32_t>(ir, h);
 
-			for (uint32_t i = 0; i < count; ++i) {
-				uint32_t idx;
-				Read(ir, h, idx);
+		if (load_flags & LSSF_Anims) {
+			std::map<uint32_t, AnimRef> anim_refs;
 
-				Anim anim;
-				LoadAnimFromBinary(ir, h, anim);
+			{
+				uint32_t count;
+				Read(ir, h, count);
 
-				if (load_flags & LSSF_Anims) { // very wasteful if unset, loading work is done and thrown away...
+				for (uint32_t i = 0; i < count; ++i) {
+					uint32_t idx;
+					Read(ir, h, idx);
+
+					Anim anim;
+					LoadAnimFromBinary(ir, h, anim);
+
 					const auto anim_ref = AddAnim(anim);
 					ctx.view.anims.push_back(anim_ref);
 					anim_refs[idx] = anim_ref;
 				}
 			}
-		}
 
-		{
-			uint32_t count;
-			Read(ir, h, count);
+			{
+				uint32_t count;
+				Read(ir, h, count);
 
-			for (uint32_t i = 0; i < count; ++i) {
-				SceneAnim scene_anim;
+				for (uint32_t i = 0; i < count; ++i) {
+					SceneAnim scene_anim;
 
-				uint32_t scene_anim_idx;
-				Read(ir, h, scene_anim.name);
-				Read(ir, h, scene_anim.t_start);
-				Read(ir, h, scene_anim.t_end);
-				Read(ir, h, scene_anim_idx);
-				Read(ir, h, scene_anim.frame_duration);
+					uint32_t scene_anim_idx;
+					Read(ir, h, scene_anim.name);
+					Read(ir, h, scene_anim.t_start);
+					Read(ir, h, scene_anim.t_end);
+					Read(ir, h, scene_anim_idx);
+					Read(ir, h, scene_anim.frame_duration);
 
-				const auto &i_scene_anim = anim_refs.find(scene_anim_idx);
-				if (i_scene_anim != std::end(anim_refs))
-					scene_anim.scene_anim = i_scene_anim->second;
+					const auto &i_scene_anim = anim_refs.find(scene_anim_idx);
+					if (i_scene_anim != std::end(anim_refs))
+						scene_anim.scene_anim = i_scene_anim->second;
 
-				uint32_t node_anim_count;
-				Read(ir, h, node_anim_count);
+					uint32_t node_anim_count;
+					Read(ir, h, node_anim_count);
 
-				for (uint32_t j = 0; j < node_anim_count; ++j) {
-					uint32_t node_idx, anim_idx;
+					for (uint32_t j = 0; j < node_anim_count; ++j) {
+						uint32_t node_idx, anim_idx;
 
-					Read(ir, h, node_idx);
-					Read(ir, h, anim_idx);
+						Read(ir, h, node_idx);
+						Read(ir, h, anim_idx);
 
-					const auto &i_node_ref = ctx.node_refs.find(node_idx); // remap node
-					const auto &i_anim_ref = anim_refs.find(anim_idx); // remap anim
+						const auto &i_node_ref = ctx.node_refs.find(node_idx); // remap node
+						const auto &i_anim_ref = anim_refs.find(anim_idx); // remap anim
 
-					if (i_node_ref != std::end(ctx.node_refs) && i_anim_ref != std::end(anim_refs))
-						scene_anim.node_anims.push_back({i_node_ref->second, i_anim_ref->second});
-				}
+						if (i_node_ref != std::end(ctx.node_refs) && i_anim_ref != std::end(anim_refs))
+							scene_anim.node_anims.push_back({i_node_ref->second, i_anim_ref->second});
+					}
 
-				if (load_flags & LSSF_Anims) { // very wasteful if unset, loading work is done and thrown away...
 					const auto scene_anim_ref = AddSceneAnim(scene_anim);
 					ctx.view.scene_anims.push_back(scene_anim_ref);
 				}
 			}
+		} else {
+			Seek(ir, h, anim_chunk_size, SM_Current);
 		}
 	}
 
-	if (version >= 1)
-		if (file_flags & LSSF_KeyValues) {
-			uint32_t count;
-			Read(ir, h, count);
+	if (file_flags & LSSF_KeyValues) {
+		ProfilerPerfSection section("Scene::Load_binary: Load Key/Values");
 
-			if (load_flags & LSSF_KeyValues) {
-				std::string key, value;
-				for (uint32_t i = 0; i < count; ++i) {
-					Read(ir, h, key);
-					Read(ir, h, value);
-					key_values[key] = value;
-				}
-			} else {
-				for (uint32_t i = 0; i < count; ++i) {
-					SkipString(ir, h);
-					SkipString(ir, h);
-				}
+		uint32_t count;
+		Read(ir, h, count);
+
+		if (load_flags & LSSF_KeyValues) {
+			std::string key, value;
+			for (uint32_t i = 0; i < count; ++i) {
+				Read(ir, h, key);
+				Read(ir, h, value);
+				key_values[key] = value;
+			}
+		} else {
+			for (uint32_t i = 0; i < count; ++i) {
+				SkipString(ir, h);
+				SkipString(ir, h);
 			}
 		}
+	}
 
 	//
-	for (const auto &ref : nodes_to_disable)
-		DisableNode(ref);
+	{
+		ProfilerPerfSection section("Scene::Load_binary: Disable Nodes to Disable");
+		for (const auto &ref : nodes_to_disable)
+			DisableNode(ref);
+	}
 
 	//
-	ReadyWorldMatrices(); // FIX THIS! only clear transform flag for newly created nodes!
-	ComputeWorldMatrices(); // FIX THIS! we only need to compute and update newly created nodes!
+	{
+		ProfilerPerfSection section("Scene::Load_binary: Ready Matrices");
+
+		ReadyWorldMatrices(); // [EJ] clear transform flag for newly created transforms ONLY if it becomes a DEMONSTRATED bottleneck which it has never been yet
+
+		// compute new transform matrices
+		for (const auto &ref : transform_refs)
+			ComputeTransformWorldMatrix(ref.idx);
+	}
 
 	//
 	debug(format("Load scene '%1' took %2 ms").arg(name).arg(time_to_ms(time_now() - t_start)));

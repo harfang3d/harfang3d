@@ -73,9 +73,16 @@ OptionalOpacityMap | 2 | USE_OPACITY_MAP=[1 or 0] | uOpacityMap | 5
 OptionalAmbientMap | 2 | USE_AMBIENT_MAP=[1 or 0] | uAmbientMap | 6
 OptionalReflectionMap | 2 | USE_REFLECTION_MAP=[1 or 0] | uReflectionMap | 7
 OptionalNormalMap | 2 | USE_NORMAL_MAP=[1 or 0] | uNormalMap | 2
-NormalMapWorldOrTangent | 2 | USE_WORLD_SPACE_NORMAL_MAP=[1 or 0] | - | -
+NormalMapInWorldSpace | 2 | NORMAL_MAP_IN_WORLD_SPACE=[1 or 0] | - | -
+DiffuseUV1 | 2 | DIFFUSE_UV_CHANNEL=[1 or 0] | - | -
+SpecularUV1 | 2 | SPECULAR_UV_CHANNEL=[1 or 0] | - | -
+AmbientUV1 | 2 | AMBIENT_UV_CHANNEL=[1 or 0] | - | -
+OptionalSkinning | 2 | ENABLE_SKINNING=[1 or 0] | - | -
+OptionalAlphaCut | 2 | ENABLE_ALPHA_CUT=[1 or 0] | - | -
 
 Obviously, a shader declaring all possible features will generate a considerable amount of variants.
+
+*Note:* For backward compatibility reasons `AMBIENT_UV_CHANNEL=1` is always defined when compiling a pipeline shader without the AmbientUV1 feature.
 
 ### User Uniforms
 

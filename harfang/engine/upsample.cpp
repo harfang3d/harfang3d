@@ -15,8 +15,8 @@ bool IsValid(const Upsample &upsample) {
 }
 
 static Upsample _CreateUpsample(const Reader &ir, const ReadProvider &ip, const char *path) {
-    Upsample up;
-	up.compute = hg::LoadProgram(ir, ip, hg::format("%1/shader/aaa_upsample").arg(path));
+	Upsample up;
+	up.compute = LoadProgram(ir, ip, format("%1/shader/aaa_upsample").arg(path));
 	up.u_input = bgfx::createUniform("u_input", bgfx::UniformType::Sampler);
 	up.u_attr_lo = bgfx::createUniform("u_attr_lo", bgfx::UniformType::Sampler);
 	up.u_attr_hi = bgfx::createUniform("u_attr_hi", bgfx::UniformType::Sampler);
@@ -36,7 +36,8 @@ void DestroyUpsample(Upsample &up) {
 	bgfx_Destroy(up.u_attr_hi);
 }
 
-void ComputeUpsample(bgfx::ViewId &view_id, const iRect &rect, const Texture &input, const Texture &attr_lo, const Texture &attr_hi, bgfx::FrameBufferHandle output, const Upsample &up) {
+void ComputeUpsample(bgfx::ViewId &view_id, const iRect &rect, const Texture &input, const Texture &attr_lo, const Texture &attr_hi,
+	bgfx::FrameBufferHandle output, const Upsample &up) {
 	__ASSERT__(IsValid(up));
 
 	bgfx::TransientIndexBuffer idx;
@@ -44,7 +45,7 @@ void ComputeUpsample(bgfx::ViewId &view_id, const iRect &rect, const Texture &in
 	CreateFullscreenQuad(idx, vtx);
 
 	float ortho[16];
-	memcpy(ortho, hg::to_bgfx(hg::Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
+	memcpy(ortho, to_bgfx(Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
 
 	bgfx::setViewName(view_id, "Upsample");
 	bgfx::setViewRect(view_id, rect.sx, rect.sy, GetWidth(rect), GetHeight(rect));
@@ -52,8 +53,8 @@ void ComputeUpsample(bgfx::ViewId &view_id, const iRect &rect, const Texture &in
 	bgfx::setViewTransform(view_id, NULL, ortho);
 	bgfx::setViewClear(view_id, BGFX_CLEAR_NONE, 0, 1.f, UINT8_MAX);
 	bgfx::setTexture(0, up.u_input, input.handle, uint32_t(input.flags));
-    bgfx::setTexture(1, up.u_attr_lo, attr_lo.handle, uint32_t(attr_lo.flags));
-    bgfx::setTexture(2, up.u_attr_hi, attr_hi.handle, uint32_t(attr_hi.flags));
+	bgfx::setTexture(1, up.u_attr_lo, attr_lo.handle, uint32_t(attr_lo.flags));
+	bgfx::setTexture(2, up.u_attr_hi, attr_hi.handle, uint32_t(attr_hi.flags));
 
 	bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_DEPTH_TEST_ALWAYS);
 	bgfx::setIndexBuffer(&idx);

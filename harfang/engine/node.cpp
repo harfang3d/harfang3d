@@ -252,7 +252,7 @@ void Node::RemoveScript(size_t slot_idx) {
 }
 
 //
-bool GetNodesMinMax(const std::vector<hg::Node> &nodes, const PipelineResources &resources, MinMax &minmax) {
+bool GetNodesMinMax(const std::vector<Node> &nodes, const PipelineResources &resources, MinMax &minmax) {
 	if (nodes.empty())
 		return false;
 

@@ -17,7 +17,7 @@ bool IsValid(const SSR &ssr) {
 
 static SSR _CreateSSR(const Reader &ir, const ReadProvider &ip, const char *path) {
 	SSR ssr;
-	ssr.prg_ssr = hg::LoadProgram(ir, ip, hg::format("%1/shader/ssr").arg(path));
+	ssr.prg_ssr = LoadProgram(ir, ip, format("%1/shader/ssr").arg(path));
 	ssr.u_color = bgfx::createUniform("u_color", bgfx::UniformType::Sampler);
 	ssr.u_attr0 = bgfx::createUniform("u_attr0", bgfx::UniformType::Sampler);
 	ssr.u_attr1 = bgfx::createUniform("u_attr1", bgfx::UniformType::Sampler);
@@ -46,8 +46,8 @@ void DestroySSR(SSR &ssr) {
 	bgfx_Destroy(ssr.u_depthTexInfos);
 }
 
-void ComputeSSR(bgfx::ViewId &view_id, const iRect &rect, bgfx::BackbufferRatio::Enum ratio, const Texture &color, const Texture &attr0, 
-	const Texture &attr1, const Texture &probe, const Texture &noise, const HiZ &hiz, bgfx::FrameBufferHandle output, const SSR &ssr) {
+void ComputeSSR(bgfx::ViewId &view_id, const iRect &rect, bgfx::BackbufferRatio::Enum ratio, const Texture &color, const Texture &attr0, const Texture &attr1,
+	const Texture &probe, const Texture &noise, const HiZ &hiz, bgfx::FrameBufferHandle output, const SSR &ssr) {
 	__ASSERT__(IsValid(ssr));
 
 	bgfx::TransientIndexBuffer idx;
@@ -55,7 +55,7 @@ void ComputeSSR(bgfx::ViewId &view_id, const iRect &rect, bgfx::BackbufferRatio:
 	CreateFullscreenQuad(idx, vtx);
 
 	float ortho[16];
-	memcpy(ortho, hg::to_bgfx(hg::Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
+	memcpy(ortho, to_bgfx(Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
 
 	bgfx::setViewName(view_id, "SSR");
 	bgfx::setViewRect(view_id, rect.sx, rect.sy, GetWidth(rect), GetHeight(rect));
@@ -72,7 +72,7 @@ void ComputeSSR(bgfx::ViewId &view_id, const iRect &rect, bgfx::BackbufferRatio:
 	float params[4];
 	params[0] = float(hiz.pyramid_infos.width);
 	params[1] = float(hiz.pyramid_infos.height);
-	params[2] = float(ratio - hiz.ratio);									// [todo] assert(ratio >= hiz.ratio) ?
+	params[2] = float(ratio - hiz.ratio); // [todo] assert(ratio >= hiz.ratio) ?
 	params[3] = float(hiz.pyramid_infos.numMips - 1);
 	bgfx::setUniform(ssr.u_depthTexInfos, params);
 

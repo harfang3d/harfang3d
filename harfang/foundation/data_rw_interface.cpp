@@ -30,6 +30,19 @@ const Reader g_data_reader = {
 
 const Writer g_data_writer = {
 	[](Handle hnd, const void *data, size_t size) { return (*reinterpret_cast<Data **>(&hnd))->Write(data, size); },
+	[](Handle hnd, ptrdiff_t offset, SeekMode mode) -> bool {
+		auto data = (*reinterpret_cast<Data **>(&hnd));
+
+		if (mode == SM_Start)
+			data->SetCursor(offset);
+		else if (mode == SM_Current)
+			data->SetCursor(data->GetCursor() + offset);
+		else if (mode == SM_End)
+			data->SetCursor(data->GetSize() + offset);
+
+		return true;
+	},
+	[](Handle hnd) -> size_t { return (*reinterpret_cast<const Data **>(&hnd))->GetCursor(); },
 	[](Handle hnd) -> bool { return *reinterpret_cast<Data **>(&hnd) != nullptr; },
 };
 

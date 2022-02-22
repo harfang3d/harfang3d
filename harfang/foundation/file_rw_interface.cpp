@@ -16,6 +16,8 @@ const Reader g_file_reader = {
 
 const Writer g_file_writer = {
 	[](Handle hnd, const void *data, size_t size) { return Write(reinterpret_cast<File &>(hnd), data, size); },
+	[](Handle hnd, ptrdiff_t offset, SeekMode mode) -> bool { return Seek(reinterpret_cast<File &>(hnd), offset, mode); },
+	[](Handle hnd) -> size_t { return Tell(reinterpret_cast<File &>(hnd)); },
 	[](Handle hnd) { return reinterpret_cast<File &>(hnd).ref != invalid_gen_ref; },
 };
 

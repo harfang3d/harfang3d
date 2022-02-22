@@ -1,1 +1,1 @@
-Load a scene in binary format from the local filesystem.
+Load a scene in binary format from the local filesystem. Loaded content is added to the existing scene content.

@@ -4,6 +4,7 @@
 #include "foundation/cext.h"
 #include "foundation/file.h"
 #include "foundation/math.h"
+#include "foundation/profiler.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
@@ -54,6 +55,8 @@ void Picture::SetData(void *data, uint16_t width, uint16_t height, PictureFormat
 }
 
 void Picture::CopyData(const void *data, uint16_t width, uint16_t height, PictureFormat format) {
+	ProfilerPerfSection section("Picture::CopyData");
+
 	Clear();
 
 	w = width;
@@ -66,6 +69,7 @@ void Picture::CopyData(const void *data, uint16_t width, uint16_t height, Pictur
 }
 
 void Picture::TakeDataOwnership() {
+	ProfilerPerfSection section("Picture::TakeDataOwnership");
 	if (has_ownership || d == nullptr)
 		return;
 
@@ -176,6 +180,8 @@ STB_callbacks open_STB_file(const char *path) {
 }
 
 static bool load_STB_picture(Picture &pic, const char *path) {
+	ProfilerPerfSection section("load_STB_picture", path);
+
 	auto cb = open_STB_file(path);
 	if (!cb.file)
 		return false;
@@ -202,13 +208,15 @@ bool LoadPicture(Picture &pic, const char *path) { return load_STB_picture(pic, 
 
 //
 static void STB_write(void *user, void *data, int size) {
-	ScopedFile *file = reinterpret_cast<ScopedFile*>(user);
-	if(file) {
+	ScopedFile *file = reinterpret_cast<ScopedFile *>(user);
+	if (file) {
 		Write(file->f, data, size);
 	}
 }
 
 bool SavePNG(const Picture &pic, const char *path) {
+	ProfilerPerfSection section("SavePNG", path);
+
 	if (!pic.GetHeight() || !pic.GetWidth())
 		return false;
 
@@ -217,10 +225,12 @@ bool SavePNG(const Picture &pic, const char *path) {
 		return false;
 
 	return stbi_write_png_to_func(
-				STB_write, &file, pic.GetWidth(), pic.GetHeight(), size_of(pic.GetFormat()), pic.GetData(), pic.GetWidth() * size_of(pic.GetFormat())) != 0;
+			   STB_write, &file, pic.GetWidth(), pic.GetHeight(), size_of(pic.GetFormat()), pic.GetData(), pic.GetWidth() * size_of(pic.GetFormat())) != 0;
 }
 
 bool SaveBMP(const Picture &pic, const char *path) {
+	ProfilerPerfSection section("SaveBMP", path);
+
 	if (!pic.GetHeight() || !pic.GetWidth())
 		return false;
 
@@ -232,6 +242,8 @@ bool SaveBMP(const Picture &pic, const char *path) {
 }
 
 bool SaveTGA(const Picture &pic, const char *path) {
+	ProfilerPerfSection section("SaveTGA", path);
+
 	if (!pic.GetHeight() || !pic.GetWidth())
 		return false;
 

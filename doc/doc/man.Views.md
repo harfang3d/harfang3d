@@ -26,16 +26,16 @@ A view accepts a single value for each of these properties. *Multiple calls to c
 
 If you need to use different values for a view property you must use additional views even if all other properties remain unchanged.
 
-Views with no queued draw commands are skipped. If you need to force processing a view use [Touch].
+Views with no queued draw commands are skipped. If you need to force the processing of a view, use [Touch].
 
 ## Draw Command Queue
 
 Draw commands queued on a view are processed according to the view mode, they are executed:
 
-- In submission order if the view mode is *VM_Sequential*.
-- In ascending depth order if the view mode is *VM_Ascending*.
-- In descending depth order if the view mode is *VM_Descending*.
+- In submission order if the view mode is [VM_Sequential].
+- In ascending depth order if the view mode is [VM_Ascending].
+- In descending depth order if the view mode is [VM_Descending].
 
-When the view mode is *VM_Ascending* or *VM_Descending*, the depth value used to sort draw commands is derived from the draw call *depth* parameter.
+When the view mode is [VM_Ascending] or [VM_Descending], the depth value used to sort draw commands is derived from the draw call *depth* parameter.
 
-When no depth is specified 0 is implied.
+When no depth is specified, 0 is implied.

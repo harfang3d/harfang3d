@@ -18,7 +18,7 @@ bool IsValid(const MotionBlur &motion_blur) {
 static MotionBlur _CreateMotionBlur(const Reader &ir, const ReadProvider &ip, const char *path) {
 	MotionBlur motion_blur;
 
-	motion_blur.prg_motion_blur = hg::LoadProgram(ir, ip, hg::format("%1/shader/motion_blur").arg(path));
+	motion_blur.prg_motion_blur = LoadProgram(ir, ip, format("%1/shader/motion_blur").arg(path));
 	motion_blur.u_color = bgfx::createUniform("u_color", bgfx::UniformType::Sampler);
 	motion_blur.u_attr0 = bgfx::createUniform("u_attr0", bgfx::UniformType::Sampler);
 	motion_blur.u_attr1 = bgfx::createUniform("u_attr1", bgfx::UniformType::Sampler);
@@ -52,7 +52,7 @@ void ApplyMotionBlur(bgfx::ViewId &view_id, const iRect &rect, const Texture &co
 	CreateFullscreenQuad(idx, vtx);
 
 	float ortho[16];
-	memcpy(ortho, hg::to_bgfx(hg::Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
+	memcpy(ortho, to_bgfx(Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
 
 	bgfx::setViewName(view_id, "Motion Blur");
 	bgfx::setViewRect(view_id, rect.sx, rect.sy, GetWidth(rect), GetHeight(rect));

@@ -16,19 +16,21 @@ bool IsValid(const TemporalAccumulation &temporal_acc) {
 }
 
 static TemporalAccumulation _CreateTemporalAccumulation(const Reader &ir, const ReadProvider &ip, const char *path) {
-    TemporalAccumulation temporal_acc;
-	temporal_acc.compute = hg::LoadProgram(ir, ip, hg::format("%1/shader/temporal_accumulation").arg(path));
+	TemporalAccumulation temporal_acc;
+	temporal_acc.compute = LoadProgram(ir, ip, format("%1/shader/temporal_accumulation").arg(path));
 	temporal_acc.u_current = bgfx::createUniform("u_current", bgfx::UniformType::Sampler);
 	temporal_acc.u_previous = bgfx::createUniform("u_previous", bgfx::UniformType::Sampler);
 	temporal_acc.u_attr1 = bgfx::createUniform("u_attr1", bgfx::UniformType::Sampler);
 	if (!IsValid(temporal_acc)) {
 		DestroyTemporalAccumulation(temporal_acc);
 	}
-    return temporal_acc;
+	return temporal_acc;
 }
 
 TemporalAccumulation CreateTemporalAccumulationFromFile(const char *path) { return _CreateTemporalAccumulation(g_file_reader, g_file_read_provider, path); }
-TemporalAccumulation CreateTemporalAccumulationFromAssets(const char *path) { return _CreateTemporalAccumulation(g_assets_reader, g_assets_read_provider, path); }
+TemporalAccumulation CreateTemporalAccumulationFromAssets(const char *path) {
+	return _CreateTemporalAccumulation(g_assets_reader, g_assets_read_provider, path);
+}
 
 void DestroyTemporalAccumulation(TemporalAccumulation &temporal_acc) {
 	bgfx_Destroy(temporal_acc.compute);
@@ -37,7 +39,8 @@ void DestroyTemporalAccumulation(TemporalAccumulation &temporal_acc) {
 	bgfx_Destroy(temporal_acc.u_attr1);
 }
 
-void ComputeTemporalAccumulation(bgfx::ViewId &view_id, const iRect &rect, const Texture &current, const Texture &previous, const Texture &attr1, bgfx::FrameBufferHandle output, const TemporalAccumulation &temporal_acc) {
+void ComputeTemporalAccumulation(bgfx::ViewId &view_id, const iRect &rect, const Texture &current, const Texture &previous, const Texture &attr1,
+	bgfx::FrameBufferHandle output, const TemporalAccumulation &temporal_acc) {
 	__ASSERT__(IsValid(temporal_acc));
 
 	const bgfx::Caps *caps = bgfx::getCaps();
@@ -47,7 +50,7 @@ void ComputeTemporalAccumulation(bgfx::ViewId &view_id, const iRect &rect, const
 	CreateFullscreenQuad(idx, vtx);
 
 	float ortho[16];
-	memcpy(ortho, hg::to_bgfx(hg::Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
+	memcpy(ortho, to_bgfx(Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
 
 	bgfx::setViewName(view_id, "Temporal accumulation");
 	bgfx::setViewRect(view_id, rect.sx, rect.sy, GetWidth(rect), GetHeight(rect));
@@ -55,9 +58,9 @@ void ComputeTemporalAccumulation(bgfx::ViewId &view_id, const iRect &rect, const
 	bgfx::setViewTransform(view_id, NULL, ortho);
 	bgfx::setViewClear(view_id, BGFX_CLEAR_NONE, 0, 1.f, UINT8_MAX);
 	bgfx::setTexture(0, temporal_acc.u_current, current.handle, uint32_t(current.flags));
-    bgfx::setTexture(1, temporal_acc.u_previous, previous.handle, uint32_t(previous.flags));
-    bgfx::setTexture(2, temporal_acc.u_attr1, attr1.handle, uint32_t(attr1.flags));
-		
+	bgfx::setTexture(1, temporal_acc.u_previous, previous.handle, uint32_t(previous.flags));
+	bgfx::setTexture(2, temporal_acc.u_attr1, attr1.handle, uint32_t(attr1.flags));
+
 	bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_DEPTH_TEST_ALWAYS);
 	bgfx::setIndexBuffer(&idx);
 	bgfx::setVertexBuffer(0, &vtx);

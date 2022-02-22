@@ -23,18 +23,18 @@ static bool LoadShaders(Bloom &bloom, const Reader &ir, const ReadProvider &ip, 
 	bloom.u_params = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
 	bloom.u_source_rect = bgfx::createUniform("u_source_rect", bgfx::UniformType::Vec4);
 	if (!(bgfx::isValid(bloom.u_source) && bgfx::isValid(bloom.u_input) && bgfx::isValid(bloom.u_params) && bgfx::isValid(bloom.u_source_rect))) {
-		hg::error("failed to create bloom uniforms.");
+		error("failed to create bloom uniforms.");
 		return false;
 	}
 
 	// load programs
-	bloom.prg_threshold = hg::LoadProgram(ir, ip, hg::format("%1/bloom_threshold").arg(path));
-	bloom.prg_downsample = hg::LoadProgram(ir, ip, hg::format("%1/bloom_downsample").arg(path));
-	bloom.prg_upsample = hg::LoadProgram(ir, ip, hg::format("%1/bloom_upsample").arg(path));
-	bloom.prg_combine = hg::LoadProgram(ir, ip, hg::format("%1/bloom_combine").arg(path));
+	bloom.prg_threshold = LoadProgram(ir, ip, format("%1/bloom_threshold").arg(path));
+	bloom.prg_downsample = LoadProgram(ir, ip, format("%1/bloom_downsample").arg(path));
+	bloom.prg_upsample = LoadProgram(ir, ip, format("%1/bloom_upsample").arg(path));
+	bloom.prg_combine = LoadProgram(ir, ip, format("%1/bloom_combine").arg(path));
 
 	if (!(bgfx::isValid(bloom.prg_threshold) && bgfx::isValid(bloom.prg_downsample) && bgfx::isValid(bloom.prg_upsample) && bgfx::isValid(bloom.prg_combine))) {
-		hg::error("failed to load bloom programs.");
+		error("failed to load bloom programs.");
 		return false;
 	}
 
@@ -49,15 +49,16 @@ bool IsValid(const Bloom &bloom) {
 		   bgfx::isValid(bloom.prg_upsample) && bgfx::isValid(bloom.prg_combine);
 }
 
-static Bloom CreateBloom(const Reader &ir, const ReadProvider &ip, const char *path, bgfx::BackbufferRatio::Enum ratio) {
+static Bloom CreateBloom(
+	const Reader &ir, const ReadProvider &ip, const char *path, const RenderBufferResourceFactory &rb_factory, bgfx::BackbufferRatio::Enum ratio) {
 	Bloom bloom;
 	if (!LoadShaders(bloom, ir, ip, path)) {
 		DestroyBloom(bloom);
 		return bloom;
 	}
 
-	bloom.in_fb = bgfx::createFrameBuffer(ratio, bgfx::TextureFormat::RGBA16F, g_bloom_tex_flags);
-	bloom.out_fb = bgfx::createFrameBuffer(ratio, bgfx::TextureFormat::RGBA16F, g_bloom_tex_flags);
+	bloom.in_fb = rb_factory.create_framebuffer(ratio, bgfx::TextureFormat::RGBA16F, g_bloom_tex_flags);
+	bloom.out_fb = rb_factory.create_framebuffer(ratio, bgfx::TextureFormat::RGBA16F, g_bloom_tex_flags);
 	if (!(bgfx::isValid(bloom.in_fb) && bgfx::isValid(bloom.out_fb))) {
 		DestroyBloom(bloom);
 		return bloom;
@@ -68,8 +69,12 @@ static Bloom CreateBloom(const Reader &ir, const ReadProvider &ip, const char *p
 	return bloom;
 }
 
-Bloom CreateBloomFromFile(const char *path, bgfx::BackbufferRatio::Enum ratio) { return CreateBloom(g_file_reader, g_file_read_provider, path, ratio); }
-Bloom CreateBloomFromAssets(const char *path, bgfx::BackbufferRatio::Enum ratio) { return CreateBloom(g_assets_reader, g_assets_read_provider, path, ratio); }
+Bloom CreateBloomFromFile(const char *path, const RenderBufferResourceFactory &rb_factory, bgfx::BackbufferRatio::Enum ratio) {
+	return CreateBloom(g_file_reader, g_file_read_provider, path, rb_factory, ratio);
+}
+Bloom CreateBloomFromAssets(const char *path, const RenderBufferResourceFactory &rb_factory, bgfx::BackbufferRatio::Enum ratio) {
+	return CreateBloom(g_assets_reader, g_assets_read_provider, path, rb_factory, ratio);
+}
 
 void DestroyBloom(Bloom &bloom) {
 	bgfx_Destroy(bloom.in_fb);
@@ -86,7 +91,17 @@ void DestroyBloom(Bloom &bloom) {
 	bgfx_Destroy(bloom.prg_combine);
 }
 
-void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, bgfx::FrameBufferHandle output, const Bloom &bloom, float threshold,
+void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, bgfx::FrameBufferHandle output,
+	const Bloom &bloom, float threshold, float smoothness, float intensity) {
+	auto stats = bgfx::getStats();
+
+	const int width = stats->width;
+	const int height = stats->height;
+	ApplyBloom(view_id, rect, input, hg::iVec2(width, height), output, bloom, threshold, smoothness, intensity);
+}
+
+void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, const hg::iVec2 &fb_size, bgfx::FrameBufferHandle output,
+	const Bloom &bloom, float threshold,
 	float smoothness, float intensity) {
 	__ASSERT__(IsValid(bloom));
 
@@ -96,17 +111,11 @@ void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &inp
 	bgfx::TransientVertexBuffer vtx;
 	CreateFullscreenQuad(idx, vtx);
 
-	//
-	auto stats = bgfx::getStats();
-
-	const int width = stats->width;
-	const int height = stats->height;
-
-	const int pass_count = static_cast<int>(std::floor(std::log2(std::min(width, height)))) / 2;
+	const int pass_count = static_cast<int>(std::floor(std::log2(std::min(fb_size.x, fb_size.y)))) / 2;
 
 	//
 	float ortho[16];
-	memcpy(ortho, hg::to_bgfx(hg::Compute2DProjectionMatrix(-1.f, 1.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
+	memcpy(ortho, to_bgfx(Compute2DProjectionMatrix(-1.f, 1.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
 
 	// threshold
 	{
@@ -134,15 +143,14 @@ void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &inp
 	iRect pass_rect = rect;
 	{
 		std::vector<iRect> pass_rects;
-
 		for (int i = 0; i < pass_count; ++i) {
 			pass_rects.push_back(pass_rect);
 			const iRect source_rect = pass_rect;
 
-			pass_rect.ex = GetWidth(pass_rect) / 2 + pass_rect.sx;
-			pass_rect.ey = GetHeight(pass_rect) / 2 + pass_rect.sy;
+			pass_rect.ex = Floor(GetWidth(pass_rect) / 2) + pass_rect.sx;
+			pass_rect.ey = Floor(GetHeight(pass_rect) / 2) + pass_rect.sy;
 
-			bgfx::setViewName(view_id, hg::format("Bloom downsample %1").arg(i).c_str());
+			bgfx::setViewName(view_id, format("Bloom downsample %1").arg(i).c_str());
 			bgfx::setViewRect(view_id, pass_rect.sx, pass_rect.sy, GetWidth(pass_rect), GetHeight(pass_rect));
 			bgfx::setViewTransform(view_id, NULL, ortho);
 			bgfx::setViewClear(view_id, BGFX_CLEAR_NONE, 1.f, 0, UINT8_MAX);
@@ -163,10 +171,11 @@ void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &inp
 
 		// upsample
 		for (int i = 0; i < pass_count; ++i) {
-			const iRect pass_rect = pass_rects.back();
+			const iRect source_rect = pass_rect;
+			pass_rect = pass_rects.back();
 			pass_rects.pop_back();
 
-			bgfx::setViewName(view_id, hg::format("Bloom upsample %1").arg(i).c_str());
+			bgfx::setViewName(view_id, format("Bloom upsample %1").arg(i).c_str());
 			bgfx::setViewRect(view_id, pass_rect.sx, pass_rect.sy, GetWidth(pass_rect), GetHeight(pass_rect));
 			bgfx::setViewTransform(view_id, NULL, ortho);
 			bgfx::setViewClear(view_id, BGFX_CLEAR_NONE, 1.f, 0, UINT8_MAX);
@@ -174,8 +183,8 @@ void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &inp
 
 			const float params[4] = {0.f, 0.f, intensity, 0.f};
 			bgfx::setUniform(bloom.u_params, &params[0], 1);
-			const float u_source_rect[] = {
-				float(pass_rect.sx), float(pass_rect.sy), (pass_rect.ex - pass_rect.sx) / 2.f + pass_rect.sx, (pass_rect.ey - pass_rect.sy) / 2.f + pass_rect.sy};
+
+			const float u_source_rect[] = {float(source_rect.sx), float(source_rect.sy), float(GetWidth(source_rect)), float(GetHeight(source_rect))};
 			bgfx::setUniform(bloom.u_source_rect, u_source_rect, 1);
 			bgfx::setTexture(0, bloom.u_source, bgfx::getTexture(bloom.in_fb), BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
 

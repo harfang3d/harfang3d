@@ -7,6 +7,7 @@
 #include "foundation/log.h"
 #include "foundation/timer.h"
 
+#include "engine/ogg_audio_stream.h"
 #include "engine/wav_audio_stream.h"
 
 #include <AL/alc.h>
@@ -20,7 +21,7 @@
 namespace hg {
 
 static const size_t max_source = 64;
-static const time_ns audio_mixer_period = time_from_ms(50);
+static const time_ns audio_mixer_period = time_from_ms(20);
 
 //
 struct ALStream {
@@ -100,7 +101,7 @@ static inline int AFF_ALFormat(AudioFrameFormat fmt) {
 	switch (fmt) {
 		case AFF_LPCM_44KHZ_S16_Mono:
 		case AFF_LPCM_48KHZ_S16_Mono:
-			return AL_FORMAT_MONO16; 
+			return AL_FORMAT_MONO16;
 		case AFF_LPCM_44KHZ_S16_Stereo:
 		case AFF_LPCM_48KHZ_S16_Stereo:
 			return AL_FORMAT_STEREO16;
@@ -243,6 +244,8 @@ static void UpdateAudio() {
 bool IsAudioUp() { return al_mixer.device || al_mixer.context; }
 
 bool AudioInit() {
+	start_timer();
+
 	if (IsAudioUp())
 		return true;
 
@@ -287,7 +290,7 @@ void AudioShutdown() {
 	}
 }
 
-void SetListener(const hg::Mat4 &world, const hg::Vec3 &velocity) {
+void SetListener(const Mat4 &world, const Vec3 &velocity) {
 	const auto T = GetT(world);
 	__AL_CALL(alListener3f(AL_POSITION, T.x, T.y, T.z));
 
@@ -371,6 +374,9 @@ static SoundRef LoadSound(IAudioStreamer streamer, const char *path) {
 SoundRef LoadWAVSoundFile(const char *path) { return LoadSound(MakeWAVFileStreamer(), path); }
 SoundRef LoadWAVSoundAsset(const char *name) { return LoadSound(MakeWAVAssetStreamer(), name); }
 
+SoundRef LoadOGGSoundFile(const char *path) { return LoadSound(MakeOGGFileStreamer(), path); }
+SoundRef LoadOGGSoundAsset(const char *name) { return LoadSound(MakeOGGAssetStreamer(), name); }
+
 //
 static void ALChannelSetState(ALint src, const StereoSourceState &state, bool stream) {
 	__AL_CALL(alSourcef(src, AL_GAIN, state.volume));
@@ -448,6 +454,11 @@ SourceRef StreamWAVAssetStereo(const char *path, const StereoSourceState &state)
 SourceRef StreamWAVFileSpatialized(const char *path, const SpatializedSourceState &state) { return Stream(MakeWAVFileStreamer(), path, state); }
 SourceRef StreamWAVAssetSpatialized(const char *path, const SpatializedSourceState &state) { return Stream(MakeWAVAssetStreamer(), path, state); }
 
+SourceRef StreamOGGFileStereo(const char *path, const StereoSourceState &state) { return Stream(MakeOGGFileStreamer(), path, state); }
+SourceRef StreamOGGAssetStereo(const char *path, const StereoSourceState &state) { return Stream(MakeOGGAssetStreamer(), path, state); }
+SourceRef StreamOGGFileSpatialized(const char *path, const SpatializedSourceState &state) { return Stream(MakeOGGFileStreamer(), path, state); }
+SourceRef StreamOGGAssetSpatialized(const char *path, const SpatializedSourceState &state) { return Stream(MakeOGGAssetStreamer(), path, state); }
+
 //
 time_ns GetSourceTimecode(SourceRef src_ref) {
 	if (src_ref < 0 || src_ref >= max_source)
@@ -489,7 +500,7 @@ bool SetSourceTimecode(SourceRef src_ref, time_ns t) {
 	std::lock_guard<std::mutex> mixer_lock(al_mixer.lock);
 	if (src_ref < 0 || src_ref >= max_source)
 		return false;
-	
+
 	ALStream &stream = al_mixer.streams[src_ref];
 	if (stream.ref == InvalidAudioStreamRef)
 		return 0;
@@ -535,7 +546,7 @@ void SetSourceRepeat(SourceRef src_ref, SourceRepeat repeat) {
 		stream.loop = repeat == SR_Loop;
 }
 
-void SetSourceTransform(SourceRef src_ref, const hg::Mat4 &world, const hg::Vec3 &velocity) {
+void SetSourceTransform(SourceRef src_ref, const Mat4 &world, const Vec3 &velocity) {
 	if (src_ref < 0 || src_ref >= max_source)
 		return;
 

@@ -15,45 +15,33 @@ struct Monitor::Impl {
 };
 
 Monitor::Monitor() : impl_(new Monitor::Impl()) {}
-Monitor::~Monitor() = default; 
-Monitor::Monitor(const Monitor& m) : impl_(new Monitor::Impl(*m.impl_)) {}
+Monitor::~Monitor() = default;
+Monitor::Monitor(const Monitor &m) : impl_(new Monitor::Impl(*m.impl_)) {}
 Monitor::Monitor(Monitor &&) noexcept = default;
-Monitor& Monitor::operator=(const Monitor& m) {
-	if(this != &m) {
+Monitor &Monitor::operator=(const Monitor &m) {
+	if (this != &m) {
 		impl_.reset(new Monitor::Impl(*m.impl_));
 	}
 	return *this;
 }
-Monitor& Monitor::operator=(Monitor &&) noexcept = default;
+Monitor &Monitor::operator=(Monitor &&) noexcept = default;
 
 std::vector<Monitor> GetMonitors() {
 	std::vector<Monitor> monitors;
 	return monitors;
 }
 
-iRect GetMonitorRect(const Monitor &m) {
-	return m.impl_->rect;
-}
+iRect GetMonitorRect(const Monitor &m) { return m.impl_->rect; }
 
-bool IsPrimaryMonitor(const Monitor &m) {
-	return m.impl_->primary;
-}
+bool IsPrimaryMonitor(const Monitor &m) { return m.impl_->primary; }
 // TODO Return true if the monitor is connected.
-bool IsMonitorConnected(const Monitor &monitor) {
-	return true;
-}
+bool IsMonitorConnected(const Monitor &monitor) { return true; }
 // TODO Return monitor name.
-std::string GetMonitorName(const Monitor &monitor) {
-	return "TODO IN SDL";
-}
+std::string GetMonitorName(const Monitor &monitor) { return "TODO IN SDL"; }
 // TODO Return monitor size in millimeters.
-hg::iVec2 GetMonitorSizeMM(const Monitor &monitor) {
-	return hg::iVec2(0, 0);
-}
+iVec2 GetMonitorSizeMM(const Monitor &monitor) { return iVec2(0, 0); }
 // TODO Get the list of screen modes for a given monitor.
-bool GetMonitorModes(const Monitor &monitor, std::vector<MonitorMode> &modes) {
-	return true;
-}
+bool GetMonitorModes(const Monitor &monitor, std::vector<MonitorMode> &modes) { return true; }
 
 //-- Window
 //
@@ -62,9 +50,7 @@ struct SDLWindow {
 	bool is_foreign{false};
 };
 
-void WindowSystemInit() {
-	SDL_Init(SDL_INIT_VIDEO);
-}
+void WindowSystemInit() { SDL_Init(SDL_INIT_VIDEO); }
 
 Window NewWindow(int width, int height, int bpp, Window::Visibility visibility) {
 
@@ -109,17 +95,11 @@ Window NewWindowFrom(void *handle) {
 }
 
 // TODO Create a new fullscreen window on a specified monitor.
-Window NewFullscreenWindow(const Monitor &monitor, int mode_index, MonitorRotation rotation) {
-	return NewWindow(512, 512, 32, Window::Windowed);
-}
+Window NewFullscreenWindow(const Monitor &monitor, int mode_index, MonitorRotation rotation) { return NewWindow(512, 512, 32, Window::Windowed); }
 
-void *GetDisplay() {
-	return nullptr;
-}
+void *GetDisplay() { return nullptr; }
 
-void *GetWindowHandle(const Window &w) {
-	return reinterpret_cast<void *>(reinterpret_cast<const SDLWindow *>(w.data.data())->w);
-}
+void *GetWindowHandle(const Window &w) { return reinterpret_cast<void *>(reinterpret_cast<const SDLWindow *>(w.data.data())->w); }
 
 Window GetWindowInFocus() { return g_window_system.get().window_in_focus; }
 
@@ -182,25 +162,24 @@ bool WindowHasFocus(const Window &w) {
 	return true;
 }
 
-bool SetWindowPos(const Window &w, const hg::iVec2 &v) {
+bool SetWindowPos(const Window &w, const iVec2 &v) {
 	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
 	SDL_SetWindowPosition(data->w, v.x, v.y);
 	UpdateWindow(w); // process messages on the spot
 	return true;
 }
 
-hg::iVec2 GetWindowPos(const Window &w) {
+iVec2 GetWindowPos(const Window &w) {
 	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
 
 	UpdateWindow(w);
 
-	hg::iVec2 pos;
+	iVec2 pos;
 	SDL_GetWindowPosition(data->w, &pos.x, &pos.y);
 	return pos;
 }
 
 void ShowCursor() { SDL_ShowCursor(SDL_ENABLE); }
 void HideCursor() { SDL_ShowCursor(SDL_DISABLE); }
-
 
 } // namespace hg

@@ -41,6 +41,7 @@ bool IsFile(const char *path);
 bool Unlink(const char *path);
 
 struct FileInfo {
+	bool is_file;
 	size_t size;
 	time_ns created;
 	time_ns modified;

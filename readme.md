@@ -55,13 +55,13 @@ Audio API
 <a name="subsection_1b"></a>
 ## Screenshots
 
-The following screenshots were captured on a 2070RTX in 1080P running at 60FPS, GI is performed using screen space raytracing and does not require RTX capable hardware.
+The following screenshots were captured on a 1080GTX in 1080P running at 60FPS.
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cyber_city_aaa.png)
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/2.0.111/sun_temple_aaa.png)
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cyber_city_aaa_2.png)
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/2.0.111/sun_temple_aaa_2.png)
 
-*(CyberPunk City, CyberPunk Girl and Robot R32 by art-equilibrium, ILranch and ZeroArt3d)*
+*(Sun Temple, courtesy of the Open Research Content Archive (ORCA))*
 
 <a name="section_2"></a>
 # Download

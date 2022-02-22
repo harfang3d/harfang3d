@@ -129,7 +129,7 @@ Asset OpenAsset(const char *name, bool silent) {
 	std::lock_guard<std::mutex> lock(assets_mutex);
 
 	for (auto &p : assets_folders) {
-		const auto asset_path = hg::PathJoin({p, name});
+		const auto asset_path = PathJoin({p, name});
 
 		const auto file = Open(asset_path.c_str(), true);
 		if (IsValid(file))
@@ -178,7 +178,7 @@ bool IsAssetFile(const char *name) {
 	std::lock_guard<std::mutex> lock(assets_mutex);
 
 	for (auto &p : assets_folders)
-		if (IsFile(hg::PathJoin({p, name}).c_str()))
+		if (IsFile(PathJoin({p, name}).c_str()))
 			return true;
 
 	// look in archive

@@ -25,8 +25,8 @@ static void CreateSAOCommon(SAO &sao, const Reader &ir, const ReadProvider &ip, 
 	sao.u_params = bgfx::createUniform("u_params", bgfx::UniformType::Vec4, 2);
 	sao.u_projection_infos = bgfx::createUniform("u_projection_infos", bgfx::UniformType::Vec4);
 
-	sao.prg_compute = LoadProgram(ir, ip, hg::format("%1/shader/sao_compute").arg(path));
-	sao.prg_blur = LoadProgram(ir, ip, hg::format("%1/shader/sao_blur").arg(path));
+	sao.prg_compute = LoadProgram(ir, ip, format("%1/shader/sao_compute").arg(path));
+	sao.prg_blur = LoadProgram(ir, ip, format("%1/shader/sao_blur").arg(path));
 }
 
 static SAO _CreateSAO(const Reader &ir, const ReadProvider &ip, const char *path, bgfx::BackbufferRatio::Enum ratio) {
@@ -50,12 +50,8 @@ static SAO _CreateSAO(const Reader &ir, const ReadProvider &ip, const char *path
 	return sao;
 }
 
-SAO CreateSAOFromFile(const char *path, bgfx::BackbufferRatio::Enum ratio) {
-	return _CreateSAO(g_file_reader, g_file_read_provider, path, ratio);
-}
-SAO CreateSAOFromAssets(const char *path, bgfx::BackbufferRatio::Enum ratio) {
-	return _CreateSAO(g_assets_reader, g_assets_read_provider, path, ratio);
-}
+SAO CreateSAOFromFile(const char *path, bgfx::BackbufferRatio::Enum ratio) { return _CreateSAO(g_file_reader, g_file_read_provider, path, ratio); }
+SAO CreateSAOFromAssets(const char *path, bgfx::BackbufferRatio::Enum ratio) { return _CreateSAO(g_assets_reader, g_assets_read_provider, path, ratio); }
 
 void DestroySAO(SAO &sao) {
 	bgfx_Destroy(sao.compute_fb);
@@ -72,8 +68,8 @@ void DestroySAO(SAO &sao) {
 	bgfx_Destroy(sao.prg_blur);
 }
 
-void ComputeSAO(bgfx::ViewId &view_id, const iRect &rect, const Texture &attr0, const Texture &attr1, const Texture &noise, bgfx::FrameBufferHandle output, const SAO &sao,
-	const Mat44 &projection, float bias, float radius, int sample_count, float sharpness) {
+void ComputeSAO(bgfx::ViewId &view_id, const iRect &rect, const Texture &attr0, const Texture &attr1, const Texture &noise, bgfx::FrameBufferHandle output,
+	const SAO &sao, const Mat44 &projection, float bias, float radius, int sample_count, float sharpness) {
 	__ASSERT__(IsValid(sao));
 
 	const bgfx::Caps *caps = bgfx::getCaps();
@@ -85,7 +81,7 @@ void ComputeSAO(bgfx::ViewId &view_id, const iRect &rect, const Texture &attr0, 
 	float projection_infos[4] = {1.f / projection.m[0][0], 1.f / projection.m[1][1], projection.m[2][2], projection.m[2][3]};
 
 	float ortho[16];
-	memcpy(ortho, hg::to_bgfx(hg::Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
+	memcpy(ortho, to_bgfx(Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
 
 	float params[4];
 	memset(&params, 0, sizeof(float[4]));

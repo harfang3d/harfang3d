@@ -52,8 +52,8 @@ install(
 	COMPONENT
 		python)
 
-if(WIN32)
-	install(TARGETS glfw RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bdist_wheel/harfang COMPONENT python)
+if(HG_USE_GLFW)
+	install(FILES $<TARGET_FILE:glfw> DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bdist_wheel/harfang COMPONENT python)
 endif()
 
 if(HG_ENABLE_OPENVR_API)

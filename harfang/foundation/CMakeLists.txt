@@ -71,6 +71,7 @@ set(HDRS
 	signal.h
 	smart_median_average.h
 	string.h
+	sysinfo.h
 	thread.h
 	time.h
 	timer.h
@@ -129,6 +130,7 @@ set(SRCS
 	rw_interface.cpp
 	sha1.cpp
 	string.cpp
+	sysinfo.cpp
 	time.cpp
 	timer.cpp
 	time_chrono.cpp
@@ -148,6 +150,8 @@ set_target_properties(foundation PROPERTIES FOLDER "harfang")
 
 if(NOT WIN32)
 	target_link_libraries(foundation PUBLIC uuid)
+else()
+	target_link_libraries(foundation PUBLIC Iphlpapi)
 endif()
 
 install_cppsdk_target(foundation)

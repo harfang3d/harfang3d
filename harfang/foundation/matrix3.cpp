@@ -84,7 +84,7 @@ inline void unpack_euler_order(euler_order order, int &i, int &j, int &k, bool &
 }
 
 // internal function, taken from the cml library : http://cmldev.sourceforge.net/cml1-doc/d4/da1/helper_8h_source.html
-static void ToEuler(const Mat3& m, euler_order order, float& angle_0, float& angle_1, float& angle_2) {
+static void ToEuler(const Mat3 &m, euler_order order, float &angle_0, float &angle_1, float &angle_2) {
 
 	const float tolerance = std::numeric_limits<float>::epsilon();
 
@@ -157,19 +157,19 @@ Vec3 ToEuler(const Mat3 &m, RotationOrder rorder) {
 	return euler;
 }
 
-Mat3 RotationMatXZY(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), hg::RO_XZY); }
+Mat3 RotationMatXZY(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), RO_XZY); }
 
-Mat3 RotationMatZYX(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), hg::RO_ZYX); }
+Mat3 RotationMatZYX(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), RO_ZYX); }
 
-Mat3 RotationMatXYZ(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), hg::RO_XYZ); }
+Mat3 RotationMatXYZ(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), RO_XYZ); }
 
-Mat3 RotationMatZXY(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), hg::RO_ZXY); }
+Mat3 RotationMatZXY(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), RO_ZXY); }
 
-Mat3 RotationMatYZX(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), hg::RO_YZX); }
+Mat3 RotationMatYZX(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), RO_YZX); }
 
-Mat3 RotationMatYXZ(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), hg::RO_YXZ); }
+Mat3 RotationMatYXZ(float x, float y, float z) { return RotationMat3(Vec3(x, y, z), RO_YXZ); }
 
-Mat3 RotationMatXY(float x, float y) { return RotationMat3(Vec3(x, y, 0.0f), hg::RO_XYZ); }
+Mat3 RotationMatXY(float x, float y) { return RotationMat3(Vec3(x, y, 0.0f), RO_XYZ); }
 
 // internal function, taken from the cml library : http://cmldev.sourceforge.net/cml1-doc/d4/da1/helper_8h_source.html
 static Mat3 RotationMat3(float angle_0, float angle_1, float angle_2, euler_order order) {

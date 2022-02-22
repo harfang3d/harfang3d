@@ -30,8 +30,7 @@ endfunction(install_cppsdk_external_target)
 
 # glfw
 if(HG_USE_GLFW)
-	set(HG_REBUILD_GLFW ON)
-	if(NOT WIN32)
+	if(NOT HG_REBUILD_GLFW)
 		# use system package
 		find_package(glfw3 3.2)
 
@@ -39,11 +38,14 @@ if(HG_USE_GLFW)
 			# check that we are using the shared library version
 			get_target_property(glfw_target_type glfw TYPE)
 			if(glfw_target_type STREQUAL "SHARED_LIBRARY")
-				set(HG_REBUILD_GLFW OFF)
 				set_target_properties(glfw PROPERTIES IMPORTED_GLOBAL TRUE)
 			else()
 				message(WARNING "Only the dynamic library version of GLFW is allowed")
+				set(HG_REBUILD_GLFW ON)
 			endif()
+		else()
+			message(WARNING "GLFW was not found")
+			set(HG_REBUILD_GLFW ON)
 		endif()
 	endif()
 
@@ -52,6 +54,11 @@ if(HG_USE_GLFW)
 		set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
 		set(GLFW_INSTALL OFF CACHE BOOL "")
 		add_subdirectory(glfw EXCLUDE_FROM_ALL)
+		# here we completly hijack glfw shared library output name.
+		# on *nix we don't want all the so names with versions (libgflw.so.3 libglfw.so.3.x etc...)
+		set_property(TARGET glfw PROPERTY VERSION)
+		set_property(TARGET glfw PROPERTY SOVERSION)
+		set_property(TARGET glfw PROPERTY OUTPUT_NAME glfw3)
 		set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
 		install_cppsdk_external_target(glfw)
 		set_target_properties(glfw PROPERTIES FOLDER "harfang/3rdparty")
@@ -111,6 +118,8 @@ set_target_properties(stb_vorbis PROPERTIES FOLDER "harfang/3rdparty")
 target_compile_definitions(stb_vorbis PUBLIC STB_VORBIS_NO_STDIO=1)
 target_include_directories(stb_vorbis PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/stb_vorbis>)
 
+install_cppsdk_external_target(stb_vorbis)
+
 # STB truetype
 add_library(stb_truetype STATIC stb_truetype/stb_truetype.c stb_truetype/stb_truetype.h)
 target_include_directories(stb_truetype PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/stb_truetype>)
@@ -122,6 +131,11 @@ install_cppsdk_external_target(stb_truetype)
 if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
 	add_subdirectory(bullet3 EXCLUDE_FROM_ALL)
 
+	set_target_properties(BulletDynamics PROPERTIES FOLDER "harfang/3rdparty/bullet3")
+	set_target_properties(BulletCollision PROPERTIES FOLDER "harfang/3rdparty/bullet3")
+	set_target_properties(BulletCommon PROPERTIES FOLDER "harfang/3rdparty/bullet3")
+	set_target_properties(LinearMath PROPERTIES FOLDER "harfang/3rdparty/bullet3")
+
 	install_cppsdk_external_target(BulletDynamics)
 	install_cppsdk_external_target(BulletCollision)
 	install_cppsdk_external_target(BulletCommon)
@@ -129,7 +143,15 @@ if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
 endif()
 
 # imgui
-add_library(imgui STATIC imgui/misc/cpp/imgui_stdlib.cpp imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp imgui/imgui.h imgui/imgui_internal.h imgui/imconfig.h)
+add_library(imgui STATIC
+	imgui/misc/cpp/imgui_stdlib.cpp
+	imgui/imgui.cpp
+	imgui/imgui_draw.cpp
+	imgui/imgui_tables.cpp
+	imgui/imgui_widgets.cpp
+	imgui/imgui.h
+	imgui/imgui_internal.h
+	imgui/imconfig.h)
 target_include_directories(imgui
 	PUBLIC
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

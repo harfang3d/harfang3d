@@ -33,6 +33,8 @@ struct Reader {
 
 struct Writer {
 	size_t (*write)(Handle h, const void *data, size_t size);
+	bool (*seek)(Handle h, ptrdiff_t offset, SeekMode mode);
+	size_t (*tell)(Handle h);
 	bool (*is_valid)(Handle hnd);
 };
 
@@ -66,7 +68,12 @@ bool Read(const Reader &i, const Handle &h, std::string &v);
 bool Write(const Writer &i, const Handle &h, const std::string &v);
 
 //
+size_t Tell(const Reader &i, const Handle &h);
+size_t Tell(const Writer &i, const Handle &h);
+
+//
 bool Seek(const Reader &i, const Handle &h, ptrdiff_t offset, SeekMode mode);
+bool Seek(const Writer &i, const Handle &h, ptrdiff_t offset, SeekMode mode);
 
 //
 template <typename T> T Read(const Reader &i, const Handle &h) {
@@ -130,5 +137,32 @@ class Data;
 
 Data LoadData(const Reader &i, const Handle &h);
 std::string LoadString(const Reader &i, const Handle &h);
+
+//
+template <typename T> struct DeferredWrite {
+	DeferredWrite(const Writer &iw_, const Handle &h_) : iw(iw_), h(h_) {
+		cursor = Tell(iw, h);
+
+#ifdef ENABLE_BINARY_DEBUG_HANDLE
+		if (h.debug)
+			Seek(iw, h, sizeof(uint16_t), SM_Current); // leave space for debug size marker
+#endif
+		Seek(iw, h, sizeof(T), SM_Current); // leave space for deferred write
+	}
+
+	bool Commit(const T &v) {
+		const auto seek_ = Tell(iw, h);
+
+		if (!Seek(iw, h, cursor, SM_Start) || !Write(iw, h, v) || !Seek(iw, h, seek_, SM_Start))
+			return false;
+
+		return true;
+	}
+
+	size_t cursor;
+
+	const Writer &iw;
+	const Handle &h;
+};
 
 } // namespace hg
