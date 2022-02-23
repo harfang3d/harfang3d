@@ -109,7 +109,7 @@ struct SceneAnim {
 	AnimRef scene_anim;
 	std::vector<NodeAnim> node_anims;
 
-	hg::time_ns frame_duration{hg::time_from_ms(1000 / 20)}; // default to 20 fps
+	time_ns frame_duration{time_from_ms(1000 / 20)}; // default to 20 fps
 	uint8_t flags{};
 };
 
@@ -257,6 +257,11 @@ public:
 	Transform GetNodeTransform(NodeRef ref) const { return {scene_ref, GetNodeTransformRef(ref)}; }
 	void SetNodeTransform(NodeRef ref, const Transform &v) { SetNodeTransform(ref, v.ref); }
 
+	Mat4 GetNodeWorldMatrix(NodeRef ref) const;
+	/*!
+		Set a node world matrix and flag it as update so that it won't be computed by the next call to ComputeWorldMatrices().
+		Note: This function INTENTIONALLY does not decompose the provided matrix to the transfrom position/rotation/scale fields.
+	*/
 	void SetNodeWorldMatrix(NodeRef ref, const Mat4 &world);
 
 	//
@@ -352,7 +357,7 @@ public:
 	void SetLightInnerAngle(ComponentRef ref, float v);
 	float GetLightOuterAngle(ComponentRef ref) const;
 	void SetLightOuterAngle(ComponentRef ref, float v);
-	hg::Vec4 GetLightPSSMSplit(ComponentRef ref) const;
+	Vec4 GetLightPSSMSplit(ComponentRef ref) const;
 	void SetLightPSSMSplit(ComponentRef ref, const Vec4 &v);
 	float GetLightPriority(ComponentRef ref) const;
 	void SetLightPriority(ComponentRef ref, float v);
@@ -437,9 +442,12 @@ public:
 	void SetCollisionResource(ComponentRef ref, const std::string &path);
 	std::string GetCollisionResource(ComponentRef ref);
 
-	Collision CreateSphereCollision(float radius, float mass = 1.f);
-	Collision CreateCubeCollision(float x, float y, float z, float mass = 1.f);
-	Collision CreateMeshCollision(const std::string &collision_path, float mass = 1.f);
+	Collision CreateSphereCollision(float radius, float mass = Kg(1.f));
+	Collision CreateCubeCollision(float x, float y, float z, float mass = Kg(1.f));
+	Collision CreateCapsuleCollision(float radius, float height, float mass = Kg(1.f));
+	Collision CreateCylinderCollision(float radius, float height, float mass = Kg(1.f));
+	Collision CreateMeshCollision(const std::string &collision_path, float mass = Kg(1.f));
+	Collision CreateMeshConvexCollision(const std::string &collision_path, float mass = Kg(1.f));
 
 	size_t GetNodeCollisionCount(NodeRef ref) const;
 	Collision GetNodeCollision(NodeRef ref, size_t idx) const;
@@ -614,6 +622,8 @@ public:
 
 	SceneAnimRef DuplicateSceneAnim(SceneAnimRef ref);
 
+	size_t GarbageCollectAnims();
+
 	// scene meta
 	bool HasKey(const std::string &key) const;
 	std::vector<std::string> GetKeys() const;
@@ -724,16 +734,15 @@ private:
 		float shadow_bias{default_shadow_bias};
 	};
 
-	struct RigidBody_ {
+	struct RigidBody_ { // 6B
 		RigidBodyType type{RBT_Dynamic};
-
-		Mat4 prv{Mat4::Identity}, cur{Mat4::Identity};
-		Vec3 scl{Vec3::One};
 
 		uint8_t linear_damping{pack_float<uint8_t>(0.f)};
 		uint8_t angular_damping{pack_float<uint8_t>(0.f)};
 
-		float restitution{0.f}, friction{0.5f}, rolling_friction{0.f};
+		uint8_t restitution{pack_float<uint8_t>(0.f)};
+		uint8_t friction{pack_float<uint8_t>(0.5f)};
+		uint8_t rolling_friction{pack_float<uint8_t>(0.f)};
 	};
 
 	generational_vector_list<Transform_> transforms;
@@ -783,9 +792,9 @@ private:
 	friend void LoadComponent(Transform_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Camera_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Object_ *data_, const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip,
-		PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, uint32_t version);
+		PipelineResources &resources, const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources);
 	friend void LoadComponent(Light_ *data_, const Reader &ir, const Handle &h);
-	friend void LoadComponent(RigidBody_ *data_, const Reader &ir, const Handle &h, uint32_t version);
+	friend void LoadComponent(RigidBody_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Collision_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Instance_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Script_ *data_, const Reader &ir, const Handle &h);
@@ -803,7 +812,7 @@ private:
 	friend void LoadComponent(Transform_ *data_, const json &js);
 	friend void LoadComponent(Camera_ *data_, const json &js);
 	friend void LoadComponent(Object_ *data_, const json &js, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
-		const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
+		const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources);
 	friend void LoadComponent(Light_ *data_, const json &js);
 	friend void LoadComponent(RigidBody_ *data_, const json &js);
 	friend void LoadComponent(Collision_ *data_, const json &js);

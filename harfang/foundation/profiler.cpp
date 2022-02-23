@@ -1,14 +1,17 @@
 // HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include "foundation/profiler.h"
+#include "foundation/format.h"
+#include "foundation/log.h"
 #include "foundation/math.h"
+
 #include <algorithm>
 #include <mutex>
 
 namespace hg {
 
 static std::mutex lock;
-static std::vector<size_t> task_bucket[256];
+static std::vector<size_t> task_buckets[256];
 
 struct Task {
 	std::string name;
@@ -32,7 +35,7 @@ static ProfilerFrame last_frame_profile;
 static size_t GetTaskBucket(const std::string &name) { return std::hash<std::string>{}(name)&255; }
 
 static size_t GetTaskInBucket(size_t bucket_index, const std::string &name) {
-	auto &bucket = task_bucket[bucket_index];
+	auto &bucket = task_buckets[bucket_index];
 
 	// look into the bucket for the period
 	for (auto &i : bucket)
@@ -61,10 +64,13 @@ static bool _compare_tree_entry(const ProfilerFrame::Task &a, const ProfilerFram
 	return task_a_name_length < task_b_name_length;
 }
 
-static void CaptureFrame(ProfilerFrame &f) {
-	auto t_now = time_now();
+ProfilerFrame CaptureProfilerFrame() {
+	std::lock_guard<std::mutex> guard(lock);
 
+	ProfilerFrame f;
 	f.frame = frame;
+
+	auto t_now = time_now();
 
 	f.tasks.clear();
 	f.sections.clear();
@@ -117,24 +123,68 @@ static void CaptureFrame(ProfilerFrame &f) {
 
 		std::sort(f.tasks.begin(), f.tasks.end(), &_compare_tree_entry);
 	}
+
+	return f;
 }
 
 //
-void EndProfilerFrame() {
+ProfilerFrame EndProfilerFrame() {
+	ProfilerFrame profiler_frame = CaptureProfilerFrame();
+
 	std::lock_guard<std::mutex> guard(lock);
 
-	CaptureFrame(last_frame_profile);
-
-	for (auto &bucket : task_bucket)
+	for (auto &bucket : task_buckets)
 		bucket.clear();
 
 	tasks.clear();
 	sections.clear();
 
 	++frame;
+
+	return profiler_frame;
 }
 
-const ProfilerFrame &GetLastFrameProfile() { return last_frame_profile; }
+//
+void PrintProfilerFrame(const ProfilerFrame &frame) {
+	// compile task reports
+	struct TaskReport {
+		std::string name;
+		size_t section_count;
+		time_ns total, avg;
+	};
+
+	std::vector<TaskReport> task_reports;
+
+	//
+	for (const auto &task : frame.tasks) {
+		if (task.section_indexes.empty())
+			continue;
+
+		// compute section statistics
+		time_ns total = 0;
+
+		for (const auto section_id : task.section_indexes) {
+			const auto &section = sections[section_id];
+			total += section.end - section.start;
+		}
+
+		const time_ns avg = total / task.section_indexes.size();
+
+		//
+		task_reports.push_back({task.name, task.section_indexes.size(), total, avg});
+	}
+
+	// output report
+	std::sort(std::begin(task_reports), std::end(task_reports), [](const TaskReport &a, const TaskReport &b) { return a.name < b.name; });
+
+	log(format("Profile for Frame %1 (duration: %2 ms)").arg(frame.frame).arg(time_to_ms(frame.end - frame.start)));
+	for (const auto &report : task_reports)
+		log(format("    Task %1 (%2 section): total %3 ms, average %4 ms")
+				.arg(report.name)
+				.arg(report.section_count)
+				.arg(time_to_ms(report.total))
+				.arg(time_to_ms(report.avg)));
+}
 
 //
 ProfilerSectionIndex BeginProfilerSection(const std::string &name, const std::string &section_details) {
@@ -164,7 +214,8 @@ void LockProfiler() { lock.lock(); }
 void UnlockProfiler() { lock.unlock(); }
 
 //
-ProfilerPerfSection::ProfilerPerfSection(const std::string &task_name, const std::string &section_details) : section_index(BeginProfilerSection(task_name, section_details)) {}
+ProfilerPerfSection::ProfilerPerfSection(const std::string &task_name, const std::string &section_details)
+	: section_index(BeginProfilerSection(task_name, section_details)) {}
 ProfilerPerfSection::~ProfilerPerfSection() { EndProfilerSection(section_index); }
 
 } // namespace hg

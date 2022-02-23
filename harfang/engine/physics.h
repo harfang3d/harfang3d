@@ -14,12 +14,19 @@ enum CollisionEventTrackingMode : uint8_t { CETM_EventOnly, CETM_EventAndContact
 
 struct Contact {
 	Vec3 P, N;
-	uint32_t i;
 	float d;
 };
 
 using NodeContacts = std::map<NodeRef, std::vector<Contact>>;
-using NodeNodeContacts = std::map<NodeRef, NodeContacts>;
+using NodePairContacts = std::map<NodeRef, NodeContacts>;
+
+std::vector<NodeRef> GetNodeRefsInContact(NodeRef with, const NodePairContacts &contacts);
+std::vector<Contact> GetNodeRefPairContacts(NodeRef first, NodeRef second, const NodePairContacts &contacts);
+
+class Scene;
+
+std::vector<Node> GetNodesInContact(const Scene &scene, const Node with, const NodePairContacts &contacts);
+std::vector<Contact> GetNodePairContacts(const Node first, const Node second, const NodePairContacts &contacts);
 
 struct RaycastOut {
 	Vec3 P{}, N{};

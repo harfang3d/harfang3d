@@ -1,1 +1,1 @@
-Load a scene in JSON format from the local filesystem.
+Load a scene in JSON format from the local filesystem. Loaded content is added to the existing scene content.

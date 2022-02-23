@@ -44,7 +44,8 @@ enum ForwardPipelineUniformValue {
 
 	UV_PreviousViewProjection,
 	UV_ViewProjUnjittered, // for TAA
-	UV_AAAParams, // [0].x: ssgi ratio, [0].y: ssr ratio, [0].z: temporal AA weight, [0].w: motion blur strength, [1].x: exposure, [1].y: 1/gamma
+	UV_AAAParams, // [0].x: ssgi ratio, [0].y: ssr ratio, [0].z: temporal AA weight, [0].w: motion blur strength
+				  // [1].x: exposure,   [1].y: 1/gamma,   [1].z: sample count,       [1].w max distance
 
 	UV_MainInvView,
 
@@ -65,18 +66,18 @@ enum ForwardPipelineUniformTexture {
 };
 
 //
-ForwardPipelineLight MakeForwardPipelinePointLight(const hg::Mat4 &world, const hg::Color &diffuse, const hg::Color &specular, float radius, float priority,
-	ForwardPipelineShadowType shadow_type, float shadow_bias) {
-	return {FPLT_Point, shadow_type, world, diffuse, specular, radius, 0.f, 0.f, hg::Vec4::Zero, priority, shadow_bias};
+ForwardPipelineLight MakeForwardPipelinePointLight(
+	const Mat4 &world, const Color &diffuse, const Color &specular, float radius, float priority, ForwardPipelineShadowType shadow_type, float shadow_bias) {
+	return {FPLT_Point, shadow_type, world, diffuse, specular, radius, 0.f, 0.f, Vec4::Zero, priority, shadow_bias};
 }
 
-ForwardPipelineLight MakeForwardPipelineSpotLight(const hg::Mat4 &world, const hg::Color &diffuse, const hg::Color &specular, float radius, float inner_angle,
+ForwardPipelineLight MakeForwardPipelineSpotLight(const Mat4 &world, const Color &diffuse, const Color &specular, float radius, float inner_angle,
 	float outer_angle, float priority, ForwardPipelineShadowType shadow_type, float shadow_bias) {
-	return {FPLT_Spot, shadow_type, world, diffuse, specular, radius, inner_angle, outer_angle, hg::Vec4::Zero, priority, shadow_bias};
+	return {FPLT_Spot, shadow_type, world, diffuse, specular, radius, inner_angle, outer_angle, Vec4::Zero, priority, shadow_bias};
 }
 
-ForwardPipelineLight MakeForwardPipelineLinearLight(const hg::Mat4 &world, const hg::Color &diffuse, const hg::Color &specular, const hg::Vec4 &pssm_split,
-	float priority, ForwardPipelineShadowType shadow_type, float shadow_bias) {
+ForwardPipelineLight MakeForwardPipelineLinearLight(const Mat4 &world, const Color &diffuse, const Color &specular, const Vec4 &pssm_split, float priority,
+	ForwardPipelineShadowType shadow_type, float shadow_bias) {
 	return {FPLT_Linear, shadow_type, world, diffuse, specular, 0.f, 0.f, 0.f, pssm_split, priority, shadow_bias};
 }
 
@@ -130,7 +131,7 @@ ForwardPipelineLights PrepareForwardPipelineLights(const std::vector<ForwardPipe
 
 //
 void UpdateForwardPipeline(ForwardPipeline &pipeline, const ForwardPipelineShadowData &shadow_data, const Color &ambient, const ForwardPipelineLights &lights,
-	const ForwardPipelineFog &fog) {
+	const ForwardPipelineFog &fog, const hg::iVec2 &fb_size) {
 	pipeline.uniform_values[UV_Clock].value[0] = time_to_sec_f(get_clock());
 
 	pipeline.uniform_values[UV_FogColor].value = {fog.color.r, fog.color.g, fog.color.b, fog.color.a};
@@ -154,8 +155,7 @@ void UpdateForwardPipeline(ForwardPipeline &pipeline, const ForwardPipelineShado
 	pipeline.uniform_values[UV_ShadowState].value = {
 		1.f / pipeline.shadow_map_resolution, 1.f / pipeline.shadow_map_resolution, lights.lights[0].shadow_bias, lights.lights[1].shadow_bias};
 
-	const auto stats = bgfx::getStats();
-	pipeline.uniform_values[UV_Resolution].value = {float(stats->width), float(stats->height), -1, -1};
+	pipeline.uniform_values[UV_Resolution].value = {float(fb_size.x), float(fb_size.y), -1, -1};
 }
 
 void UpdateForwardPipelinePBRProbe(ForwardPipeline &pipeline, Texture irradiance, Texture radiance, Texture brdf) {
@@ -171,7 +171,8 @@ void UpdateForwardPipelineAO(ForwardPipeline &pipeline, Texture ao) { pipeline.u
 static float backbuffer_ratio[bgfx::BackbufferRatio::Count] = {1.f, 2.f, 4.f, 8.f, 16.f, 0.5f};
 
 void UpdateForwardPipelineAAA(ForwardPipeline &pipeline, const iRect &rect, const Mat4 &view, const Mat44 &proj, const Mat4 &prv_view, const Mat44 &prv_proj,
-	const Vec2 &jitter, bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio, float temporal_aa_weight, float motion_blur_strength,
+	const Vec2 &jitter, bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio, float temporal_aa_weight,
+	float motion_blur_strength,
 	float exposure, float gamma, int sample_count, float max_distance) {
 	pipeline.uniform_values[UV_Projection].value = {1.f / proj.m[0][0], 1.f / proj.m[1][1], proj.m[2][2], proj.m[2][3]};
 
@@ -201,7 +202,7 @@ void SubmitModelToForwardPipeline(bgfx::ViewId view_id, const Model &mdl, const 
 	*/
 }
 
-static hg::Mat4 ComputeCropMatrix() {
+static Mat4 ComputeCropMatrix() {
 	const bgfx::Caps *caps = bgfx::getCaps();
 	const float sy = caps->originBottomLeft ? 0.5f : -0.5f;
 	const float sz = caps->homogeneousDepth ? 0.5f : 1.0f;
@@ -209,7 +210,7 @@ static hg::Mat4 ComputeCropMatrix() {
 	return TranslationMat4({0.5, 0.5, tz}) * ScaleMat4({0.5, sy, sz});
 }
 
-static const hg::Vec4 frustum_corners[8] = {{-1.f, 1.f, 0.f, 1.f}, {1.f, 1.f, 0.f, 1.f}, {1.f, -1.f, 0.f, 1.f}, {-1.f, -1.f, 0.f, 1.f}, {-1.f, 1.f, 1.f, 1.f},
+static const Vec4 frustum_corners[8] = {{-1.f, 1.f, 0.f, 1.f}, {1.f, 1.f, 0.f, 1.f}, {1.f, -1.f, 0.f, 1.f}, {-1.f, -1.f, 0.f, 1.f}, {-1.f, 1.f, 1.f, 1.f},
 	{1.f, 1.f, 1.f, 1.f}, {1.f, -1.f, 1.f, 1.f}, {-1.f, -1.f, 1.f, 1.f}};
 
 void GenerateLinearShadowMapForForwardPipeline(bgfx::ViewId &view_id, const ViewState &view_state, const std::vector<ModelDisplayList> &display_lists,

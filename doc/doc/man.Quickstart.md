@@ -11,7 +11,7 @@ Follow the following steps:
 1. Download _assetc_ for your platform from [here](https://harfang3d.com/releases) to compile the tutorial resources.
 1. Drag and drop the tutorial resources folder on the assetc executable **-OR-** execute assetc passing it the path to the tutorial resources folder _(eg. `assetc d:/tutorials-hg2/resources`)_.
 
-![assetc drag & drop](../img/assetc.gif)
+![assetc drag & drop](/images/docs/${HG_VERSION}/assetc.gif)
 
 After the compilation process finishes, you will see a `resources_compiled` folder next to the tutorials resources folder.
 

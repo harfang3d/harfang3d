@@ -70,13 +70,11 @@ void SaveComponent(const Scene::Light_ *data_, json &js) {
 
 void SaveComponent(const Scene::RigidBody_ *data_, json &js) {
 	js["type"] = data_->type;
-	js["world"] = data_->cur;
-	js["scale"] = data_->scl;
-	js["linear_damping"] = data_->linear_damping;
-	js["angular_damping"] = data_->angular_damping;
-	js["restitution"] = data_->restitution;
-	js["friction"] = data_->friction;
-	js["rolling_friction"] = data_->rolling_friction;
+	js["linear_damping"] = unpack_float(data_->linear_damping);
+	js["angular_damping"] = unpack_float(data_->angular_damping);
+	js["restitution"] = unpack_float(data_->restitution);
+	js["friction"] = unpack_float(data_->friction);
+	js["rolling_friction"] = unpack_float(data_->rolling_friction);
 }
 
 void SaveComponent(const Scene::Script_ *data_, json &js) {
@@ -128,15 +126,11 @@ void LoadComponent(Scene::Camera_ *data_, const json &js) {
 }
 
 void LoadComponent(Scene::Object_ *data_, const json &js, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
-	const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources) {
+	const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources) {
 	const std::string name = js.at("name");
 
-	if (!name.empty()) {
-		if (do_not_load_resources)
-			data_->model = resources.models.Add(name.c_str(), {});
-		else
-			data_->model = LoadModel(deps_ir, deps_ip, name.c_str(), resources);
-	}
+	if (!name.empty())
+		data_->model = SkipLoadOrQueueModelLoad(deps_ir, deps_ip, name.c_str(), resources, queue_model_loads, do_not_load_resources);
 
 	const auto i_mats = js.find("materials");
 	if (i_mats != std::end(js)) {
@@ -191,19 +185,16 @@ void LoadComponent(Scene::Light_ *data_, const json &js) {
 
 void LoadComponent(Scene::RigidBody_ *data_, const json &js) {
 	data_->type = js.at("type");
-	data_->cur = js.at("world");
-	if (js.find("scale") != std::end(js))
-		data_->scl = js.at("scale");
 	if (js.find("linear_damping") != std::end(js))
-		data_->linear_damping = js.at("linear_damping");
+		data_->linear_damping = pack_float<uint8_t>(js.at("linear_damping").get<float>());
 	if (js.find("angular_damping") != std::end(js))
-		data_->angular_damping = js.at("angular_damping");
+		data_->angular_damping = pack_float<uint8_t>(js.at("angular_damping").get<float>());
 	if (js.find("restitution") != std::end(js))
-		data_->restitution = js.at("restitution");
+		data_->restitution = pack_float<uint8_t>(js.at("restitution").get<float>());
 	if (js.find("friction") != std::end(js))
-		data_->friction = js.at("friction");
+		data_->friction = pack_float<uint8_t>(js.at("friction").get<float>());
 	if (js.find("rolling_friction") != std::end(js))
-		data_->rolling_friction = js.at("rolling_friction");
+		data_->rolling_friction = pack_float<uint8_t>(js.at("rolling_friction").get<float>());
 }
 
 void LoadComponent(Scene::Script_ *data_, const json &js) {
@@ -601,8 +592,8 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 			int n = 0;
 			for (const auto &j : *i) {
 				const auto ref = object_refs[n++] = CreateObject().ref;
-				LoadComponent(
-					&objects[ref.idx], j, deps_ir, deps_ip, resources, pipeline, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
+				LoadComponent(&objects[ref.idx], j, deps_ir, deps_ip, resources, pipeline, load_flags & LSSF_QueueModelLoads,
+					load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
 			}
 		}
 	}
@@ -750,7 +741,7 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 		// setup instances
 		if (!(load_flags & LSSF_DoNotLoadResources))
 			for (const auto ref : node_with_instance_to_setup) {
-				NodeSetupInstance(ref, deps_ir, deps_ip, resources, pipeline, LSSF_AllNodeFeatures, ctx.recursion_level + 1);
+				NodeSetupInstance(ref, deps_ir, deps_ip, resources, pipeline, LSSF_AllNodeFeatures | (load_flags & LSSF_OptionsMask), ctx.recursion_level + 1);
 				NodeStartOnInstantiateAnim(ref);
 			}
 
@@ -779,10 +770,14 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 			const auto &js_env = js.find("environment");
 
 			if (js_env != std::end(js)) {
-				const auto &js_current_camera = js_env->find("current_camera");
-				if (js_current_camera != std::end(*js_env)) {
-					const auto current_camera_idx = js_current_camera->get<NodeRef>().idx;
-					current_camera = ctx.node_refs[current_camera_idx];
+				const bool can_change_current_camera = current_camera == InvalidNodeRef || !(load_flags & LSSF_DoNotChangeCurrentCameraIfValid);
+
+				if (can_change_current_camera) {
+					const auto &js_current_camera = js_env->find("current_camera");
+					if (js_current_camera != std::end(*js_env)) {
+						const auto current_camera_idx = js_current_camera->get<NodeRef>().idx;
+						current_camera = ctx.node_refs[current_camera_idx];
+					}
 				}
 
 				environment.ambient = (*js_env)["ambient"];
@@ -790,45 +785,20 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 				environment.fog_far = (*js_env)["fog_far"];
 				environment.fog_color = (*js_env)["fog_color"];
 
-				{
-					auto i = js_env->find("irradiance_map");
-					if (i != std::end(*js_env)) {
-						if (load_flags & LSSF_DoNotLoadResources) {
-							environment.irradiance_map = resources.textures.Add(i->get<std::string>().c_str(), {});
-						} else {
+				auto i = js_env->find("irradiance_map");
+				if (i != std::end(*js_env))
+					environment.irradiance_map = SkipLoadOrQueueTextureLoad(
+						deps_ir, deps_ip, i->get<std::string>().c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
 
-							if (load_flags & LSSF_QueueTextureLoads)
-								environment.irradiance_map = QueueLoadTexture(deps_ir, deps_ip, i->get<std::string>().c_str(), BGFX_SAMPLER_NONE, resources);
-							else
-								environment.irradiance_map = LoadTexture(deps_ir, deps_ip, i->get<std::string>().c_str(), BGFX_SAMPLER_NONE, resources);
-						}
-					}
+				i = js_env->find("radiance_map");
+				if (i != std::end(*js_env))
+					environment.radiance_map = SkipLoadOrQueueTextureLoad(
+						deps_ir, deps_ip, i->get<std::string>().c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
 
-					i = js_env->find("radiance_map");
-					if (i != std::end(*js_env)) {
-						if (load_flags & LSSF_DoNotLoadResources) {
-							environment.radiance_map = resources.textures.Add(i->get<std::string>().c_str(), {});
-						} else {
-
-							if (load_flags & LSSF_QueueTextureLoads)
-								environment.radiance_map = QueueLoadTexture(deps_ir, deps_ip, i->get<std::string>().c_str(), BGFX_SAMPLER_NONE, resources);
-							else
-								environment.radiance_map = LoadTexture(deps_ir, deps_ip, i->get<std::string>().c_str(), BGFX_SAMPLER_NONE, resources);
-						}
-					}
-
-					i = js_env->find("brdf_map");
-					if (i != std::end(*js_env)) {
-						if (load_flags & LSSF_DoNotLoadResources) {
-							environment.brdf_map = resources.textures.Add(i->get<std::string>().c_str(), {});
-						} else {
-							if (load_flags & LSSF_QueueTextureLoads)
-								environment.brdf_map = QueueLoadTexture(deps_ir, deps_ip, i->get<std::string>().c_str(), BGFX_SAMPLER_NONE, resources);
-							else
-								environment.brdf_map = LoadTexture(deps_ir, deps_ip, i->get<std::string>().c_str(), BGFX_SAMPLER_NONE, resources);
-						}
-					}
-				}
+				i = js_env->find("brdf_map");
+				if (i != std::end(*js_env))
+					environment.brdf_map = SkipLoadOrQueueTextureLoad(
+						deps_ir, deps_ip, i->get<std::string>().c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
 			}
 		}
 

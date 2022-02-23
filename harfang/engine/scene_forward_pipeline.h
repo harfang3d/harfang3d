@@ -38,6 +38,7 @@ struct ForwardPipelineAAAConfig {
 
 	int sample_count = 2; // SSGI/SSR sample count
 	float max_distance = 100.f; // SSGI/SSR max exploration
+	float z_thickness = 0.1f;
 
 	float bloom_threshold = 5.f, bloom_bias = 0.5f, bloom_intensity = 0.1f;
 	float motion_blur = 1.f;
@@ -135,6 +136,12 @@ ForwardPipelineAAA CreateForwardPipelineAAAFromFile(const char *path, const Forw
 ForwardPipelineAAA CreateForwardPipelineAAAFromAssets(const char *path, const ForwardPipelineAAAConfig &config,
 	bgfx::BackbufferRatio::Enum ssgi_ratio = bgfx::BackbufferRatio::Half, bgfx::BackbufferRatio::Enum ssr_ratio = bgfx::BackbufferRatio::Half);
 
+ForwardPipelineAAA CreateForwardPipelineAAAFromFile(const char *path, const ForwardPipelineAAAConfig &config, uint16_t rb_width, uint16_t rb_height,
+	bgfx::BackbufferRatio::Enum ssgi_ratio = bgfx::BackbufferRatio::Half, bgfx::BackbufferRatio::Enum ssr_ratio = bgfx::BackbufferRatio::Half);
+ForwardPipelineAAA CreateForwardPipelineAAAFromAssets(const char *path, const ForwardPipelineAAAConfig &config, uint16_t rb_width, uint16_t rb_height,
+	bgfx::BackbufferRatio::Enum ssgi_ratio = bgfx::BackbufferRatio::Half, bgfx::BackbufferRatio::Enum ssr_ratio = bgfx::BackbufferRatio::Half);
+
+
 void DestroyForwardPipelineAAA(ForwardPipelineAAA &aaa);
 
 bool IsValid(const ForwardPipelineAAA &aaa);
@@ -191,8 +198,14 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	bgfx::FrameBufferHandle fb = BGFX_INVALID_HANDLE, const char *debug_name = "scene");
 
 void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, const Rect<int> &rect, const ViewState &view_state, ForwardPipeline &pipeline,
-	const SceneForwardPipelineRenderData &render_data, const PipelineResources &resources, SceneForwardPipelinePassViewId &views, const ForwardPipelineAAA &aaa,
-	const ForwardPipelineAAAConfig &aaa_config, int frame, bgfx::FrameBufferHandle fb = BGFX_INVALID_HANDLE, const char *debug_name = "scene");
+	const SceneForwardPipelineRenderData &render_data, const PipelineResources &resources, SceneForwardPipelinePassViewId &views, ForwardPipelineAAA &aaa,
+	const ForwardPipelineAAAConfig &aaa_config, int frame, uint16_t rb_width, uint16_t rb_height, bgfx::FrameBufferHandle fb = BGFX_INVALID_HANDLE,
+	const char *debug_name = "scene");
+
+void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, const Rect<int> &rect, const ViewState &view_state, ForwardPipeline &pipeline,
+	const SceneForwardPipelineRenderData &render_data, const PipelineResources &resources, SceneForwardPipelinePassViewId &views, ForwardPipelineAAA &aaa,
+	const ForwardPipelineAAAConfig &aaa_config, int frame, bgfx::FrameBufferHandle fb = BGFX_INVALID_HANDLE,
+	const char *debug_name = "scene");
 
 /// High-level submit scene to forward pipeline using a custom view state.
 void SubmitSceneToPipeline(bgfx::ViewId &view_id, const Scene &scene, const Rect<int> &rect, const ViewState &view_state, ForwardPipeline &pipeline,

@@ -52,7 +52,7 @@ template <typename AnimTrack> int GetKey(const AnimTrack &track, time_ns t) {
 	if (key_count == 0)
 		return -1;
 
-	int lo = 0, hi = hg::numeric_cast<int>(key_count) - 1;
+	int lo = 0, hi = numeric_cast<int>(key_count) - 1;
 
 	while (true) {
 		const int mid = (lo + hi) / 2;
@@ -249,7 +249,7 @@ template <typename AnimTrack, typename T> size_t SimplifyAnimTrackT(AnimTrack &t
 			for (int j = last_copied + 1; j <= i; j++) {
 				const auto &src_key = track_ref.keys[j];
 				T interpolated;
-				hg::Evaluate(track, src_key.t, interpolated);
+				Evaluate(track, src_key.t, interpolated);
 				if (!CompareKeyValue(interpolated, src_key.v, epsilon)) {
 					track.keys.push_back(src_key);
 					last_copied = i;

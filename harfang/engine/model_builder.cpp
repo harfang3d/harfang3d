@@ -3,6 +3,7 @@
 #include "engine/model_builder.h"
 #include "foundation/format.h"
 #include "foundation/log.h"
+#include "foundation/profiler.h"
 
 #include "meshoptimizer.h"
 
@@ -113,12 +114,14 @@ void ModelBuilder::AddPolygon(const std::vector<uint16_t> &idxs) {
 void ModelBuilder::AddBoneIdx(uint16_t idx) {
 	auto &list = lists.back();
 	list.bones_table.push_back(idx);
-	__ASSERT__(list.bones_table.size() <= hg::max_skinned_model_matrix_count);
+	__ASSERT__(list.bones_table.size() <= max_skinned_model_matrix_count);
 }
 
 //
 void ModelBuilder::Make(
 	const bgfx::VertexLayout &decl, end_list_cb on_end_list, void *userdata, ModelOptimisationLevel optimisation_level, bool verbose) const {
+	ProfilerPerfSection section("ModelBuilder::Make");
+
 	const uint16_t stride = decl.getStride();
 
 	Model model;
@@ -216,14 +219,15 @@ void ModelBuilder::Make(
 }
 
 Model ModelBuilder::MakeModel(const bgfx::VertexLayout &decl, ModelOptimisationLevel optimisation_level, bool verbose) const {
+	ProfilerPerfSection section("ModelBuilder::MakeModel");
+
 	Model model;
 	model.lists.reserve(16);
 
 	Make(
 		decl,
 		[](const bgfx::VertexLayout &decl, const MinMax &minmax, const std::vector<uint32_t> &idx_data, const std::vector<uint8_t> &vtx_data,
-			const std::vector<uint16_t> &bones_table, uint16_t mat,
-			void *userdata) {
+			const std::vector<uint16_t> &bones_table, uint16_t mat, void *userdata) {
 			Model &model = *reinterpret_cast<Model *>(userdata);
 
 			const auto idx_hnd = bgfx::createIndexBuffer(bgfx::copy(idx_data.data(), uint32_t(idx_data.size() * sizeof(uint32_t))), BGFX_BUFFER_INDEX32);

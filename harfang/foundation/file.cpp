@@ -103,9 +103,8 @@ File OpenAppendText(const char *path) {
 File OpenTemp(const char *tmplt) {
 	size_t len = strlen(tmplt);
 	File out{invalid_gen_ref};
-	if ((len < 6) || !ends_with(tmplt, "XXXXXX")) {
+	if ((len < 6) || !ends_with(tmplt, "XXXXXX"))
 		return out;
-	}
 
 	char *path = strdup(tmplt);
 	char *suffix = path + len - 6;
@@ -206,17 +205,31 @@ void Rewind(File file) {
 
 //
 FileInfo GetFileInfo(const char *path) {
+#if WIN32
+	struct _stat info;
+	const auto path_utf16 = utf8_to_utf16(path);
+	if (_wstat(LPCWSTR(path_utf16.c_str()), &info) != 0)
+		return {false, 0, 0, 0};
+#else
 	struct stat info;
 	if (stat(path, &info) != 0)
-		return {0, 0, 0};
-	return {size_t(info.st_size), time_ns(info.st_ctime), time_ns(info.st_mtime)};
+		return {false, 0, 0, 0};
+#endif
+	return {info.st_mode & S_IFREG ? true : false, size_t(info.st_size), time_ns(info.st_ctime), time_ns(info.st_mtime)};
 }
 
 //
 bool IsFile(const char *path) {
+#if WIN32
+	struct _stat info;
+	const auto path_utf16 = utf8_to_utf16(path);
+	if (_wstat(LPCWSTR(path_utf16.c_str()), &info) != 0)
+		return false;
+#else
 	struct stat info;
 	if (stat(path, &info) != 0)
 		return false;
+#endif
 
 	if (info.st_mode & S_IFREG)
 		return true;

@@ -148,7 +148,7 @@ void CaptureCallstack(CallStack &callstack, uint32_t skip_frames, void *context)
 std::string to_string(const CallStack &callstack) {
 	std::string out;
 	for (auto &frame : callstack.frames)
-		out += hg::format("- %1:%2 in %3 (%4)\n").arg(frame.source).arg(frame.line).arg(frame.function).arg(frame.address).str();
+		out += format("- %1:%2 in %3 (%4)\n").arg(frame.source).arg(frame.line).arg(frame.function).arg(frame.address).str();
 	return out;
 }
 

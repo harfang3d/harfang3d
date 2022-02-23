@@ -24,6 +24,18 @@
 
 namespace hg {
 
+btRigidBody *SceneBullet3Physics::GetNodeBody(NodeRef ref, const char *func) const {
+	const auto i = nodes.find(ref);
+
+	if (i != std::end(nodes))
+		return i->second.body;
+
+	if (func)
+		warn(format("Node physics missing when calling %1 for NodeRef %2:%3").arg(func).arg(ref.gen).arg(ref.idx));
+
+	return nullptr;
+}
+
 //
 struct DebugDrawContext {
 	bgfx::ViewId view_id;
@@ -340,6 +352,7 @@ void SceneBullet3Physics::Clear() {
 
 	for (auto i : collision_trees)
 		;
+
 	collision_trees.clear();
 }
 
@@ -366,40 +379,95 @@ size_t SceneBullet3Physics::GarbageCollectResources() {
 
 //
 void SceneBullet3Physics::StepSimulation(time_ns dt, time_ns step, int max_step) {
-	world->stepSimulation(time_to_sec_f(dt), max_step, time_to_sec_f(step));
+	// store current matrices to use as previous matrices should a physics sub-step be taken
+	std::map<NodeRef, Mat4> prv_mtx;
 
-#if 0
-	debug(format("Bullet3 | # Rigid Body: %1, # Collision Objects: %2, # Constraints: %3")
-			  .arg("-")
-			  .arg(world->getNumCollisionObjects())
-			  .arg(world->getNumConstraints()));
-#endif
+	for (const auto &i : nodes) {
+		const auto body = i.second.body;
+		if (body->getCollisionFlags() == btRigidBody::CF_DYNAMIC_OBJECT)
+			prv_mtx[i.first] = from_btTransform(body->getWorldTransform());
+	}
+
+	// remove previous matrix for teleported nodes ([EJ] two step to avoid n2 queries)
+	for (auto ref : was_teleported)
+		prv_mtx.erase(ref);
+
+	was_teleported.clear();
+
+	//
+	const auto substep_count = world->stepSimulation(time_to_sec_f(dt), max_step, time_to_sec_f(step));
+
+	// if substep was taken commit to prv_world_mtx
+	if (substep_count > 0)
+		prv_world_mtx = std::move(prv_mtx); // [EJ] would be much better to know beforehand that substep count will be >0 and work on prv_world_mtx directly
+
+	//
+	physics_motion_clock += dt - substep_count * step;
+	physics_motion_k = time_to_sec_f(physics_motion_clock) / time_to_sec_f(step);
+}
+
+//
+void SceneBullet3Physics::SyncTransformsFromScene(const Scene &scene) {
+	for (const auto &i : nodes) {
+		const auto body = i.second.body;
+		const auto flags = body->getCollisionFlags();
+
+		if (flags == btRigidBody::CF_KINEMATIC_OBJECT) {
+			const auto world = scene.GetNodeWorldMatrix(i.first);
+			const auto world_no_scale = TransformationMat4(GetT(world), GetR(world), Vec3::One);
+			body->setWorldTransform(to_btTransform(world_no_scale));
+		}
+	}
+}
+
+void SceneBullet3Physics::SyncTransformsToScene(Scene &scene) {
+	Mat4 world;
+
+	for (const auto &i : nodes) {
+		const auto body = i.second.body;
+		const auto flags = body->getCollisionFlags();
+
+		if (flags == btRigidBody::CF_DYNAMIC_OBJECT) {
+			const auto j = prv_world_mtx.find(i.first);
+
+			if (j != std::end(prv_world_mtx)) {
+				const auto prv_world = j->second;
+				const auto cur_world = from_btTransform(body->getWorldTransform());
+
+				world = LerpAsOrthonormalBase(prv_world, cur_world, physics_motion_k);
+			} else {
+				world = from_btTransform(body->getWorldTransform());
+			}
+
+			scene.SetNodeWorldMatrix(i.first, world); // EJ20222101 do not use Transform.SetWorld which is much slower
+		}
+	}
 }
 
 //
 void SceneBullet3Physics::NodeStartTrackingCollisionEvents(NodeRef ref, CollisionEventTrackingMode mode) { node_collision_event_tracking_modes[ref] = mode; }
 void SceneBullet3Physics::NodeStopTrackingCollisionEvents(NodeRef ref) { node_collision_event_tracking_modes.erase(ref); }
 
-void SceneBullet3Physics::CollectCollisionEvents(const Scene &scene, NodeNodeContacts &node_node_contacts) {
+void SceneBullet3Physics::CollectCollisionEvents(const Scene &scene, NodePairContacts &node_node_contacts) {
 	node_node_contacts.clear();
 
-	int manifold_count = world->getDispatcher()->getNumManifolds();
-	auto manifolds = world->getDispatcher()->getInternalManifoldPointer();
+	const int manifold_count = world->getDispatcher()->getNumManifolds();
+	const auto manifolds = world->getDispatcher()->getInternalManifoldPointer();
 
 	for (int n = 0; n < manifold_count; ++n) {
-		auto manifold = manifolds[n];
+		const auto manifold = manifolds[n];
 		if (!manifold) // manifolds are valid as long as the bodies overlap in the broadphase
 			continue;
 
-		auto manifold_contact_count = manifold->getNumContacts();
+		const auto manifold_contact_count = manifold->getNumContacts();
 		if (!manifold_contact_count)
 			continue;
 
-		auto node_a_ref = scene.GetNodeRef(static_cast<const btRigidBody *>(manifold->getBody0())->getUserIndex());
+		const auto node_a_ref = scene.GetNodeRef(static_cast<const btRigidBody *>(manifold->getBody0())->getUserIndex());
 		if (!scene.IsValidNodeRef(node_a_ref))
 			continue;
 
-		auto node_b_ref = scene.GetNodeRef(static_cast<const btRigidBody *>(manifold->getBody1())->getUserIndex());
+		const auto node_b_ref = scene.GetNodeRef(static_cast<const btRigidBody *>(manifold->getBody1())->getUserIndex());
 		if (!scene.IsValidNodeRef(node_a_ref))
 			continue;
 
@@ -407,12 +475,11 @@ void SceneBullet3Physics::CollectCollisionEvents(const Scene &scene, NodeNodeCon
 			auto i = node_collision_event_tracking_modes.find(node_a_ref);
 			if (i != std::end(node_collision_event_tracking_modes)) {
 				auto &contacts = node_node_contacts[node_a_ref][node_b_ref];
+				contacts.reserve(manifold_contact_count);
 
 				for (int j = 0; j < manifold_contact_count; ++j) {
 					const auto &contact = manifold->getContactPoint(j);
-
-					contacts.push_back({from_btVector3(contact.m_positionWorldOnB), from_btVector3(contact.m_normalWorldOnB), numeric_cast<uint32_t>(j),
-						contact.getDistance()});
+					contacts.push_back({from_btVector3(contact.m_positionWorldOnB), from_btVector3(contact.m_normalWorldOnB), contact.getDistance()});
 				}
 			}
 		}
@@ -420,50 +487,38 @@ void SceneBullet3Physics::CollectCollisionEvents(const Scene &scene, NodeNodeCon
 }
 
 //
-void SceneBullet3Physics::SyncBodiesFromScene(const Scene &scene) {
-	for (const auto &i : nodes)
-		if (const auto node = scene.GetNode(i.first))
-			if (auto trs = node.GetTransform()) {
-				const auto body = i.second.body;
-				const auto flags = body->getCollisionFlags();
-
-				if (flags == btRigidBody::CF_KINEMATIC_OBJECT) {
-					const auto w = trs.GetWorld();
-					const auto w2 = TransformationMat4(GetT(w), GetR(w), Vec3::One);
-					body->setWorldTransform(to_btTransform(w2));
-				} else if (flags == btRigidBody::CF_DYNAMIC_OBJECT) {
-					const auto world = body->getInterpolationWorldTransform();
-					trs.SetWorld(from_btTransform(world));
-				}
-			}
-}
-
-//
 void SceneBullet3Physics::NodeWake(NodeRef ref) const {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		body->activate();
 }
 
 //
 void SceneBullet3Physics::NodeSetDeactivation(NodeRef ref, bool enable) const {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		body->setActivationState(enable ? ACTIVE_TAG : DISABLE_DEACTIVATION);
 }
 
 bool SceneBullet3Physics::NodeGetDeactivation(NodeRef ref) const {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		return body->getActivationState() == ACTIVE_TAG ? true : false;
 	return true;
 }
 
 //
 void SceneBullet3Physics::NodeResetWorld(NodeRef ref, const Mat4 &world) const {
-	if (auto body = GetNodeBody(ref)) {
+	if (auto body = GetNodeBody(ref, __func__)) {
 		body->setWorldTransform(to_btTransform(world));
 		body->setLinearVelocity(btVector3(0, 0, 0));
 		body->setAngularVelocity(btVector3(0, 0, 0));
 		body->clearForces();
 		body->activate();
+	}
+}
+
+void SceneBullet3Physics::NodeTeleport(NodeRef ref, const Mat4 &world) {
+	if (auto body = GetNodeBody(ref, __func__)) {
+		body->setWorldTransform(to_btTransform(world));
+		was_teleported.push_back(ref);
 	}
 }
 
@@ -474,80 +529,86 @@ static btVector3 __bt_WorldToLocalPos(btRigidBody *body, const btVector3 &pos) {
 	return world_transform.inverse() * pos;
 }
 
-void SceneBullet3Physics::NodeAddImpulse(NodeRef ref, const Vec3 &I) {
-	if (auto body = GetNodeBody(ref))
-		body->applyCentralImpulse(to_btVector3(I));
-}
-
-void SceneBullet3Physics::NodeAddImpulse(NodeRef ref, const Vec3 &I, const Vec3 &world_pos) {
-	if (auto body = GetNodeBody(ref))
-		body->applyImpulse(to_btVector3(I), to_btVector3(world_pos) - body->getCenterOfMassPosition());
-}
-
 void SceneBullet3Physics::NodeAddForce(NodeRef ref, const Vec3 &F) {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		body->applyCentralForce(to_btVector3(F));
 }
 
 void SceneBullet3Physics::NodeAddForce(NodeRef ref, const Vec3 &F, const Vec3 &world_pos) {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		body->applyForce(to_btVector3(F), to_btVector3(world_pos) - body->getCenterOfMassPosition());
 }
 
+void SceneBullet3Physics::NodeAddImpulse(NodeRef ref, const Vec3 &I) {
+	if (auto body = GetNodeBody(ref, __func__))
+		body->applyCentralImpulse(to_btVector3(I));
+}
+
+void SceneBullet3Physics::NodeAddImpulse(NodeRef ref, const Vec3 &I, const Vec3 &world_pos) {
+	if (auto body = GetNodeBody(ref, __func__))
+		body->applyImpulse(to_btVector3(I), to_btVector3(world_pos) - body->getCenterOfMassPosition());
+}
+
+void SceneBullet3Physics::NodeAddTorque(NodeRef ref, const Vec3 &T) {
+	if (auto body = GetNodeBody(ref, __func__))
+		body->applyTorque(to_btVector3(T));
+}
+
+void SceneBullet3Physics::NodeAddTorqueImpulse(NodeRef ref, const Vec3 &T) {
+	if (auto body = GetNodeBody(ref, __func__))
+		body->applyTorqueImpulse(to_btVector3(T));
+}
+
 Vec3 SceneBullet3Physics::NodeGetPointVelocity(NodeRef ref, const Vec3 &world_pos) const {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		return from_btVector3(body->getVelocityInLocalPoint(to_btVector3(world_pos) - body->getCenterOfMassPosition()));
 	return {};
 }
 
+//
 Vec3 SceneBullet3Physics::NodeGetLinearVelocity(NodeRef ref) const {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		return from_btVector3(body->getLinearVelocity());
 	return {};
 }
 
 void SceneBullet3Physics::NodeSetLinearVelocity(NodeRef ref, const Vec3 &V) {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		body->applyCentralImpulse(to_btVector3(V - from_btVector3(body->getLinearVelocity())));
 }
 
 Vec3 SceneBullet3Physics::NodeGetAngularVelocity(NodeRef ref) const {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		return from_btVector3(body->getAngularVelocity());
 	return {};
 }
 
 void SceneBullet3Physics::NodeSetAngularVelocity(NodeRef ref, const Vec3 &W) {
-	if (auto body = GetNodeBody(ref))
+	if (auto body = GetNodeBody(ref, __func__))
 		body->setAngularVelocity(to_btVector3(W));
 }
 
-void SceneBullet3Physics::NodeGetLinearLockAxes(NodeRef ref, bool &X, bool &Y, bool &Z) const {
-	if (auto body = GetNodeBody(ref)) {
-		const auto &v = body->getAngularVelocity();
-		X = v.x() == 1.f ? false : true;
-		X = v.y() == 1.f ? false : true;
-		X = v.z() == 1.f ? false : true;
-	}
+//
+Vec3 SceneBullet3Physics::NodeGetLinearFactor(NodeRef ref) const {
+	if (auto body = GetNodeBody(ref, __func__))
+		return from_btVector3(body->getLinearFactor());
+	return {};
 }
 
-void SceneBullet3Physics::NodeSetLinearLockAxes(NodeRef ref, bool X, bool Y, bool Z) {
-	if (auto body = GetNodeBody(ref))
-		body->setLinearFactor(btVector3(X ? 0.f : 1.f, Y ? 0.f : 1.f, Z ? 0.f : 1.f));
+void SceneBullet3Physics::NodeSetLinearFactor(NodeRef ref, const Vec3 &k) {
+	if (auto body = GetNodeBody(ref, __func__))
+		body->setLinearFactor(to_btVector3(k));
 }
 
-void SceneBullet3Physics::NodeGetAngularLockAxes(NodeRef ref, bool &X, bool &Y, bool &Z) const {
-	if (auto body = GetNodeBody(ref)) {
-		const auto &v = body->getAngularVelocity();
-		X = v.x() == 1.f ? false : true;
-		X = v.y() == 1.f ? false : true;
-		X = v.z() == 1.f ? false : true;
-	}
+Vec3 SceneBullet3Physics::NodeGetAngularFactor(NodeRef ref) const {
+	if (auto body = GetNodeBody(ref, __func__))
+		return from_btVector3(body->getAngularFactor());
+	return {};
 }
 
-void SceneBullet3Physics::NodeSetAngularLockAxes(NodeRef ref, bool X, bool Y, bool Z) {
-	if (auto body = GetNodeBody(ref))
-		body->setAngularFactor(btVector3(X ? 0.f : 1.f, Y ? 0.f : 1.f, Z ? 0.f : 1.f));
+void SceneBullet3Physics::NodeSetAngularFactor(NodeRef ref, const Vec3 &k) {
+	if (auto body = GetNodeBody(ref, __func__))
+		body->setAngularFactor(to_btVector3(k));
 }
 
 //
@@ -561,7 +622,7 @@ struct NodeCollideWorldCallback : btCollisionWorld::ContactResultCallback {
 
 		if (scene.IsValidNodeRef(node_0_ref) && scene.IsValidNodeRef(node_1_ref)) {
 			contacts[node_ref == node_0_ref ? node_1_ref : node_0_ref].push_back(
-				{from_btVector3(cp.m_positionWorldOnB), from_btVector3(cp.m_normalWorldOnB), 0, cp.getDistance()});
+				{from_btVector3(cp.m_positionWorldOnB), from_btVector3(cp.m_normalWorldOnB), cp.getDistance()});
 		}
 		return 0.f;
 	}
@@ -572,8 +633,8 @@ struct NodeCollideWorldCallback : btCollisionWorld::ContactResultCallback {
 	NodeContacts contacts;
 };
 
-NodeContacts SceneBullet3Physics::NodeCollideWorld(const Scene &scene, NodeRef ref, const Mat4 &mtx, int max_contact) const {
-	const auto body = GetNodeBody(ref);
+NodePairContacts SceneBullet3Physics::NodeCollideWorld(const Scene &scene, NodeRef ref, const Mat4 &mtx, int max_contact) const {
+	const auto body = GetNodeBody(ref, __func__);
 	if (!body)
 		return {};
 
@@ -584,11 +645,11 @@ NodeContacts SceneBullet3Physics::NodeCollideWorld(const Scene &scene, NodeRef r
 	world->contactTest(body, callback);
 
 	body->setWorldTransform(trs); // restore body transform
-	return callback.contacts;
+	return {{ref, callback.contacts}};
 }
 
-NodeContacts SceneBullet3Physics::NodeCollideWorld(const Node &node, const Mat4 &world, int max_contact) const {
-	return node.scene_ref ? NodeCollideWorld(*node.scene_ref->scene, node.ref, world, max_contact) : NodeContacts{};
+NodePairContacts SceneBullet3Physics::NodeCollideWorld(const Node &node, const Mat4 &world, int max_contact) const {
+	return node.scene_ref ? NodeCollideWorld(*node.scene_ref->scene, node.ref, world, max_contact) : NodePairContacts{};
 }
 
 //

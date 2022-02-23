@@ -14,7 +14,7 @@ If you are unclear on the resources/assets distinction see [man.Assets].
 
 The easiest way is to drag and drop the resources folder on the assetc executable:
 
-![assetc drag & drop](../img/assetc.gif)
+![assetc drag & drop](/images/docs/${HG_VERSION}/assetc.gif)
 
 ## Command-Line
 

@@ -37,6 +37,7 @@ option(HG_EMBEDDED "Harfang: Build for embedded system" OFF)
 
 option(HG_USE_GLFW "Harfang: Use GLFW backend" ON)
 option(HG_USE_GLFW_WAYLAND "Harfang: Use GLFW Wayland backend" OFF)
+option(HG_REBUILD_GLFW "Harfang: Rebuild GLFW backend" ON)
 option(HG_USE_EGL "Harfang: Use EGL for GL context management" OFF)
 
 option(HG_ENABLE_BULLET3_SCENE_PHYSICS "Harfang: Scene physics using Bullet Dynamics" ON)
@@ -293,10 +294,8 @@ if(HG_BINDING_DEFINES_LIST)
 	set(HG_BINDING_DEFINES "--defines" ${HG_BINDING_DEFINES_LIST})
 endif()
 
-if(HG_BUILD_HG_LUA OR HG_BUILD_CPP_SDK OR HG_BUILD_ASSIMP_CONVERTER OR HG_BUILD_FBX_CONVERTER OR HG_BUILD_GLTF_EXPORTER OR HG_BUILD_GLTF_IMPORTER OR HG_BUILD_ASSETC)
-	add_subdirectory(extern)
-	add_subdirectory(binding)
-endif()
+add_subdirectory(extern)
+add_subdirectory(binding)
 
 add_subdirectory(harfang)
 

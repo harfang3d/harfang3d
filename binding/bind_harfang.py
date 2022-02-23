@@ -1339,6 +1339,8 @@ def bind_scene(gen):
 		("LSSF_All", "hg::LSSF_All"),
 		("LSSF_QueueTextureLoads", "hg::LSSF_QueueTextureLoads"),
 		("LSSF_FreezeMatrixToTransformOnSave", "hg::LSSF_FreezeMatrixToTransformOnSave"),
+		("LSSF_QueueModelLoads", "hg::LSSF_QueueModelLoads"),
+		("LSSF_DoNotChangeCurrentCameraIfValid", "hg::LSSF_DoNotChangeCurrentCameraIfValid"),
 	], 'LoadSaveSceneFlags')
 
 	gen.bind_function('hg::SaveSceneJsonToFile', 'bool', ['const char *path', 'const hg::Scene &scene', 'const hg::PipelineResources &resources', '?uint32_t flags'], {'constants_group': {'flags': 'LoadSaveSceneFlags'}})
@@ -1487,7 +1489,7 @@ static std::vector<hg::ForwardPipelineLight> _GetSceneForwardPipelineLights(cons
 	gen.bind_constructor(forward_pipeline_aaa_config, [])
 	gen.bind_members(forward_pipeline_aaa_config, [
 		'float temporal_aa_weight',
-		'int sample_count', 'float max_distance',
+		'int sample_count', 'float max_distance', 'float z_thickness',
 		'float bloom_threshold', 'float bloom_bias', 'float bloom_intensity',
 		'float motion_blur',
 		'float exposure', 'float gamma'
@@ -1502,10 +1504,6 @@ static std::vector<hg::ForwardPipelineLight> _GetSceneForwardPipelineLights(cons
 	gen.bind_function('hg::CreateForwardPipelineAAAFromAssets', 'hg::ForwardPipelineAAA', ['const char *path', 'const hg::ForwardPipelineAAAConfig &config', '?bgfx::BackbufferRatio::Enum ssgi_ratio', '?bgfx::BackbufferRatio::Enum ssr_ratio'])
 	gen.bind_function('hg::DestroyForwardPipelineAAA', 'void', ['hg::ForwardPipelineAAA &pipeline'])
 	gen.bind_function('hg::IsValid', 'bool', ['const hg::ForwardPipelineAAA &pipeline'])
-
-	gen.bind_function('hg::UpdateForwardPipelineAAA', 'void', ['hg::ForwardPipeline &pipeline', 'const hg::Rect<int> &rect', 'const hg::Mat4 &view', 'const hg::Mat44 &proj', 
-		'const hg::Mat4 &prv_view', 'const hg::Mat44 &prv_proj', 'const hg::tVec2<float> &jitter', 'bgfx::BackbufferRatio::Enum ssgi_ratio', 'bgfx::BackbufferRatio::Enum ssr_ratio', 'float temporal_aa_weight', 'float motion_blur_strength',
-		'float exposure', 'float gamma', 'int sample_count', 'float max_distance'])
 
 	gen.bind_function('hg::SubmitSceneToForwardPipeline', 'void', ['bgfx::ViewId &view_id', 'const hg::Scene &scene', 'const hg::Rect<int> &rect', 'const hg::ViewState &view_state',
 	'const hg::ForwardPipeline &pipeline', 'const hg::SceneForwardPipelineRenderData &render_data', 'const hg::PipelineResources &resources', 'const hg::SceneForwardPipelinePassViewId &views', 
@@ -1528,6 +1526,9 @@ static std::vector<hg::ForwardPipelineLight> _GetSceneForwardPipelineLights(cons
 def bind_bullet3_physics(gen):
 	gen.add_include('engine/scene_bullet3_physics.h')
 
+	node_node_contacts = gen.begin_class('hg::NodePairContacts')
+	gen.end_class(node_node_contacts)
+
 	bullet = gen.begin_class('hg::SceneBullet3Physics', noncopyable=True)
 
 	gen.bind_constructor(bullet, ['?int thread_count'])
@@ -1547,9 +1548,10 @@ def bind_bullet3_physics(gen):
 
 	gen.bind_method(bullet, 'StepSimulation', 'void', ['hg::time_ns display_dt', '?hg::time_ns step_dt', '?int max_step'])
 
-#	gen.bind_method(newton, 'CollectCollisionEvents', 'void', ['const hg::Scene &scene', 'hg::NodeNodeContacts &node_node_contacts'])
+	gen.bind_method(bullet, 'CollectCollisionEvents', 'void', ['const hg::Scene &scene', 'hg::NodePairContacts &node_pair_contacts'])
 
-	gen.bind_method(bullet, 'SyncBodiesFromScene', 'void', ['const hg::Scene &scene'])
+	gen.bind_method(bullet, 'SyncTransformsFromScene', 'void', ['const hg::Scene &scene'])
+	gen.bind_method(bullet, 'SyncTransformsToScene', 'void', ['hg::Scene &scene'])
 
 	gen.bind_method(bullet, 'GarbageCollect', 'size_t', ['const hg::Scene &scene'])
 	gen.bind_method(bullet, 'GarbageCollectResources', 'size_t', [])
@@ -1564,9 +1566,12 @@ def bind_bullet3_physics(gen):
 	gen.bind_method(bullet, 'NodeGetDeactivation', 'bool', ['const hg::Node &node'])
 
 	gen.bind_method(bullet, 'NodeResetWorld', 'void', ['const hg::Node &node', 'const hg::Mat4 &world'])
+	gen.bind_method(bullet, 'NodeTeleport', 'void', ['const hg::Node &node', 'const hg::Mat4 &world'])
 
 	gen.bind_method(bullet, 'NodeAddForce', 'void', ['const hg::Node &node', 'const hg::Vec3 &F', '?const hg::Vec3 &world_pos'])
 	gen.bind_method(bullet, 'NodeAddImpulse', 'void', ['const hg::Node &node', 'const hg::Vec3 &dt_velocity', '?const hg::Vec3 &world_pos'])
+	gen.bind_method(bullet, 'NodeAddTorque', 'void', ['const hg::Node &node', 'const hg::Vec3 &T'])
+	gen.bind_method(bullet, 'NodeAddTorqueImpulse', 'void', ['const hg::Node &node', 'const hg::Vec3 &dt_angular_velocity'])
 	gen.bind_method(bullet, 'NodeGetPointVelocity', 'hg::Vec3', ['const hg::Node &node', 'const hg::Vec3 &world_pos'])
 
 	gen.bind_method(bullet, 'NodeGetLinearVelocity', 'hg::Vec3', ['const hg::Node &node'])
@@ -1574,38 +1579,16 @@ def bind_bullet3_physics(gen):
 	gen.bind_method(bullet, 'NodeGetAngularVelocity', 'hg::Vec3', ['const hg::Node &node'])
 	gen.bind_method(bullet, 'NodeSetAngularVelocity', 'void', ['const hg::Node &node', 'const hg::Vec3 &W'])
 
-	gen.bind_method(bullet, 'NodeGetLinearLockAxes', 'void', ['const hg::Node &node', 'bool &X', 'bool &Y', 'bool &Z'], {'arg_out': ['X', 'Y', 'Z']})
-	gen.bind_method(bullet, 'NodeSetLinearLockAxes', 'void', ['const hg::Node &node', 'bool X', 'bool Y', 'bool Z'])
-	gen.bind_method(bullet, 'NodeGetAngularLockAxes', 'void', ['const hg::Node &node', 'bool &X', 'bool &Y', 'bool &Z'], {'arg_out': ['X', 'Y', 'Z']})
-	gen.bind_method(bullet, 'NodeSetAngularLockAxes', 'void', ['const hg::Node &node', 'bool X', 'bool Y', 'bool Z'])
-	
+	gen.bind_method(bullet, 'NodeGetLinearFactor', 'hg::Vec3', ['const hg::Node &node'])
+	gen.bind_method(bullet, 'NodeSetLinearFactor', 'void', ['const hg::Node &node', 'const hg::Vec3 &k'])
+	gen.bind_method(bullet, 'NodeGetAngularFactor', 'hg::Vec3', ['const hg::Node &node'])
+	gen.bind_method(bullet, 'NodeSetAngularFactor', 'void', ['const hg::Node &node', 'const hg::Vec3 &k'])
+
 	#
-	node_contacts = gen.begin_class('hg::NodeContacts')
-	gen.end_class(node_contacts)
+	gen.bind_method(bullet, 'NodeCollideWorld', 'hg::NodePairContacts', ['const hg::Node &node', 'const hg::Mat4 &world', '?int max_contact'])
 
-	gen.insert_binding_code('''
-static std::vector<hg::Node> __GetNodesInContacts(const hg::Scene &scene, const hg::NodeContacts &ctcs) {
-	std::vector<hg::Node> nodes;
-	nodes.reserve(ctcs.size());
-
-	for (auto i : ctcs)
-		if (auto node = scene.GetNode(i.first))
-			nodes.push_back(std::move(node));
-
-	return nodes;
-}
-
-static std::vector<hg::Contact> __GetNodeContacts(const hg::NodeContacts &ctcs, const hg::Node &node) {
-	auto i = ctcs.find(node.ref);
-	if (i == std::end(ctcs))
-		return {};
-	return i->second;
-}
-''')
-
-	gen.bind_method(bullet, 'NodeCollideWorld', 'hg::NodeContacts', ['const hg::Node &node', 'const hg::Mat4 &world', '?int max_contact'])
-	gen.bind_function('GetNodesInContacts', 'std::vector<hg::Node>', ['const hg::Scene &scene', 'const hg::NodeContacts &node_contacts'], {'route': route_lambda('__GetNodesInContacts')})
-	gen.bind_function('GetNodeContacts', 'std::vector<hg::Contact>', ['const hg::NodeContacts &node_contacts', 'const hg::Node &node'], {'route': route_lambda('__GetNodeContacts')})
+	gen.bind_function('GetNodesInContact', 'std::vector<hg::Node>', ['const hg::Scene &scene', 'const hg::Node with', 'const hg::NodePairContacts &node_pair_contacts'])
+	gen.bind_function('GetNodePairContacts', 'std::vector<hg::Contact>', ['const hg::Node &first', 'const hg::Node &second', 'const hg::NodePairContacts &node_pair_contacts'])
 
 	#
 	gen.bind_method(bullet, 'RaycastFirstHit', 'hg::RaycastOut', ['const hg::Scene &scene', 'const hg::Vec3 &p0', 'const hg::Vec3 &p1'])
@@ -1830,44 +1813,46 @@ def bind_scene_systems(gen):
 	gen.end_class(scene_clocks)
 
 	scene_sync_to_systems_from_file_protos = [
-		('void', ['hg::Scene &scene', 'hg::SceneLuaVM &vm'], [])
+		('void', ['hg::Scene &scene', 'hg::SceneLuaVM &vm'], []),
 	]
 	scene_sync_to_systems_from_assets_protos = [
-		('void', ['hg::Scene &scene', 'hg::SceneLuaVM &vm'], [])
+		('void', ['hg::Scene &scene', 'hg::SceneLuaVM &vm'], []),
 	]
 	scene_update_systems_protos = [
 		('void', ['hg::Scene &scene', 'hg::SceneClocks &clocks', 'hg::time_ns dt'], []),
-		('void', ['hg::Scene &scene', 'hg::SceneClocks &clocks', 'hg::time_ns dt', 'hg::SceneLuaVM &vm'], [])
+		('void', ['hg::Scene &scene', 'hg::SceneClocks &clocks', 'hg::time_ns dt', 'hg::SceneLuaVM &vm'], []),
 	]
 	scene_garbage_collect_systems_protos = [
 		('size_t', ['hg::Scene &scene'], []),
-		('size_t', ['hg::Scene &scene', 'hg::SceneLuaVM &vm'], [])
+		('size_t', ['hg::Scene &scene', 'hg::SceneLuaVM &vm'], []),
 	]
 	scene_clear_systems_protos = [
 		('void', ['hg::Scene &scene'], []),
-		('void', ['hg::Scene &scene', 'hg::SceneLuaVM &vm'], [])
+		('void', ['hg::Scene &scene', 'hg::SceneLuaVM &vm'], []),
 	]
 
 	if gen.defined('HG_ENABLE_BULLET3_SCENE_PHYSICS'):
 		scene_sync_to_systems_from_file_protos.extend([
 			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics'], []),
-			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics', 'hg::SceneLuaVM &vm'], [])
+			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics', 'hg::SceneLuaVM &vm'], []),
 		])
 		scene_sync_to_systems_from_assets_protos.extend([
 			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics'], []),
-			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics', 'hg::SceneLuaVM &vm'], [])
+			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics', 'hg::SceneLuaVM &vm'], []),
 		])
 		scene_update_systems_protos.extend([
 			('void', ['hg::Scene &scene', 'hg::SceneClocks &clocks', 'hg::time_ns dt', 'hg::SceneBullet3Physics &physics', 'hg::time_ns step', 'int max_physics_step'], []),
-			('void', ['hg::Scene &scene', 'hg::SceneClocks &clocks', 'hg::time_ns dt', 'hg::SceneBullet3Physics &physics', 'hg::time_ns step', 'int max_physics_step', 'hg::SceneLuaVM &vm'], [])
+			('void', ['hg::Scene &scene', 'hg::SceneClocks &clocks', 'hg::time_ns dt', 'hg::SceneBullet3Physics &physics', 'hg::time_ns step', 'int max_physics_step', 'hg::SceneLuaVM &vm'], []),
+			('void', ['hg::Scene &scene', 'hg::SceneClocks &clocks', 'hg::time_ns dt', 'hg::SceneBullet3Physics &physics', 'hg::NodePairContacts &contacts', 'hg::time_ns step', 'int max_physics_step'], []),
+			('void', ['hg::Scene &scene', 'hg::SceneClocks &clocks', 'hg::time_ns dt', 'hg::SceneBullet3Physics &physics', 'hg::NodePairContacts &contacts', 'hg::time_ns step', 'int max_physics_step', 'hg::SceneLuaVM &vm'], []),
 		])
 		scene_garbage_collect_systems_protos.extend([
 			('size_t', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics'], []),
-			('size_t', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics', 'hg::SceneLuaVM &vm'], [])
+			('size_t', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics', 'hg::SceneLuaVM &vm'], []),
 		])
 		scene_clear_systems_protos.extend([
 			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics'], []),
-			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics', 'hg::SceneLuaVM &vm'], [])
+			('void', ['hg::Scene &scene', 'hg::SceneBullet3Physics &physics', 'hg::SceneLuaVM &vm'], []),
 		])
 
 	gen.bind_function_overloads('hg::SceneSyncToSystemsFromFile', scene_sync_to_systems_from_file_protos)
@@ -1875,6 +1860,7 @@ def bind_scene_systems(gen):
 	gen.bind_function_overloads('hg::SceneUpdateSystems', scene_update_systems_protos)
 	gen.bind_function_overloads('hg::SceneGarbageCollectSystems', scene_garbage_collect_systems_protos)
 	gen.bind_function_overloads('hg::SceneClearSystems', scene_clear_systems_protos)
+
 
 def bind_font(gen):
 	gen.add_include('engine/font.h')
@@ -2150,7 +2136,10 @@ static void _SetViewTransform(bgfx::ViewId view_id, const hg::Mat4 &view, const 
 	gen.insert_binding_code('static void _DestroyTexture(const hg::Texture &tex) { bgfx::destroy(tex.handle); }')
 	gen.bind_function('DestroyTexture', 'void', ['const hg::Texture &tex'], {'route': route_lambda('_DestroyTexture')})
 
-	gen.bind_function('hg::ProcessTextureLoadQueue', 'size_t', ['hg::PipelineResources &res'])
+	gen.bind_function('hg::ProcessTextureLoadQueue', 'size_t', ['hg::PipelineResources &res', '?size_t limit'])
+
+	gen.bind_function('hg::ProcessModelLoadQueue', 'size_t', ['hg::PipelineResources &res', '?size_t limit'])
+	gen.bind_function('hg::ProcessLoadQueues', 'size_t', ['hg::PipelineResources &res', '?size_t limit'])
 
 	# ModelRef/TextureRef/MaterialRef/PipelineProgramRef
 	model_ref = gen.begin_class('hg::ModelRef')
@@ -2274,11 +2263,23 @@ static void _SetViewTransform(bgfx::ViewId view_id, const hg::Mat4 &view, const 
 	gen.bind_function('hg::GetMaterialWriteRGBA', 'void', ['const hg::Material &mat', 'bool &write_r', 'bool &write_g', 'bool &write_b', 'bool &write_a'], {'arg_out': ['write_r', 'write_g', 'write_b', 'write_a']})
 	gen.bind_function('hg::SetMaterialWriteRGBA', 'void', ['hg::Material &mat', 'bool write_r', 'bool write_g', 'bool write_b', 'bool write_a'])
 
+	gen.bind_function('hg::GetMaterialNormalMapInWorldSpace', 'bool', ['const hg::Material &mat'])
+	gen.bind_function('hg::SetMaterialNormalMapInWorldSpace', 'void', ['hg::Material &mat', 'bool enable'])
+
 	gen.bind_function('hg::GetMaterialWriteZ', 'bool', ['const hg::Material &mat'])
 	gen.bind_function('hg::SetMaterialWriteZ', 'void', ['hg::Material &mat', 'bool enable'])
 
+	gen.bind_function('hg::GetMaterialDiffuseUsesUV1', 'bool', ['const hg::Material &mat'])
+	gen.bind_function('hg::SetMaterialDiffuseUsesUV1', 'void', ['hg::Material &mat', 'bool enable'])
+	gen.bind_function('hg::GetMaterialSpecularUsesUV1', 'bool', ['const hg::Material &mat'])
+	gen.bind_function('hg::SetMaterialSpecularUsesUV1', 'void', ['hg::Material &mat', 'bool enable'])
+	gen.bind_function('hg::GetMaterialAmbientUsesUV1', 'bool', ['const hg::Material &mat'])
+	gen.bind_function('hg::SetMaterialAmbientUsesUV1', 'void', ['hg::Material &mat', 'bool enable'])
+
 	gen.bind_function('hg::GetMaterialSkinning', 'bool', ['const hg::Material &mat'])
 	gen.bind_function('hg::SetMaterialSkinning', 'void', ['hg::Material &mat', 'bool enable'])
+	gen.bind_function('hg::GetMaterialAlphaCut', 'bool', ['const hg::Material &mat'])
+	gen.bind_function('hg::SetMaterialAlphaCut', 'void', ['hg::Material &mat', 'bool enable'])
 
 	gen.bind_function('hg::CreateMaterial', 'hg::Material', ['hg::PipelineProgramRef prg'])
 	gen.bind_function('hg::CreateMaterial', 'hg::Material', ['hg::PipelineProgramRef prg', 'const char *value_name', 'const hg::Vec4 &value'])
@@ -3197,9 +3198,12 @@ def bind_math(gen):
 
 	matrix4 = gen.begin_class('hg::Mat4')
 	gen.bind_static_members(matrix4, ['const hg::Mat4 Zero', 'const hg::Mat4 Identity'])
+	
+	gen.insert_binding_code('static hg::Mat4 *_Mat4_Copy(const hg::Mat4 &m) { return new hg::Mat4(m); }')
 
 	gen.bind_constructor_overloads(matrix4, [
 		([], []),
+		(['const hg::Mat4 &m'], {'route': route_lambda('_Mat4_Copy')}),
 		(['float m00', 'float m10', 'float m20', 'float m01', 'float m11', 'float m21', 'float m02', 'float m12', 'float m22', 'float m03', 'float m13', 'float m23'], []),
 		(['const hg::Mat3 &m'], [])
 	])
@@ -3567,7 +3571,20 @@ def bind_imgui(gen):
 		'ImGuiWindowFlags_AlwaysVerticalScrollbar', 'ImGuiWindowFlags_AlwaysHorizontalScrollbar', 'ImGuiWindowFlags_AlwaysUseWindowPadding', 'ImGuiWindowFlags_NoDocking'
 	], 'int', namespace='')
 
+	gen.bind_named_enum('ImGuiPopupFlags', [
+		'ImGuiPopupFlags_None',
+		'ImGuiPopupFlags_MouseButtonLeft', 'ImGuiPopupFlags_MouseButtonRight', 'ImGuiPopupFlags_MouseButtonMiddle',
+		'ImGuiPopupFlags_NoOpenOverExistingPopup', 'ImGuiPopupFlags_NoOpenOverItems', 'ImGuiPopupFlags_AnyPopupId', 'ImGuiPopupFlags_AnyPopupLevel', 'ImGuiPopupFlags_AnyPopup'
+	], 'int', namespace='')
+
 	gen.bind_named_enum('ImGuiCond', ['ImGuiCond_Always', 'ImGuiCond_Once', 'ImGuiCond_FirstUseEver', 'ImGuiCond_Appearing'], 'int', namespace='')
+
+	gen.bind_named_enum('ImGuiMouseButton', [
+		'ImGuiPopupFlags_None',
+		'ImGuiPopupFlags_MouseButtonLeft', 'ImGuiPopupFlags_MouseButtonRight', 'ImGuiPopupFlags_MouseButtonMiddle',
+		'ImGuiPopupFlags_NoOpenOverExistingPopup', 'ImGuiPopupFlags_NoOpenOverItems',
+		'ImGuiPopupFlags_AnyPopupId', 'ImGuiPopupFlags_AnyPopupLevel', 'ImGuiPopupFlags_AnyPopup'
+	], 'int', namespace='')
 
 	gen.bind_named_enum('ImGuiHoveredFlags', [
 		'ImGuiHoveredFlags_None', 'ImGuiHoveredFlags_ChildWindows', 'ImGuiHoveredFlags_RootWindow', 'ImGuiHoveredFlags_AnyWindow', 'ImGuiHoveredFlags_AllowWhenBlockedByPopup',
@@ -3586,7 +3603,7 @@ def bind_imgui(gen):
 		'ImGuiInputTextFlags_CharsDecimal', 'ImGuiInputTextFlags_CharsHexadecimal', 'ImGuiInputTextFlags_CharsUppercase', 'ImGuiInputTextFlags_CharsNoBlank',
 		'ImGuiInputTextFlags_AutoSelectAll', 'ImGuiInputTextFlags_EnterReturnsTrue', 'ImGuiInputTextFlags_CallbackCompletion', 'ImGuiInputTextFlags_CallbackHistory',
 		'ImGuiInputTextFlags_CallbackAlways', 'ImGuiInputTextFlags_CallbackCharFilter', 'ImGuiInputTextFlags_AllowTabInput', 'ImGuiInputTextFlags_CtrlEnterForNewLine',
-		'ImGuiInputTextFlags_NoHorizontalScroll', 'ImGuiInputTextFlags_AlwaysInsertMode', 'ImGuiInputTextFlags_ReadOnly', 'ImGuiInputTextFlags_Password'
+		'ImGuiInputTextFlags_NoHorizontalScroll', 'ImGuiInputTextFlags_AlwaysOverwrite', 'ImGuiInputTextFlags_ReadOnly', 'ImGuiInputTextFlags_Password'
 	], 'int', namespace='')
 
 	gen.bind_named_enum('ImGuiTreeNodeFlags', [
@@ -3611,10 +3628,10 @@ def bind_imgui(gen):
 		'ImGuiStyleVar_FrameRounding', 'ImGuiStyleVar_ItemSpacing', 'ImGuiStyleVar_ItemInnerSpacing', 'ImGuiStyleVar_IndentSpacing', 'ImGuiStyleVar_GrabMinSize', 'ImGuiStyleVar_ButtonTextAlign'
 	], 'int', namespace='')
 
-	gen.bind_named_enum('ImDrawCornerFlags', [
-		'ImDrawCornerFlags_TopLeft', 'ImDrawCornerFlags_TopRight', 'ImDrawCornerFlags_BotLeft', 'ImDrawCornerFlags_BotRight',
-		'ImDrawCornerFlags_Top', 'ImDrawCornerFlags_Bot', 'ImDrawCornerFlags_Left', 'ImDrawCornerFlags_Right',
-		'ImDrawCornerFlags_All'
+	gen.bind_named_enum('ImDrawFlags', [
+		'ImDrawFlags_RoundCornersNone',
+		'ImDrawFlags_RoundCornersTopLeft', 'ImDrawFlags_RoundCornersTopRight', 'ImDrawFlags_RoundCornersBottomLeft', 'ImDrawFlags_RoundCornersBottomRight',
+		'ImDrawFlags_RoundCornersAll'
 	], 'int', namespace='')
 
 	#gen.bind_function('ImGui::GetIO', 'ImGuiIO &', [], bound_name='ImGuiGetIO')
@@ -3663,7 +3680,7 @@ def bind_imgui(gen):
 		('void', ['const hg::Texture &tex', 'const hg::tVec2<float> &a', 'const hg::tVec2<float> &b', 'const hg::tVec2<float> &c', 'const hg::tVec2<float> &d'], {'route': route_lambda('ImGui::AddImageQuad')}),
 		('void', ['const hg::Texture &tex', 'const hg::tVec2<float> &a', 'const hg::tVec2<float> &b', 'const hg::tVec2<float> &c', 'const hg::tVec2<float> &d', 'const hg::tVec2<float> &uv_a', 'const hg::tVec2<float> &uv_b', 'const hg::tVec2<float> &uv_c', 'const hg::tVec2<float> &uv_d', '?ImU32 col'], {'route': route_lambda('ImGui::AddImageQuad')})
 	])
-	gen.bind_method(imdrawlist, 'AddImageRounded', 'void', ['const hg::Texture &tex', 'const hg::tVec2<float> &a', 'const hg::tVec2<float> &b', 'const hg::tVec2<float> &uv_a', 'const hg::tVec2<float> &uv_b', 'ImU32 col', 'float rounding', '?ImDrawCornerFlags rounding_corners'], {'route': route_lambda('ImGui::AddImageRounded')})
+	gen.bind_method(imdrawlist, 'AddImageRounded', 'void', ['const hg::Texture &tex', 'const hg::tVec2<float> &a', 'const hg::tVec2<float> &b', 'const hg::tVec2<float> &uv_a', 'const hg::tVec2<float> &uv_b', 'ImU32 col', 'float rounding', '?ImDrawFlags flags'], {'route': route_lambda('ImGui::AddImageRounded')})
 
 	gen.insert_binding_code('''
 static void _ImDrawList_AddPolyline(ImDrawList *self, const std::vector<hg::tVec2<float>> &points, ImU32 col, bool closed, float thickness) { self->AddPolyline(reinterpret_cast<const ImVec2 *>(points.data()), points.size(), col, closed, thickness); }
@@ -3671,7 +3688,7 @@ static void _ImDrawList_AddConvexPolyFilled(ImDrawList *self, const std::vector<
 ''')
 	gen.bind_method(imdrawlist, 'AddPolyline', 'void', ['const std::vector<hg::tVec2<float>> &points', 'ImU32 col', 'bool closed', 'float thickness'], {'route': route_lambda('_ImDrawList_AddPolyline')})
 	gen.bind_method(imdrawlist, 'AddConvexPolyFilled', 'void', ['const std::vector<hg::tVec2<float>> &points', 'ImU32 col'], {'route': route_lambda('_ImDrawList_AddConvexPolyFilled')})
-	gen.bind_method(imdrawlist, 'AddBezierCurve', 'void', ['const hg::tVec2<float> &pos0', 'const hg::tVec2<float> &cp0', 'const hg::tVec2<float> &cp1', 'const hg::tVec2<float> &pos1', 'ImU32 col', 'float thickness', '?int num_segments'])
+	gen.bind_method(imdrawlist, 'AddBezierCubic', 'void', ['const hg::tVec2<float> &pos0', 'const hg::tVec2<float> &cp0', 'const hg::tVec2<float> &cp1', 'const hg::tVec2<float> &pos1', 'ImU32 col', 'float thickness', '?int num_segments'])
 
 	gen.bind_method(imdrawlist, 'PathClear', 'void', [])
 
@@ -3682,8 +3699,8 @@ static void _ImDrawList_AddConvexPolyFilled(ImDrawList *self, const std::vector<
 
 	gen.bind_method(imdrawlist, 'PathArcTo', 'void', ['const hg::tVec2<float> &centre', 'float radius', 'float a_min', 'float a_max', '?int num_segments'])
 	gen.bind_method(imdrawlist, 'PathArcToFast', 'void', ['const hg::tVec2<float> &centre', 'float radius', 'int a_min_of_12', 'int a_max_of_12'])
-	gen.bind_method(imdrawlist, 'PathBezierCurveTo', 'void', ['const hg::tVec2<float> &p1', 'const hg::tVec2<float> &p2', 'const hg::tVec2<float> &p3', '?int num_segments'])
-	gen.bind_method(imdrawlist, 'PathRect', 'void', ['const hg::tVec2<float> &rect_min', 'const hg::tVec2<float> &rect_max', '?float rounding', '?ImDrawCornerFlags rounding_corners_flags'])
+	gen.bind_method(imdrawlist, 'PathBezierCubicCurveTo', 'void', ['const hg::tVec2<float> &p1', 'const hg::tVec2<float> &p2', 'const hg::tVec2<float> &p3', '?int num_segments'])
+	gen.bind_method(imdrawlist, 'PathRect', 'void', ['const hg::tVec2<float> &rect_min', 'const hg::tVec2<float> &rect_max', '?float rounding', '?ImDrawFlags flags'])
 
 	gen.bind_method(imdrawlist, 'ChannelsSplit', 'void', ['int channels_count'])
 	gen.bind_method(imdrawlist, 'ChannelsMerge', 'void', [])
@@ -4020,7 +4037,7 @@ static bool _ImGuiListBox(const char *label, int *current_item, const std::vecto
 	gen.bind_function('ImGui::BeginPopup', 'bool', ['const char *id'], bound_name='ImGuiBeginPopup')
 	gen.bind_function('ImGui::BeginPopupModal', 'bool', ['const char *name', '?bool *open', '?ImGuiWindowFlags flags'], bound_name='ImGuiBeginPopupModal')
 	gen.bind_function('ImGui::BeginPopupContextItem', 'bool', ['const char *id', '?int mouse_button'], bound_name='ImGuiBeginPopupContextItem')
-	gen.bind_function('ImGui::BeginPopupContextWindow', 'bool', ['?const char *id', '?int mouse_button', '?bool also_over_items'], bound_name='ImGuiBeginPopupContextWindow')
+	gen.bind_function('ImGui::BeginPopupContextWindow', 'bool', ['?const char *id', '?ImGuiPopupFlags flags'], bound_name='ImGuiBeginPopupContextWindow')
 	gen.bind_function('ImGui::BeginPopupContextVoid', 'bool', ['?const char *id', '?int mouse_button'], bound_name='ImGuiBeginPopupContextVoid')
 	gen.bind_function('ImGui::EndPopup', 'void', [], bound_name='ImGuiEndPopup')
 	gen.bind_function('ImGui::CloseCurrentPopup', 'void', [], bound_name='ImGuiCloseCurrentPopup')
@@ -4078,11 +4095,11 @@ static hg::Vec2 _ImGuiCalcTextSize(const char *text, bool hide_text_after_double
 	#gen.bind_function('ImGui::IsWindowRectHovered', 'bool', [], bound_name='ImGuiIsWindowRectHovered')
 	#gen.bind_function('ImGui::IsAnyWindowHovered', 'bool', [], bound_name='ImGuiIsAnyWindowHovered')
 	gen.bind_function('ImGui::IsMouseHoveringRect', 'bool', ['const hg::tVec2<float> &rect_min', 'const hg::tVec2<float> &rect_max', '?bool clip'], bound_name='ImGuiIsMouseHoveringRect')
-	gen.bind_function('ImGui::IsMouseDragging', 'bool', ['?int button', '?float lock_threshold'], bound_name='ImGuiIsMouseDragging')
+	gen.bind_function('ImGui::IsMouseDragging', 'bool', ['ImGuiMouseButton button', '?float lock_threshold'], bound_name='ImGuiIsMouseDragging')
 	gen.bind_function('ImGui::GetMousePos', 'hg::tVec2<float>', [], bound_name='ImGuiGetMousePos')
 	gen.bind_function('ImGui::GetMousePosOnOpeningCurrentPopup', 'hg::tVec2<float>', [], bound_name='ImGuiGetMousePosOnOpeningCurrentPopup')
-	gen.bind_function('ImGui::GetMouseDragDelta', 'hg::tVec2<float>', ['?int button', '?float lock_threshold'], bound_name='ImGuiGetMouseDragDelta')
-	gen.bind_function('ImGui::ResetMouseDragDelta', 'void', ['?int button'], bound_name='ImGuiResetMouseDragDelta')
+	gen.bind_function('ImGui::GetMouseDragDelta', 'hg::tVec2<float>', ['?ImGuiMouseButton button', '?float lock_threshold'], bound_name='ImGuiGetMouseDragDelta')
+	gen.bind_function('ImGui::ResetMouseDragDelta', 'void', ['?ImGuiMouseButton button'], bound_name='ImGuiResetMouseDragDelta')
 	#IMGUI_API ImGuiMouseCursor GetMouseCursor();                                                // get desired cursor type, reset in ImGui::NewFrame(), this updated during the frame. valid before Render(). If you use software rendering by setting io.MouseDrawCursor ImGui will render those for you
 	#IMGUI_API void          SetMouseCursor(ImGuiMouseCursor type);                              // set desired cursor type
 	gen.bind_function('ImGui::CaptureKeyboardFromApp', 'void', ['bool capture'], bound_name='ImGuiCaptureKeyboardFromApp')
@@ -4133,6 +4150,9 @@ def bind_audio(gen):
 	gen.bind_function('hg::LoadWAVSoundFile', 'hg::SoundRef', ['const char *path'], {'rval_constants_group': 'SoundRef'})
 	gen.bind_function('hg::LoadWAVSoundAsset', 'hg::SoundRef', ['const char *name'], {'rval_constants_group': 'SoundRef'})
 
+	gen.bind_function('hg::LoadOGGSoundFile', 'hg::SoundRef', ['const char *path'], {'rval_constants_group': 'SoundRef'})
+	gen.bind_function('hg::LoadOGGSoundAsset', 'hg::SoundRef', ['const char *name'], {'rval_constants_group': 'SoundRef'})
+
 	gen.bind_function('hg::UnloadSound', 'void', ['hg::SoundRef snd'], {'constants_group': {'snd': 'SoundRef'}})
 
 
@@ -4167,6 +4187,11 @@ static hg::SpatializedSourceState *__ConstructSpatializedSourceState(hg::Mat4 mt
 	gen.bind_function('hg::StreamWAVAssetStereo', 'hg::SourceRef', ['const char *name', 'const hg::StereoSourceState &state'], {'rval_constants_group': 'SourceRef'})
 	gen.bind_function('hg::StreamWAVFileSpatialized', 'hg::SourceRef', ['const char *path', 'const hg::SpatializedSourceState &state'], {'rval_constants_group': 'SourceRef'})
 	gen.bind_function('hg::StreamWAVAssetSpatialized', 'hg::SourceRef', ['const char *name', 'const hg::SpatializedSourceState &state'], {'rval_constants_group': 'SourceRef'})
+
+	gen.bind_function('hg::StreamOGGFileStereo', 'hg::SourceRef', ['const char *path', 'const hg::StereoSourceState &state'], {'rval_constants_group': 'SourceRef'})
+	gen.bind_function('hg::StreamOGGAssetStereo', 'hg::SourceRef', ['const char *name', 'const hg::StereoSourceState &state'], {'rval_constants_group': 'SourceRef'})
+	gen.bind_function('hg::StreamOGGFileSpatialized', 'hg::SourceRef', ['const char *path', 'const hg::SpatializedSourceState &state'], {'rval_constants_group': 'SourceRef'})
+	gen.bind_function('hg::StreamOGGAssetSpatialized', 'hg::SourceRef', ['const char *name', 'const hg::SpatializedSourceState &state'], {'rval_constants_group': 'SourceRef'})
 
 	gen.bind_function('hg::GetSourceDuration', 'hg::time_ns', ['hg::SourceRef source'], {'constants_group': {'source': 'SourceRef'}})
 	gen.bind_function('hg::GetSourceTimecode', 'hg::time_ns', ['hg::SourceRef source'], {'constants_group': {'source': 'SourceRef'}})
@@ -4225,6 +4250,58 @@ def bind_sao(gen):
 	])
 	gen.bind_function('hg::DestroySAO', 'void', ['hg::SAO &sao'])
 	gen.bind_function('hg::ComputeSAO', 'void', ['bgfx::ViewId &view_id', 'const hg::Rect<int> &rect', 'const hg::Texture &attr0', 'const hg::Texture &attr1', 'const hg::Texture &noise', 'bgfx::FrameBufferHandle output', 'const hg::SAO &sao', 'const hg::Mat44 &projection', 'float bias', 'float radius', 'int sample_count', 'float sharpness'])
+
+	
+def bind_video_stream(gen):
+	gen.add_include('engine/video_stream.h')
+	
+	gen.bind_named_enum('VideoFrameFormat', ['VFF_UNKNOWN', 'VFF_YUV422', 'VFF_RGB24'])
+
+	gen.typedef('VideoStreamHandle', 'intptr_t')
+	gen.typedef('time_ns', 'int64_t')
+	
+	video_streamer = gen.begin_class('IVideoStreamer')
+	gen.bind_method(video_streamer, 'Startup', 'int', [])
+	gen.bind_method(video_streamer, 'Shutdown', 'void', [])
+	gen.bind_method(video_streamer, 'Open', 'VideoStreamHandle', ['const char *name'])
+	gen.bind_method(video_streamer, 'Play', 'int', ['VideoStreamHandle h'])
+	gen.bind_method(video_streamer, 'Pause', 'int', ['VideoStreamHandle h'])
+	gen.bind_method(video_streamer, 'Close', 'int', ['VideoStreamHandle h'])
+	gen.bind_method(video_streamer, 'Seek', 'int', ['VideoStreamHandle h', 'time_ns t'])
+	gen.bind_method(video_streamer, 'GetDuration', 'time_ns', ['VideoStreamHandle h'])
+	gen.bind_method(video_streamer, 'GetTimeStamp', 'time_ns', ['VideoStreamHandle h'])
+	gen.bind_method(video_streamer, 'IsEnded', 'int', ['VideoStreamHandle h'])
+
+	gen.insert_binding_code('''
+static int _VideoStreamer_GetFrame(IVideoStreamer *streamer, VideoStreamHandle h, intptr_t& ptr, int &width, int &height, int &pitch, VideoFrameFormat &format) {
+	return streamer->GetFrame(h, (const void **)&ptr, &width, &height, &pitch, &format);
+}
+''')	
+	gen.bind_method(video_streamer, 'GetFrame', 'int', ['VideoStreamHandle h', 'intptr_t& ptr', 'int &width', 'int &height', 'int &pitch', 'VideoFrameFormat &format'], {'route': route_lambda('_VideoStreamer_GetFrame'), 'arg_in_out': ['ptr', 'width', 'height', 'pitch', 'format']})
+
+	gen.bind_method(video_streamer, 'FreeFrame', 'int', ['VideoStreamHandle h', 'int frame'])
+		
+	gen.end_class(video_streamer)
+
+	gen.bind_function('hg::MakeVideoStreamer', 'IVideoStreamer', ['const char *module_path'])
+	gen.bind_function('hg::IsValid', 'bool', ['IVideoStreamer &streamer'])
+	gen.bind_function('hg::UpdateTexture', 'bool', ['IVideoStreamer &streamer', 'VideoStreamHandle &handle', 'hg::Texture &texture', 'hg::tVec2<int> &size', 'bgfx::TextureFormat::Enum &format', '?bool destroy'], {'arg_in_out': ['texture', 'size', 'format']})
+	
+def bind_profiler(gen):
+	gen.add_include('foundation/profiler.h')
+
+	gen.typedef('hg::ProfilerSectionIndex', 'size_t')
+
+	profiler_frame = gen.begin_class('hg::ProfilerFrame')
+	gen.end_class(profiler_frame)
+
+	gen.bind_function('hg::BeginProfilerSection', 'hg::ProfilerSectionIndex', ['const std::string &name', '?const std::string &section_details'])
+	gen.bind_function('hg::EndProfilerSection', 'void', ['hg::ProfilerSectionIndex section_idx'])
+
+	gen.bind_function('hg::EndProfilerFrame', 'hg::ProfilerFrame', [])
+	gen.bind_function('hg::CaptureProfilerFrame', 'hg::ProfilerFrame', [])
+
+	gen.bind_function('hg::PrintProfilerFrame', 'void', ['const hg::ProfilerFrame &profiler_frame'])
 
 
 def insert_non_embedded_setup_free_code(gen):
@@ -4301,7 +4378,6 @@ static void OutputLicensingTerms(const char *lang) {
 
 	gen.add_custom_free_code('\n')
 
-
 def bind(gen):
 	gen.start('harfang')
 
@@ -4374,5 +4450,8 @@ def bind(gen):
 		bind_recast_detour(gen)
 	bind_bloom(gen)
 	bind_sao(gen)
+	bind_profiler(gen)
+
+	bind_video_stream(gen)
 
 	gen.finalize()

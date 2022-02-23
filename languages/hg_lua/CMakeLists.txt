@@ -30,8 +30,8 @@ endif()
 
 install(TARGETS hg_lua lua libluadll RUNTIME DESTINATION hg_lua LIBRARY DESTINATION hg_lua COMPONENT lua)
 
-if(WIN32)
-	install(TARGETS glfw RUNTIME DESTINATION hg_lua COMPONENT lua)
+if(HG_USE_GLFW)
+	install(FILES $<TARGET_FILE:glfw> DESTINATION hg_lua COMPONENT lua)
 endif()
 
 if(HG_ENABLE_OPENVR_API)

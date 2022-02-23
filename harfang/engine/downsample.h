@@ -17,8 +17,8 @@ struct Downsample {
 	Texture color, attr0, depth;
 };
 
-Downsample CreateDownsampleFromFile(const char *path);
-Downsample CreateDownsampleFromAssets(const char *path);
+Downsample CreateDownsampleFromFile(const char *path, const RenderBufferResourceFactory &rb_factory);
+Downsample CreateDownsampleFromAssets(const char *path, const RenderBufferResourceFactory &rb_factory);
 
 void DestroyDownsample(Downsample &downsample);
 

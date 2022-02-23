@@ -189,7 +189,7 @@ std::vector<Vec3> ComputeVertexNormal(const Geometry &geo, const std::vector<Ver
 
 //
 struct SMikkTSpaceContextData {
-	const hg::Geometry &geo;
+	const Geometry &geo;
 	const std::vector<Vec3> &nrm;
 
 	std::vector<uint32_t> pol_idx;
@@ -475,7 +475,7 @@ bool SaveGeometry(const Writer &iw, const Handle &h, const Geometry &geo) {
 bool SaveGeometryToFile(const char *path, const Geometry &geo) { return SaveGeometry(g_file_writer, ScopedWriteHandle(g_file_write_provider, path), geo); }
 
 //
-static Vertex PreparePolygonVertex(const Geometry &geo, size_t i_bind, size_t i_vtp, const std::map<uint16_t, uint16_t>& bone_map) {
+static Vertex PreparePolygonVertex(const Geometry &geo, size_t i_bind, size_t i_vtp, const std::map<uint16_t, uint16_t> &bone_map) {
 	Vertex vtx = {};
 
 	const auto i_vtx = geo.binding[i_bind + i_vtp];
@@ -501,14 +501,14 @@ static Vertex PreparePolygonVertex(const Geometry &geo, size_t i_bind, size_t i_
 			auto bone_idx = geo.skin[i_vtx].index[i];
 			auto bone_map_it = bone_map.find(bone_idx);
 			__ASSERT__(bone_map_it != bone_map.end());
-			vtx.index[i] = hg::numeric_cast<uint8_t>(bone_map_it->second);
+			vtx.index[i] = numeric_cast<uint8_t>(bone_map_it->second);
 			vtx.weight[i] = unpack_float(geo.skin[i_vtx].weight[i]);
 		}
 
 	return vtx;
 }
 
-static bgfx::VertexLayout GetGeometryVertexDeclaration(const hg::Geometry &geo) {
+static bgfx::VertexLayout GetGeometryVertexDeclaration(const Geometry &geo) {
 	bgfx::VertexLayout vs_decl;
 
 	vs_decl.begin();
@@ -578,8 +578,7 @@ static void GeometryToModelBuilder(const Geometry &geo, ModelBuilder &builder) {
 							// make sure our bone_map contains those bones
 
 							// the bone limit has to be < 255 as long as we have a uint8_t vtx format for bone indices
-							static_assert(
-								hg::max_skinned_model_matrix_count <= std::numeric_limits<uint8_t>::max() + 1, "max_skinned_model_matrix_count <= 256");
+							static_assert(max_skinned_model_matrix_count <= std::numeric_limits<uint8_t>::max() + 1, "max_skinned_model_matrix_count <= 256");
 
 							const auto i_vtx = geo.binding[i_bind + i_vtp];
 
@@ -588,7 +587,7 @@ static void GeometryToModelBuilder(const Geometry &geo, ModelBuilder &builder) {
 								auto bone_idx = geo.skin[i_vtx].index[i];
 								if (bone_map.find(bone_idx) == bone_map.end()) {
 									auto redir_idx = uint16_t(bone_map.size());
-									if (redir_idx < hg::max_skinned_model_matrix_count) {
+									if (redir_idx < max_skinned_model_matrix_count) {
 										bone_map[bone_idx] = redir_idx;
 										bone_indices_to_add.push_back(bone_idx);
 									} else {
@@ -632,7 +631,7 @@ static void GeometryToModelBuilder(const Geometry &geo, ModelBuilder &builder) {
 }
 
 //
-Model GeometryToModel(const hg::Geometry &geo, ModelOptimisationLevel optimisation_level) {
+Model GeometryToModel(const Geometry &geo, ModelOptimisationLevel optimisation_level) {
 	ModelBuilder builder;
 	GeometryToModelBuilder(geo, builder);
 
@@ -643,7 +642,7 @@ Model GeometryToModel(const hg::Geometry &geo, ModelOptimisationLevel optimisati
 	return model;
 }
 
-bool SaveGeometryModelToFile(const char *path, const hg::Geometry &geo, ModelOptimisationLevel optimisation_level) {
+bool SaveGeometryModelToFile(const char *path, const Geometry &geo, ModelOptimisationLevel optimisation_level) {
 	ScopedFile file(OpenWrite(path));
 	if (!file)
 		return false;
@@ -665,9 +664,8 @@ bool SaveGeometryModelToFile(const char *path, const hg::Geometry &geo, ModelOpt
 	ModelBuilder builder;
 	GeometryToModelBuilder(geo, builder);
 
-	auto on_end_list = [](const bgfx::VertexLayout &, 
-		const MinMax &minmax, const std::vector<uint32_t> &idx32, const std::vector<uint8_t> &vtx, 
-		const std::vector<uint16_t> &bones_table, uint16_t mat, void *userdata) {
+	auto on_end_list = [](const bgfx::VertexLayout &, const MinMax &minmax, const std::vector<uint32_t> &idx32, const std::vector<uint8_t> &vtx,
+						   const std::vector<uint16_t> &bones_table, uint16_t mat, void *userdata) {
 		const auto &file = *reinterpret_cast<File *>(userdata);
 
 		uint8_t idx_type_size = 2;
@@ -706,7 +704,7 @@ bool SaveGeometryModelToFile(const char *path, const hg::Geometry &geo, ModelOpt
 		Write(file, minmax);
 		Write(file, mat);
 
-		hg::log(hg::format("Index size: %1, vertex size: %2").arg(idx_size).arg(vtx_size));
+		log(format("Index size: %1, vertex size: %2").arg(idx_size).arg(vtx_size));
 	};
 
 	builder.Make(decl, on_end_list, &file.f, optimisation_level);

@@ -1,8 +1,8 @@
 // HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include "foundation/intersection.h"
-#include "foundation/vector3.h"
 #include "foundation/math.h"
+#include "foundation/vector3.h"
 #include <cfloat>
 #include <cmath>
 
@@ -96,16 +96,16 @@ float SegmentClosestPoint(const Vec3 &a, const Vec3 &b, const Vec3 &u, Vec3 *p) 
 }
 
 bool LineIntersectCone(const Vec3 &a, const Vec3 &v, const Vec3 &c, const Vec3 &d, float theta, float h, float &t0, float &t1) {
-	hg::Vec3 ac = a - c;
+	Vec3 ac = a - c;
 
-	float ddv = hg::Dot(d, v);
-	float ddac = hg::Dot(d, ac);
-	float dvac = hg::Dot(v, ac);
+	float ddv = Dot(d, v);
+	float ddac = Dot(d, ac);
+	float dvac = Dot(v, ac);
 	float cs = cos(theta);
 
 	float c0 = ddv * ddv - cs * cs;
 	float c1 = ddv * ddac - cs * cs * dvac;
-	float c2 = ddac * ddac - cs * cs * hg::Dot(ac, ac);
+	float c2 = ddac * ddac - cs * cs * Dot(ac, ac);
 
 	if (c0 != 0.f) {
 		float delta = c1 * c1 - c0 * c2;
@@ -153,8 +153,7 @@ bool LineIntersectCone(const Vec3 &a, const Vec3 &v, const Vec3 &c, const Vec3 &
 			h0 = tmp;
 		}
 
-		if (((t0 < h0) || (t0 > h1)) &&
-			((t1 < h0) || (t1 > h1))) {
+		if (((t0 < h0) || (t0 > h1)) && ((t1 < h0) || (t1 > h1))) {
 			return false;
 		}
 	} else if (dvac > h) {
@@ -164,7 +163,7 @@ bool LineIntersectCone(const Vec3 &a, const Vec3 &v, const Vec3 &c, const Vec3 &
 	return true;
 }
 
-bool LineIntersectAABB(const Vec3 &a, const Vec3 &v, const Vec3 &min, const Vec3 &max, float &/*t0*/, float &/*t1*/) {
+bool LineIntersectAABB(const Vec3 &a, const Vec3 &v, const Vec3 &min, const Vec3 &max, float & /*t0*/, float & /*t1*/) {
 	Vec3 p0 = (min - a) / v;
 	Vec3 p1 = (max - a) / v;
 

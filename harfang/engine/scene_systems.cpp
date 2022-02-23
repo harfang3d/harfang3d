@@ -58,7 +58,7 @@ static void SceneScriptsOnUpdateCall(SceneLuaVM &vm, Scene &scene, time_ns dt) {
 	});
 }
 
-static void SceneScriptsOnCollisionCall(SceneLuaVM &vm, Scene &scene, const NodeNodeContacts &node_node_contacts) {
+static void SceneScriptsOnCollisionCall(SceneLuaVM &vm, Scene &scene, const NodePairContacts &node_node_contacts) {
 	for (auto i : node_node_contacts)
 		vm.ForeachNodeScripts(scene, i.first, [&](const Scene &scene, Node &node, const LuaObject &env) {
 			if (auto on_create = Get(env, "OnCollision")) {
@@ -159,7 +159,8 @@ void SceneSyncToSystemsFromAssets(Scene &scene, SceneBullet3Physics &physics, Sc
 #endif
 
 //
-static void SceneUpdateSystemsImpl(Scene &scene, SceneClocks &clocks, time_ns dt, SceneBullet3Physics *bullet3_physics, time_ns physics_step, int max_physics_step, SceneLuaVM *vm) {
+static void SceneUpdateSystemsImpl(Scene &scene, SceneClocks &clocks, time_ns dt, SceneBullet3Physics *bullet3_physics, NodePairContacts *node_node_contacts,
+	time_ns physics_step, int max_physics_step, SceneLuaVM *vm) {
 	scene.StorePreviousWorldMatrices();
 	scene.ReadyWorldMatrices();
 
@@ -167,13 +168,16 @@ static void SceneUpdateSystemsImpl(Scene &scene, SceneClocks &clocks, time_ns dt
 
 #if HG_ENABLE_BULLET3_SCENE_PHYSICS
 	if (bullet3_physics) {
-		std::map<NodeRef, std::map<NodeRef, std::vector<Contact>>> node_node_contacts;
-
+		bullet3_physics->SyncTransformsFromScene(scene);
 		bullet3_physics->StepSimulation(dt, physics_step, max_physics_step);
-		bullet3_physics->CollectCollisionEvents(scene, node_node_contacts);
+		bullet3_physics->SyncTransformsToScene(scene);
 
-		if (vm)
-			SceneScriptsOnCollisionCall(*vm, scene, node_node_contacts);
+		if (node_node_contacts) {
+			bullet3_physics->CollectCollisionEvents(scene, *node_node_contacts);
+
+			if (vm)
+				SceneScriptsOnCollisionCall(*vm, scene, *node_node_contacts);
+		}
 	}
 #endif
 
@@ -182,24 +186,31 @@ static void SceneUpdateSystemsImpl(Scene &scene, SceneClocks &clocks, time_ns dt
 
 	scene.ComputeWorldMatrices();
 	scene.FixupPreviousWorldMatrices();
-
-#if HG_ENABLE_BULLET3_SCENE_PHYSICS
-	if (bullet3_physics)
-		bullet3_physics->SyncBodiesFromScene(scene);
-#endif
 }
 
-void SceneUpdateSystems(Scene &scene, SceneClocks &clock, time_ns dt) { SceneUpdateSystemsImpl(scene, clock, dt, nullptr, 0, 0, nullptr); }
-void SceneUpdateSystems(Scene &scene, SceneClocks &clocks, time_ns dt, SceneLuaVM &vm) { SceneUpdateSystemsImpl(scene, clocks, dt, nullptr, 0, 0, &vm); }
+void SceneUpdateSystems(Scene &scene, SceneClocks &clock, time_ns dt) { SceneUpdateSystemsImpl(scene, clock, dt, nullptr, nullptr, 0, 0, nullptr); }
+void SceneUpdateSystems(Scene &scene, SceneClocks &clocks, time_ns dt, SceneLuaVM &vm) {
+	SceneUpdateSystemsImpl(scene, clocks, dt, nullptr, nullptr, 0, 0, &vm);
+}
 
 #if HG_ENABLE_BULLET3_SCENE_PHYSICS
 void SceneUpdateSystems(Scene &scene, SceneClocks &clocks, time_ns dt, SceneBullet3Physics &physics, time_ns physics_step, int physics_max_step) {
-	SceneUpdateSystemsImpl(scene, clocks, dt, &physics, physics_step, physics_max_step, nullptr);
+	SceneUpdateSystemsImpl(scene, clocks, dt, &physics, nullptr, physics_step, physics_max_step, nullptr);
 }
 
 void SceneUpdateSystems(
 	Scene &scene, SceneClocks &clocks, time_ns dt, SceneBullet3Physics &physics, time_ns physics_step, int physics_max_step, SceneLuaVM &vm) {
-	SceneUpdateSystemsImpl(scene, clocks, dt, &physics, physics_step, physics_max_step, &vm);
+	SceneUpdateSystemsImpl(scene, clocks, dt, &physics, nullptr, physics_step, physics_max_step, &vm);
+}
+
+void SceneUpdateSystems(
+	Scene &scene, SceneClocks &clocks, time_ns dt, SceneBullet3Physics &physics, NodePairContacts &contacts, time_ns physics_step, int physics_max_step) {
+	SceneUpdateSystemsImpl(scene, clocks, dt, &physics, &contacts, physics_step, physics_max_step, nullptr);
+}
+
+void SceneUpdateSystems(Scene &scene, SceneClocks &clocks, time_ns dt, SceneBullet3Physics &physics, NodePairContacts &contacts, time_ns physics_step,
+	int physics_max_step, SceneLuaVM &vm) {
+	SceneUpdateSystemsImpl(scene, clocks, dt, &physics, &contacts, physics_step, physics_max_step, &vm);
 }
 #endif
 

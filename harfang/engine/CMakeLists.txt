@@ -6,6 +6,7 @@ set(HDRS
 	audio_stream_interface.h
 	bloom.h
 	create_geometry.h
+	cubemap.h
 	dear_imgui.h
 	debugger.h
 	file_format.h
@@ -48,8 +49,10 @@ set(HDRS
 	temporal_accumulation.h
 	aaa_blur.h
 	to_json.h
+	video_stream.h
 	video_stream_interface.h
-	wav_audio_stream.h)
+	wav_audio_stream.h
+	ogg_audio_stream.h)
 
 set(SRCS
 	anim_load_binary.cpp
@@ -61,6 +64,7 @@ set(SRCS
 	bloom.cpp
 	component.cpp
 	create_geometry.cpp
+	cubemap.cpp
 	dear_imgui.cpp
 	debugger.cpp
 	font.cpp
@@ -77,6 +81,7 @@ set(SRCS
 	mikktspace.c
 	node.cpp
 	openvr_api.cpp
+	physics.cpp
 	picking_helper.cpp
 	picture.cpp
 	render_pipeline.cpp
@@ -96,7 +101,9 @@ set(SRCS
 	upsample.cpp
 	aaa_blur.cpp
 	temporal_accumulation.cpp
-	wav_audio_stream.cpp)
+	wav_audio_stream.cpp
+	ogg_audio_stream.cpp
+	video_stream.cpp)
 
 if(HG_ENABLE_RECAST_DETOUR_API)
 	list(APPEND SRCS recast_detour.cpp)
@@ -110,7 +117,7 @@ endif()
 
 add_library(engine STATIC ${SRCS} ${HDRS})
 
-target_link_libraries(engine PUBLIC bind_hg_lua script foundation platform bgfx imgui jsonhpp meshoptimizer PRIVATE stb_truetype)
+target_link_libraries(engine PUBLIC bind_hg_lua script foundation platform bgfx imgui jsonhpp meshoptimizer PRIVATE stb_truetype stb_vorbis)
 
 if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Emscripten"))
 	target_link_libraries(engine PRIVATE OpenAL)

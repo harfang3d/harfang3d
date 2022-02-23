@@ -14,6 +14,7 @@
 #include "foundation/matrix4.h"
 #include "foundation/matrix44.h"
 #include "foundation/path_tools.h"
+#include "foundation/profiler.h"
 #include "foundation/projection.h"
 #include "foundation/time.h"
 
@@ -41,6 +42,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(UniformType::Enum, {
 													{UniformType::Enum::Mat4, "mat4"},
 												});
 
+void getTextureSizeFromRatio(BackbufferRatio::Enum _ratio, uint16_t &_width, uint16_t &_height);
 } // namespace bgfx
 
 namespace hg {
@@ -433,13 +435,52 @@ void SetMaterialBlendMode(Material &mat, BlendMode mode) {
 		mat.state.state |= BGFX_STATE_BLEND_LINEAR_BURN;
 }
 
-bool GetMaterialSkinning(const Material &m) { return m.flags & MF_EnableSkinning; }
+bool GetMaterialNormalMapInWorldSpace(const Material &m) { return m.flags & MF_NormalMapInWorldSpace; }
+void SetMaterialNormalMapInWorldSpace(Material &m, bool enable) {
+	if (enable)
+		m.flags |= MF_NormalMapInWorldSpace;
+	else
+		m.flags &= ~MF_NormalMapInWorldSpace;
+}
 
+bool GetMaterialDiffuseUsesUV1(const Material &m) { return m.flags & MF_DiffuseUV1; }
+void SetMaterialDiffuseUsesUV1(Material &m, bool enable) {
+	if (enable)
+		m.flags |= MF_DiffuseUV1;
+	else
+		m.flags &= ~MF_DiffuseUV1;
+}
+
+bool GetMaterialSpecularUsesUV1(const Material &m) { return m.flags & MF_SpecularUV1; }
+void SetMaterialSpecularUsesUV1(Material &m, bool enable) {
+	if (enable)
+		m.flags |= MF_SpecularUV1;
+	else
+		m.flags &= ~MF_SpecularUV1;
+}
+
+bool GetMaterialAmbientUsesUV1(const Material &m) { return m.flags & MF_AmbientUV1; }
+void SetMaterialAmbientUsesUV1(Material &m, bool enable) {
+	if (enable)
+		m.flags |= MF_AmbientUV1;
+	else
+		m.flags &= ~MF_AmbientUV1;
+}
+
+bool GetMaterialSkinning(const Material &m) { return m.flags & MF_EnableSkinning; }
 void SetMaterialSkinning(Material &m, bool enable) {
 	if (enable)
 		m.flags |= MF_EnableSkinning;
 	else
 		m.flags &= ~MF_EnableSkinning;
+}
+
+bool GetMaterialAlphaCut(const Material &m) { return m.flags & MF_EnableAlphaCut; }
+void SetMaterialAlphaCut(Material &m, bool enable) {
+	if (enable)
+		m.flags |= MF_EnableAlphaCut;
+	else
+		m.flags &= ~MF_EnableAlphaCut;
 }
 
 //
@@ -527,6 +568,8 @@ std::vector<bgfx::ShaderHandle> GetProgramShaders(bgfx::ProgramHandle prg_h) { r
 
 //
 bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *vs_name, const char *fs_name) {
+	ProfilerPerfSection section("LoadProgram", vs_name);
+
 	ScopedReadHandle vs_h(ip, vs_name), fs_h(ip, fs_name);
 
 	if (!ir.is_valid(vs_h)) {
@@ -571,6 +614,8 @@ bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const 
 }
 
 bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip, const char *cs_name) {
+	ProfilerPerfSection section("LoadComputeProgram", cs_name);
+
 	ScopedReadHandle cs_h(ip, cs_name);
 
 	if (!ir.is_valid(cs_h)) {
@@ -609,6 +654,8 @@ bgfx::ProgramHandle LoadComputeProgramFromAssets(const char *cs_name) { return L
 
 //
 std::vector<PipelineProgramFeature> LoadPipelineProgramFeatures(const Reader &ir, const ReadProvider &ip, const char *name, bool &success) {
+	ProfilerPerfSection section("LoadPipelineProgramFeatures", name);
+
 	success = false;
 
 	const auto json_text = LoadString(ir, ScopedReadHandle(ip, name));
@@ -661,14 +708,20 @@ std::vector<PipelineProgramFeature> LoadPipelineProgramFeatures(const Reader &ir
 				features.push_back(OptionalReflectionMap);
 			else if (feat == "OptionalNormalMap")
 				features.push_back(OptionalNormalMap);
-			else if (feat == "NormalMapWorldOrTangent")
-				features.push_back(NormalMapWorldOrTangent);
-			else if (feat == "DiffuseUV01")
-				features.push_back(DiffuseUV01);
-			else if (feat == "SpecularUV01")
-				features.push_back(SpecularUV01);
+			else if (feat == "NormalMapInWorldSpace")
+				features.push_back(NormalMapInWorldSpace);
+			else if (feat == "DiffuseUV1")
+				features.push_back(DiffuseUV1);
+			else if (feat == "SpecularUV1")
+				features.push_back(SpecularUV1);
+			else if (feat == "AmbientUV1")
+				features.push_back(AmbientUV1);
 			else if (feat == "OptionalSkinning")
 				features.push_back(OptionalSkinning);
+			else if (feat == "OptionalAlphaCut")
+				features.push_back(OptionalAlphaCut);
+			else
+				warn(format("Ignoring unknown pipeline shader feature '%1' in '%2'").arg(feat).arg(name));
 		}
 	}
 
@@ -694,6 +747,8 @@ std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromAssets(const 
 //
 bool LoadPipelineProgramUniforms(const Reader &ir, const ReadProvider &ip, const char *name, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs,
 	PipelineResources &resources) {
+	ProfilerPerfSection section("LoadPipelineProgramUniforms", name);
+
 	const auto json_text = LoadString(ir, ScopedReadHandle(ip, name, true));
 	if (json_text.empty())
 		return false;
@@ -858,8 +913,18 @@ std::vector<int> GetMaterialPipelineProgramFeatureStates(const Material &mat, co
 			states.push_back(has_texture("uReflectionMap") ? 1 : 0);
 		else if (feat == OptionalNormalMap)
 			states.push_back(has_texture("uNormalMap") ? 1 : 0);
+		else if (feat == NormalMapInWorldSpace)
+			states.push_back(mat.flags & MF_NormalMapInWorldSpace ? 1 : 0);
+		else if (feat == DiffuseUV1)
+			states.push_back(mat.flags & MF_DiffuseUV1 ? 1 : 0);
+		else if (feat == SpecularUV1)
+			states.push_back(mat.flags & MF_SpecularUV1 ? 1 : 0);
+		else if (feat == AmbientUV1)
+			states.push_back(mat.flags & MF_AmbientUV1 ? 1 : 0);
 		else if (feat == OptionalSkinning)
 			states.push_back(mat.flags & MF_EnableSkinning ? 1 : 0);
+		else if (feat == OptionalAlphaCut)
+			states.push_back(mat.flags & MF_EnableAlphaCut ? 1 : 0);
 	}
 
 	return states;
@@ -926,8 +991,9 @@ void CreateMissingMaterialProgramValues(Material &mat, PipelineResources &resour
 		// OptionalNormalMap
 		//
 		// NormalMapWorldOrTangent
-		// DiffuseUV01
-		// SpecularUV01
+		// DiffuseUV1
+		// SpecularUV1
+		// AmbientUV1
 	}
 }
 
@@ -960,10 +1026,12 @@ json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::strin
 json LoadResourceMetaFromFile(const std::string &path) { return LoadResourceMeta(g_file_reader, g_file_read_provider, path); }
 json LoadResourceMetaFromAssets(const std::string &name) { return LoadResourceMeta(g_assets_reader, g_assets_read_provider, name); }
 
-bool SaveResourceMetaToFile(const std::string &path, const json &meta) { return hg::SaveJsonToFile(meta, (path + ".meta").c_str()); }
+bool SaveResourceMetaToFile(const std::string &path, const json &meta) { return SaveJsonToFile(meta, (path + ".meta").c_str()); }
 
 //
 TextureMeta LoadTextureMeta(const Reader &ir, const ReadProvider &ip, const std::string &name) {
+	ProfilerPerfSection section("LoadTextureMeta", name);
+
 	const auto js = LoadResourceMeta(ir, ip, name);
 
 	TextureMeta meta;
@@ -1032,6 +1100,8 @@ uint64_t LoadTextureFlagsFromAssets(const std::string &name) { return LoadTextur
 
 //
 Texture CreateTexture(int width, int height, const char *name, uint64_t flags, bgfx::TextureFormat::Enum texture_format) {
+	ProfilerPerfSection section("CreateTexture", name);
+
 	log(format("Creating texture '%1' (empty %2x%3)").arg(name).arg(width).arg(height).c_str());
 
 	bgfx::TextureHandle handle = BGFX_INVALID_HANDLE;
@@ -1048,6 +1118,8 @@ Texture CreateTexture(int width, int height, const char *name, uint64_t flags, b
 }
 
 Texture CreateTextureFromPicture(const Picture &pic, const char *name, uint64_t flags, bgfx::TextureFormat::Enum texture_format) {
+	ProfilerPerfSection section("CreateTextureFromPicture", name);
+
 	log(format("Creating texture '%1' from picture").arg(name).c_str());
 
 	bgfx::TextureHandle handle = BGFX_INVALID_HANDLE;
@@ -1066,12 +1138,15 @@ Texture CreateTextureFromPicture(const Picture &pic, const char *name, uint64_t 
 }
 
 void UpdateTextureFromPicture(Texture &tex, const Picture &pic) {
+	ProfilerPerfSection section("UpdateTextureFromPicture");
 	const auto *mem = bgfx::makeRef(pic.GetData(), pic.GetWidth() * pic.GetHeight() * size_of(pic.GetFormat()));
 	bgfx::updateTexture2D(tex.handle, 0, 0, 0, 0, pic.GetWidth(), pic.GetHeight(), mem);
 }
 
 //
 Texture LoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, bgfx::TextureInfo *info, bimg::Orientation::Enum *orientation) {
+	ProfilerPerfSection section("LoadTexture", name);
+
 	log(format("Loading texture '%1'").arg(name).c_str());
 
 	bgfx::TextureHandle handle = BGFX_INVALID_HANDLE;
@@ -1121,6 +1196,44 @@ Texture LoadTextureFromFile(const char *name, uint64_t flags, bgfx::TextureInfo 
 
 Texture LoadTextureFromAssets(const char *name, uint64_t flags, bgfx::TextureInfo *info, bimg::Orientation::Enum *orientation) {
 	return LoadTexture(g_assets_reader, g_assets_read_provider, name, flags, info, orientation);
+}
+
+RenderBufferResourceFactory RenderBufferResourceFactory::Custom(uint16_t width, uint16_t height) {
+	RenderBufferResourceFactory rb_factory;
+
+	rb_factory.create_texture2d = [width, height](
+									  bgfx::BackbufferRatio::Enum ratio, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags) {
+		auto tex_width = width;
+		auto tex_height = height;
+		bgfx::getTextureSizeFromRatio(ratio, tex_width, tex_height);
+		return bgfx::createTexture2D(tex_width, tex_height, hasMips, numLayers, format, flags);
+	};
+
+	rb_factory.create_framebuffer = [width, height](bgfx::BackbufferRatio::Enum ratio, bgfx::TextureFormat::Enum format, uint64_t textureFlags) {
+		auto tex_width = width;
+		auto tex_height = height;
+		bgfx::getTextureSizeFromRatio(ratio, tex_width, tex_height);
+		textureFlags |= textureFlags & BGFX_TEXTURE_RT_MSAA_MASK ? 0 : BGFX_TEXTURE_RT;
+		bgfx::TextureHandle th = bgfx::createTexture2D(tex_width, tex_height, false, 1, format, textureFlags);
+		return bgfx::createFrameBuffer(1, &th, true);
+	};
+
+	return rb_factory;
+}
+
+RenderBufferResourceFactory RenderBufferResourceFactory::Backbuffer() {
+	RenderBufferResourceFactory rb_factory;
+
+	// use back buffer
+	rb_factory.create_texture2d = [](bgfx::BackbufferRatio::Enum ratio, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags) {
+		return bgfx::createTexture2D(ratio, hasMips, numLayers, format, flags);
+	};
+
+	rb_factory.create_framebuffer = [](bgfx::BackbufferRatio::Enum ratio, bgfx::TextureFormat::Enum format, uint64_t textureFlags) {
+		return bgfx::createFrameBuffer(ratio, format, textureFlags);
+	};
+
+	return rb_factory;
 }
 
 //
@@ -1173,6 +1286,16 @@ bool SaveMaterial(const Material &mat, json &js, const PipelineResources &resour
 	json flags = json::array();
 	if (mat.flags & MF_EnableSkinning)
 		flags.push_back("EnableSkinning");
+	if (mat.flags & MF_DiffuseUV1)
+		flags.push_back("DiffuseUV1");
+	if (mat.flags & MF_SpecularUV1)
+		flags.push_back("SpecularUV1");
+	if (mat.flags & MF_AmbientUV1)
+		flags.push_back("AmbientUV1");
+	if (mat.flags & MF_NormalMapInWorldSpace)
+		flags.push_back("NormalMapInWorldSpace");
+	if (mat.flags & MF_EnableAlphaCut)
+		flags.push_back("EnableAlphaCut");
 	js["flags"] = flags;
 	return true;
 }
@@ -1220,6 +1343,25 @@ template <typename T> T GetOptional(const json &js, const char *key, T dflt) {
 	if (i == std::end(js))
 		return dflt;
 	return i->get<T>();
+}
+
+TextureRef SkipLoadOrQueueTextureLoad(
+	const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load) {
+	if (do_not_load)
+		return resources.textures.Add(path, {});
+
+	auto ref = resources.textures.Has(path);
+
+	if (ref == InvalidTextureRef) {
+		const auto meta = LoadTextureMeta(ir, ip, path);
+
+		if (queue_load)
+			ref = QueueLoadTexture(ir, ip, path, meta.flags, resources);
+		else
+			ref = LoadTexture(ir, ip, path, meta.flags, resources);
+	}
+
+	return ref;
 }
 
 Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources, const PipelineInfo &pipeline,
@@ -1274,24 +1416,8 @@ Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider 
 					path = i_texture->at("name").get<std::string>();
 			}
 
-			if (!path.empty()) {
-				if (do_not_load_resources) {
-					t.texture = resources.textures.Add(path.c_str(), {});
-				} else {
-					auto ref = resources.textures.Has(path.c_str());
-
-					if (ref != InvalidTextureRef) {
-						t.texture = ref;
-					} else {
-						const auto meta = LoadTextureMeta(deps_ir, deps_ip, path);
-
-						if (queue_texture_loads)
-							t.texture = QueueLoadTexture(deps_ir, deps_ip, path.c_str(), meta.flags, resources);
-						else
-							t.texture = LoadTexture(deps_ir, deps_ip, path.c_str(), meta.flags, resources);
-					}
-				}
-			}
+			if (!path.empty())
+				t.texture = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, path.c_str(), resources, queue_texture_loads, do_not_load_resources);
 
 			t.uniform = BGFX_INVALID_HANDLE;
 			if (IsRenderUp())
@@ -1314,6 +1440,16 @@ Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider 
 		for (auto flag : *i_flags) {
 			if (flag == "EnableSkinning")
 				mat.flags |= MF_EnableSkinning;
+			else if (flag == "DiffuseUV1")
+				mat.flags |= MF_DiffuseUV1;
+			else if (flag == "SpecularUV1")
+				mat.flags |= MF_SpecularUV1;
+			else if (flag == "AmbientUV1")
+				mat.flags |= MF_AmbientUV1;
+			else if (flag == "NormalMapInWorldSpace")
+				mat.flags |= MF_NormalMapInWorldSpace;
+			else if (flag == "EnableAlphaCut")
+				mat.flags |= MF_EnableAlphaCut;
 		}
 
 	UpdateMaterialPipelineProgramVariant(mat, resources);
@@ -1322,6 +1458,8 @@ Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider 
 
 Material LoadMaterial(const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
 	const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources) {
+	ProfilerPerfSection section("LoadMaterial");
+
 	Material mat;
 
 	std::string name;
@@ -1365,25 +1503,12 @@ Material LoadMaterial(const Reader &ir, const Handle &h, const Reader &deps_ir, 
 		if (Read<uint8_t>(ir, h) == 1) {
 			std::string tex_name;
 			Read(ir, h, tex_name);
+
 			uint32_t dummy_flags; // probably will be removed, serves no purpose since proper meta file support
 			Read(ir, h, dummy_flags);
 
-			if (do_not_load_resources) {
-				t.texture = resources.textures.Add(tex_name.c_str(), {});
-			} else {
-				auto ref = resources.textures.Has(tex_name.c_str());
-
-				if (ref != InvalidTextureRef) {
-					t.texture = ref;
-				} else {
-					const auto meta = LoadTextureMeta(deps_ir, deps_ip, tex_name);
-
-					if (queue_texture_loads)
-						t.texture = QueueLoadTexture(deps_ir, deps_ip, tex_name.c_str(), meta.flags, resources);
-					else
-						t.texture = LoadTexture(deps_ir, deps_ip, tex_name.c_str(), meta.flags, resources);
-				}
-			}
+			if (!tex_name.empty())
+				t.texture = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, tex_name.c_str(), resources, queue_texture_loads, do_not_load_resources);
 		}
 
 		t.uniform = BGFX_INVALID_HANDLE;
@@ -1478,7 +1603,69 @@ bgfx::VertexLayout VertexLayoutPosFloatNormUInt8TexCoord0UInt8() {
 }
 
 //
+size_t ProcessModelLoadQueue(PipelineResources &res, size_t limit) {
+	ProfilerPerfSection section("ProcessModelLoadQueue");
+
+	size_t processed = 0;
+
+	for (; limit > 0 && !res.model_loads.empty(); --limit) {
+		const auto &m = res.model_loads.front();
+
+		if (res.models.IsValidRef(m.ref)) {
+			auto &mdl = res.models.Get(m.ref);
+			const auto name = res.models.GetName(m.ref);
+			debug(format("Queued model load '%1'").arg(name));
+
+			ModelInfo info;
+			ScopedReadHandle h(m.ip, name.c_str(), false);
+			mdl = LoadModel(m.ir, h, name.c_str(), &info);
+			res.model_infos[m.ref.ref] = info;
+		}
+
+		res.model_loads.pop_front();
+
+		++processed;
+	}
+
+	return processed;
+}
+
+ModelRef QueueLoadModel(const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources) {
+	auto ref = resources.models.Has(name);
+	if (ref != InvalidModelRef)
+		return ref;
+
+	ref = resources.models.Add(name, {});
+	resources.model_loads.push_back({ir, ip, ref});
+	return ref;
+}
+
+ModelRef QueueLoadModelFromFile(const char *path, PipelineResources &resources) { return QueueLoadModel(g_file_reader, g_file_read_provider, path, resources); }
+
+ModelRef QueueLoadModelFromAssets(const char *name, PipelineResources &resources) {
+	return QueueLoadModel(g_assets_reader, g_assets_read_provider, name, resources);
+}
+
+ModelRef SkipLoadOrQueueModelLoad(const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load) {
+	if (do_not_load)
+		return resources.models.Add(path, {});
+
+	auto ref = resources.models.Has(path);
+
+	if (ref == InvalidModelRef) {
+		if (queue_load)
+			ref = QueueLoadModel(ir, ip, path, resources);
+		else
+			ref = LoadModel(ir, ip, path, resources);
+	}
+
+	return ref;
+}
+
+//
 Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *info) {
+	ProfilerPerfSection section("LoadModel", name);
+
 	const auto t = time_now();
 
 	if (!ir.is_valid(h)) {
@@ -1773,6 +1960,8 @@ void PipelineResources::DestroyAll() {
 
 	texture_loads.clear();
 	texture_infos.clear();
+
+	model_loads.clear();
 }
 
 //
@@ -2011,8 +2200,12 @@ MaterialRef LoadMaterialRefFromAssets(
 }
 
 //
-size_t ProcessTextureLoadQueue(PipelineResources &res) {
-	while (!res.texture_loads.empty()) {
+size_t ProcessTextureLoadQueue(PipelineResources &res, size_t limit) {
+	ProfilerPerfSection section("ProcessTextureLoadQueue");
+
+	size_t processed = 0;
+
+	for (; limit > 0 && !res.texture_loads.empty(); --limit) {
 		const auto &t = res.texture_loads.front();
 
 		if (res.textures.IsValidRef(t.ref)) {
@@ -2026,10 +2219,11 @@ size_t ProcessTextureLoadQueue(PipelineResources &res) {
 		}
 
 		res.texture_loads.pop_front();
-		break; // limit to 1 texture load per frame
+
+		++processed;
 	}
 
-	return res.texture_loads.size();
+	return processed;
 }
 
 TextureRef QueueLoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, PipelineResources &resources) {
@@ -2071,9 +2265,26 @@ TextureRef LoadTextureFromAssets(const char *name, uint64_t flags, PipelineResou
 }
 
 //
-uint32_t CaptureTexture(const PipelineResources &resources, const hg::TextureRef &t, Picture &pic) {
+uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t, Picture &pic) {
 	const auto ref = resources.textures.Get(t);
 	return bgfx::readTexture(ref.handle, pic.GetData());
+}
+
+//
+size_t ProcessLoadQueues(PipelineResources &res, size_t limit) {
+	ProfilerPerfSection section("ProcessLoadQueues");
+
+	size_t total = 0, processed;
+
+	processed = ProcessModelLoadQueue(res, limit);
+	limit -= processed;
+	total += processed;
+
+	processed = ProcessTextureLoadQueue(res, limit);
+	limit -= processed;
+	total += processed;
+
+	return total;
 }
 
 //
@@ -2462,6 +2673,8 @@ void RenderShutdown() {
 
 //
 bool RenderResetToWindow(Window *win, int &width, int &height, uint32_t reset_flags) {
+	ProfilerPerfSection section("RenderResetToWindow");
+
 	int new_width, new_height;
 	if (!GetWindowClientSize(win, new_width, new_height))
 		return false; // query failed...
@@ -2536,7 +2749,7 @@ static inline FrameBuffer CreateFrameBuffer(bgfx::TextureHandle color, bgfx::Tex
 	return {handle};
 }
 
-FrameBuffer CreateFrameBuffer(const hg::Texture &color, const hg::Texture &depth, const char *name) {
+FrameBuffer CreateFrameBuffer(const Texture &color, const Texture &depth, const char *name) {
 	return CreateFrameBuffer(color.handle, depth.handle, name, false);
 }
 
@@ -2575,7 +2788,6 @@ FrameBuffer CreateFrameBuffer(int width, int height, bgfx::TextureFormat::Enum c
 
 Texture GetColorTexture(FrameBuffer &frameBuffer) { return MakeTexture(bgfx::getTexture(frameBuffer.handle, 0)); }
 Texture GetDepthTexture(FrameBuffer &frameBuffer) { return MakeTexture(bgfx::getTexture(frameBuffer.handle, 1)); }
-
 
 void DestroyFrameBuffer(FrameBuffer &frameBuffer) { bgfx::destroy(frameBuffer.handle); }
 
@@ -2662,10 +2874,12 @@ Material CreateMaterial(PipelineProgramRef prg, const char *value_name_0, const 
 //
 
 bimg::ImageContainer *LoadImage(const Reader &ir, const ReadProvider &ip, const char *name) {
-	const auto data = hg::LoadData(ir, hg::ScopedReadHandle(ip, name));
-	if (data.GetSize() == 0) {
+	ProfilerPerfSection section("LoadImage", name);
+
+	const auto data = LoadData(ir, ScopedReadHandle(ip, name));
+	if (data.GetSize() == 0)
 		return nullptr;
-	}
+
 	return bimg::imageParse(&g_allocator, data.GetData(), uint32_t(data.GetSize()), bimg::TextureFormat::Count);
 }
 
@@ -2674,6 +2888,7 @@ bimg::ImageContainer *LoadImageFromFile(const char *name) { return LoadImage(g_f
 bimg::ImageContainer *LoadImageFromAssets(const char *name) { return LoadImage(g_assets_reader, g_assets_read_provider, name); }
 
 void UpdateTextureFromImage(Texture &tex, bimg::ImageContainer *img, bool auto_delete) {
+	ProfilerPerfSection section("UpdateTextureFromImage");
 	const bgfx::Memory *mem = bgfx::makeRef(
 		img->m_data, img->m_size, auto_delete ? [](void *ptr, void *user) { bimg::imageFree((bimg::ImageContainer *)user); } : (bgfx::ReleaseFn)0, img);
 	bgfx::updateTexture2D(tex.handle, 0, 0, 0, 0, img->m_width, img->m_height, mem);

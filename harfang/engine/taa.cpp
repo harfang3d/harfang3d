@@ -10,12 +10,14 @@
 
 namespace hg {
 
-bool IsValid(const TAA &taa) { return bgfx::isValid(taa.u_color) && bgfx::isValid(taa.u_prv_color) && bgfx::isValid(taa.u_attr0) && bgfx::isValid(taa.u_attr1); }
+bool IsValid(const TAA &taa) {
+	return bgfx::isValid(taa.u_color) && bgfx::isValid(taa.u_prv_color) && bgfx::isValid(taa.u_attr0) && bgfx::isValid(taa.u_attr1);
+}
 
 static TAA _CreateTAA(const Reader &ir, const ReadProvider &ip, const char *path) {
 	TAA taa;
 
-	taa.prg_taa = hg::LoadProgram(ir, ip, hg::format("%1/shader/taa").arg(path));
+	taa.prg_taa = LoadProgram(ir, ip, format("%1/shader/taa").arg(path));
 	taa.u_color = bgfx::createUniform("u_color", bgfx::UniformType::Sampler);
 	taa.u_prv_color = bgfx::createUniform("u_prv_color", bgfx::UniformType::Sampler);
 	taa.u_attr0 = bgfx::createUniform("u_attr0", bgfx::UniformType::Sampler);
@@ -47,7 +49,7 @@ void ApplyTAA(bgfx::ViewId &view_id, const iRect &rect, const Texture &color, co
 	CreateFullscreenQuad(idx, vtx);
 
 	float ortho[16];
-	memcpy(ortho, hg::to_bgfx(hg::Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
+	memcpy(ortho, to_bgfx(Compute2DProjectionMatrix(0.f, 100.f, 1.f, 1.f, false)).data(), sizeof(float[16]));
 
 	bgfx::setViewName(view_id, "TAA");
 	bgfx::setViewRect(view_id, rect.sx, rect.sy, GetWidth(rect), GetHeight(rect));

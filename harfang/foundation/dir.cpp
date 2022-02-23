@@ -29,7 +29,7 @@ std::vector<DirEntry> ListDir(const char *path, int mask) {
 #if _WIN32
 	WIN32_FIND_DATAW data;
 
-	auto find_path = utf8_to_utf16(hg::PathJoin({path, "*.*"}));
+	auto find_path = utf8_to_utf16(PathJoin({path, "*.*"}));
 	auto hFind = FindFirstFileW(reinterpret_cast<LPCWSTR>(find_path.data()), &data);
 	if (hFind == INVALID_HANDLE_VALUE)
 		return entries;
@@ -80,7 +80,7 @@ std::vector<DirEntry> ListDirRecursive(const char *path, int mask) {
 	std::vector<DirEntry> entries = ListDir(path, mask);
 #if _WIN32
 	WIN32_FIND_DATAW data;
-	auto find_path = utf8_to_utf16(hg::PathJoin({path, "*"}));
+	auto find_path = utf8_to_utf16(PathJoin({path, "*"}));
 	auto hFind = FindFirstFileW(reinterpret_cast<LPCWSTR>(find_path.data()), &data);
 	if (hFind == INVALID_HANDLE_VALUE)
 		return entries;
@@ -184,9 +184,16 @@ bool RmTree(const char *path) {
 }
 
 bool IsDir(const char *path) {
+#if WIN32
+	struct _stat info;
+	const auto path_utf16 = utf8_to_utf16(path);
+	if (_wstat(LPCWSTR(path_utf16.c_str()), &info) != 0)
+		return false;
+#else
 	struct stat info;
 	if (stat(path, &info) != 0)
 		return false;
+#endif
 
 	if (info.st_mode & S_IFDIR)
 		return true;
@@ -195,9 +202,8 @@ bool IsDir(const char *path) {
 
 char *MkTempDir(const char *tmplt) {
 	size_t len = strlen(tmplt);
-	if ((len < 6) || !ends_with(tmplt, "XXXXXX")) {
+	if ((len < 6) || !ends_with(tmplt, "XXXXXX"))
 		return nullptr;
-	}
 
 	char *path = strdup(tmplt);
 	char *suffix = path + len - 6;

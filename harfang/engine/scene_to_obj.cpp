@@ -15,7 +15,7 @@ struct IndexState {
 	size_t last_idx_nrm = 1;
 };
 
-std::string ExportNodeToOBJ(const Node &node, const std::string &model_dir, const hg::PipelineResources &resources, IndexState &idx) {
+std::string ExportNodeToOBJ(const Node &node, const std::string &model_dir, const PipelineResources &resources, IndexState &idx) {
 	std::string out = format("# Node '%1'\n").arg(node.GetName());
 
 	auto trs = node.GetTransform();
@@ -87,7 +87,7 @@ static std::vector<Node> ExpandInstanceNodes(const Scene &scene, const std::vect
 	return out;
 }
 
-std::string ExportNodesToOBJ(const Scene &scene, const std::vector<Node> &nodes_, const std::string &model_dir, const hg::PipelineResources &resources) {
+std::string ExportNodesToOBJ(const Scene &scene, const std::vector<Node> &nodes_, const std::string &model_dir, const PipelineResources &resources) {
 	std::string out;
 
 	const auto nodes = ExpandInstanceNodes(scene, nodes_);
@@ -104,7 +104,7 @@ std::string ExportNodesToOBJ(const Scene &scene, const std::vector<Node> &nodes_
 	return out;
 }
 
-std::string ExportSceneToOBJ(const Scene &scene, const std::string &model_dir, const hg::PipelineResources &resources) {
+std::string ExportSceneToOBJ(const Scene &scene, const std::string &model_dir, const PipelineResources &resources) {
 	return ExportNodesToOBJ(scene, scene.GetAllNodesWithComponent(NCI_Object), model_dir, resources);
 }
 

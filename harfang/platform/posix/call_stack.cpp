@@ -4,8 +4,8 @@
 #if !defined ANDROID && !defined EMSCRIPTEN
 #include <execinfo.h>
 #endif
-#include "platform/call_stack.h"
 #include "foundation/format.h"
+#include "platform/call_stack.h"
 
 namespace hg {
 
@@ -46,4 +46,3 @@ string to_string(const hg::CallStack &callstack) {
 }
 
 } // namespace std
-

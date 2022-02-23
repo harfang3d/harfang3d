@@ -22,7 +22,7 @@ template <> bool TestValueType<std::string>(const json &js) { return js.is_strin
 
 //
 template <typename T> bool GetJsonValueT(const json &js, const std::string &key, T &value) {
-	const auto elms = hg::split(key, "/");
+	const auto elms = split(key, "/");
 
 	const auto *c_js = &js;
 	for (const auto &elm : elms) {
@@ -46,7 +46,7 @@ bool GetJsonValue(const json &js, const std::string &key, std::string &value) { 
 
 //
 template <typename T> void SetJsonValueT(json &js, const std::string &key, const T &v) {
-	const auto elms = hg::split(key, "/");
+	const auto elms = split(key, "/");
 
 	auto *c_js = &js;
 	for (const auto &elm : elms) {

@@ -6,6 +6,37 @@
 
 using namespace hg;
 
+TEST(PathTools, CleanPath) { 
+	std::string out;
+
+	out = CleanPath("./first/second/third/");
+	EXPECT_EQ(out, "first/second/third");
+
+	out = CleanPath("../first/second/third/");
+	EXPECT_EQ(out, "../first/second/third");
+
+	out = CleanPath("./first/second/third/./fourth");
+	EXPECT_EQ(out, "first/second/third/fourth");
+
+	out = CleanPath("./first/../second/third/");
+	EXPECT_EQ(out, "second/third");
+
+	out = CleanPath("./first/second/third/../../fourth");
+	EXPECT_EQ(out, "first/fourth");
+
+	out = CleanPath("first/second/");
+	EXPECT_EQ(out, "first/second");
+
+	out = CleanPath("test/");
+	EXPECT_EQ(out, "test");
+
+	out = CleanPath("/test/");
+	EXPECT_EQ(out, "/test");
+
+	out = CleanPath("./test/");
+	EXPECT_EQ(out, "test");
+}
+
 TEST(PathTools, FilePathManipulation) {
 	std::string s("c:/unixlikepath/filename.exe");
 

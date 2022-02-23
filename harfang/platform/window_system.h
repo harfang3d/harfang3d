@@ -28,7 +28,7 @@ enum MonitorRotation : uint8_t {
 /// Monitor mode
 struct MonitorMode {
 	std::string name; ///< Formatted name "widthxheight frequencyHz"
-	hg::iRect rect; ///< Screen resolution in pixels.
+	iRect rect; ///< Screen resolution in pixels.
 	int frequency; ///< Frequency in Hz.
 	MonitorRotation rotation; ///< Screen orientation.
 	uint8_t supported_rotations; ///< List of supported screen rotations as a bit mask.
@@ -43,7 +43,7 @@ bool IsMonitorConnected(const Monitor *monitor);
 /// Return monitor name.
 std::string GetMonitorName(const Monitor *monitor);
 /// Return monitor size in millimeters.
-hg::iVec2 GetMonitorSizeMM(const Monitor *monitor);
+iVec2 GetMonitorSizeMM(const Monitor *monitor);
 /// Get the list of screen modes for a given monitor.
 bool GetMonitorModes(const Monitor *monitor, std::vector<MonitorMode> &modes);
 /// Get a list of monitors connected to the system.

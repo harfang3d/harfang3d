@@ -14,7 +14,11 @@
 namespace hg {
 
 void *GetFunctionPointer(const SharedLib &lib, const char *name) {
-	return dlsym(reinterpret_cast<void*>(lib), name);
+	void *f = dlsym(reinterpret_cast<void*>(lib), name);
+	if(!f) {
+		 error(format("GetFunctionPointer('%1') failed, reason: %2").arg(name).arg((const char*)dlerror()));
+	}
+	return f;
 }
 
 static std::string shared_library_path;

@@ -1,3 +1,57 @@
+# [3.2.0] - 2022-02-21
+
+This minor release brings several fixes, performance improvements and new features to the rendering, physics and audio APIs.
+
+### Source code maintenance
+- Cleanup sources, remove spurious hg namespace specifiers and run clang format on affected sources.
+- Updated the GLFW CMake to improve the resolution of the library path on Linux.
+- Updated ImGui to v1.87.
+
+### Engine
+- Implement model load queuing (see `ProcessModelLoadQueue`, `ProcessLoadQueues`, `LSSF_QueueTextureLoads`, `LSSF_QueueModelLoad`).
+- Support replay and streaming of OGG files (see `LoadOGGSoundFile`, `LoadOGGSoundAsset`, `StreamOGGFileStereo`, `StreamOGGAssetStereo`, `StreamOGGFileSpatialized`, `StreamOGGAssetSpatialized`).
+- Added a `Mat4` copy constructor.
+- Added missing declarations for `LoadImage*` functions.
+- Added a flag to prevent changing the current camera when loading a scene, if the current camera points to a valid node (see `LSSF_DoNotChangeCurrentCameraIfValid`).
+- Added an `is_file` field to the structure returned by `GetFileInfo`.
+- Simplify scene binary loader, removed versioning code:
+  - Removed unused members from the `RigidBody_` struct.
+  - Reduced memory footprint of `RigidBody_` to 6 bytes.
+- Performance improvements on multiple scene loading (through instances).
+- Added a profiling API (see `BeginProfilerSection`, `EndProfilerSection`, `EndProfilerFrame`, `CaptureProfilerFrame`, `PrintProfilerFrame`).
+- Added a Videostream plugin interface (see `MakeVideoStreamer`).
+- Fixed scene animation garbage collection.
+- Fixed a bug with Unicode support in assetc.
+- Fixed an issue with trailing slashes on Linux in the assetc command line.
+
+### Rendering
+
+ - Fixed an issue in the viewport computation when upscaling half buffers in the AAA rendering pipeline.
+ - Added a `z_thickness` param to the AAA rendering pipeline.
+ - Added a series of cubemap render functions.
+ - Implemented and documented [all supported pipeline program features](https://www.harfang3d.com/docs/3.2.0/man.pipelineshader/).
+
+### Physics
+
+- New functions to lock translations and rotations in a more consistent way with the Bullet API:
+  - `NodeSetLinearLockAxes`, `NodeSetAngularLockAxes` replaced by `NodeSetLinearFactor`, `NodeSetAngularFactor`.
+  - `NodeGetLinearLockAxes`, `NodeGetAngularLockAxes` replaced by `NodeGetLinearFactor`, `NodeGetAngularFactor`.
+- Added AddTorque/AddTorqueImpulse to physics API:
+  - `NodeAddTorque`, `NodeAddTorqueImpulse`
+- Simplified the physics collision/contact query code, unified collision query API for `NodeCollideWorld` and `StepSimulation` (see `CollectCollisionEvents`).
+- Implemented `NodeTeleport` in Bullet physics.
+- Improved the transform synchronization logic, set node world transform using the fast scene path (see `SyncTransformsFromScene`, `SyncTransformsToScene`).
+- Added proper motion interpolation in Bullet physics synchronize to scene.
+- Added missing functions to create all supported collision shape types.
+
+### Documentation
+
+- Added a missing reference to the requirements page in the main index.
+- Improved the `LoadSceneXXX` functions documentation.
+- Fixed both Lua and Python code snippets.
+- Improved the clarity of functions using bitflags by adding support for constants group in the documentation generator.
+- Update of ownership and views manual pages.
+
 # [3.1.1] - 2021-12-31
 
 This minor release brings several fixes, mainly in the Bullet Physics API.

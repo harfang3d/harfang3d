@@ -177,7 +177,7 @@ Transform Scene::CreateTransform(const Vec3 &pos, const Vec3 &rot, const Vec3 &s
 	return {scene_ref, transforms.add_ref({{pos, rot, scl}, parent})};
 }
 
-Transform Scene::CreateTransform(const hg::Mat4 &mtx, NodeRef parent) {
+Transform Scene::CreateTransform(const Mat4 &mtx, NodeRef parent) {
 	Vec3 pos, rot, scl;
 	Decompose(mtx, &pos, &rot, &scl);
 	return CreateTransform(pos, rot, scl);
@@ -207,8 +207,10 @@ void Scene::SetTransformWorldMatrix(ComponentRef ref, const Mat4 &world) {
 	if (auto trs = GetComponent_(transforms, ref))
 		if (ref.idx < transform_worlds.size()) {
 			transform_worlds[ref.idx] = world;
+
 			const auto parent_trs_ref = GetNodeComponentRef_<NCI_Transform>(trs->parent);
 			const auto local = IsValidTransformRef(parent_trs_ref) ? InverseFast(transform_worlds[parent_trs_ref.idx]) * world : world;
+
 			Decompose(local, &trs->TRS.pos, &trs->TRS.rot, &trs->TRS.scl);
 		}
 }

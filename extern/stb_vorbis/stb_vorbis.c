@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.21 - public domain
+// Ogg Vorbis audio decoder - v1.22 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -29,13 +29,14 @@
 //    Bernhard Wodo      Evan Balster        github:alxprd
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
 //    Phillip Bennefall  Rohit               Thiago Goulart
-//    github:manxorist   saga musix          github:infatum
+//    github:manxorist   Saga Musix          github:infatum
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
-//    AnthoFoxo
+//    AnthoFoxo          github:morlat       Gabriel Ravier
 //
 // Partial history:
+//    1.22    - 2021-07-11 - various small fixes
 //    1.21    - 2021-07-02 - fix bug for files with no comments
 //    1.20    - 2020-07-11 - several small fixes
 //    1.19    - 2020-02-05 - warnings
@@ -222,6 +223,12 @@ extern int stb_vorbis_decode_frame_pushdata(
 // channel. In other words, (*output)[0][0] contains the first sample from
 // the first channel, and (*output)[1][0] contains the first sample from
 // the second channel.
+//
+// *output points into stb_vorbis's internal output buffer storage; these
+// buffers are owned by stb_vorbis and application code should not free
+// them or modify their contents. They are transient and will be overwritten
+// once you ask for more data to get decoded, so be sure to grab any data
+// you need before then.
 
 extern void stb_vorbis_flush_pushdata(stb_vorbis *f);
 // inform stb_vorbis that your next datablock will not be contiguous with
@@ -287,6 +294,22 @@ extern stb_vorbis * stb_vorbis_open_file_section(FILE *f, int close_handle_on_cl
 // this stream; if you seek it in between calls to stb_vorbis, it will become
 // confused.
 #endif
+
+enum STBVorbisIOSeekMode {
+   VORBIS_IO_Start = 0,
+   VORBIS_IO_Current,
+   VORBIS_IO_End 
+};
+
+typedef struct {
+   void (*close) (void *user);
+   int  (*read)  (void *user, char *data, int size);
+   int  (*seek)  (void *user, int offset, enum STBVorbisIOSeekMode mode);
+   int  (*tell)  (void *user);
+   int  (*eof)   (void *user);
+} stbv_io_callbacks;
+
+extern stb_vorbis *stb_vorbis_open_from_callbacks(stbv_io_callbacks const *clbk, void *user, int *error, const stb_vorbis_alloc *alloc_buffer);
 
 extern int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number);
 extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
@@ -581,7 +604,7 @@ enum STBVorbisError
    #if defined(_MSC_VER) || defined(__MINGW32__)
       #include <malloc.h>
    #endif
-   #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__) || defined(__NEWLIB__)
+   #if defined(__linux__) || defined(__linux) || defined(__sun__) || defined(__EMSCRIPTEN__) || defined(__NEWLIB__)
       #include <alloca.h>
    #endif
 #else // STB_VORBIS_NO_CRT
@@ -647,6 +670,12 @@ typedef   signed int    int32;
 #endif
 
 typedef float codetype;
+
+#ifdef _MSC_VER
+#define STBV_NOTUSED(v)  (void)(v)
+#else
+#define STBV_NOTUSED(v)  (void)sizeof(v)
+#endif
 
 // @NOTE
 //
@@ -784,11 +813,9 @@ struct stb_vorbis
    char **comment_list;
 
   // input config
-#ifndef STB_VORBIS_NO_STDIO
-   FILE *f;
-   uint32 f_start;
-   int close_on_free;
-#endif
+   stbv_io_callbacks io;
+   void *io_user_data;
+   uint32 io_start;
 
    uint8 *stream;
    uint8 *stream_start;
@@ -1048,7 +1075,7 @@ static float float32_unpack(uint32 x)
    uint32 sign = x & 0x80000000;
    uint32 exp = (x & 0x7fe00000) >> 21;
    double res = sign ? -(double)mantissa : (double)mantissa;
-   return (float) ldexp((float)res, exp-788);
+   return (float) ldexp((float)res, (int)exp-788);
 }
 
 
@@ -1079,6 +1106,7 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
    // find the first entry
    for (k=0; k < n; ++k) if (len[k] < NO_CODE) break;
    if (k == n) { assert(c->sorted_entries == 0); return TRUE; }
+   assert(len[k] < 32); // no error return required, code reading lens checks this
    // add to the list
    add_entry(c, 0, k, m++, len[k], values);
    // add all available leaves
@@ -1092,6 +1120,7 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
       uint32 res;
       int z = len[i], y;
       if (z == NO_CODE) continue;
+      assert(z < 32); // no error return required, code reading lens checks this
       // find lowest available leaf (should always be earliest,
       // which is what the specification calls for)
       // note that this property, and the fact we can never have
@@ -1101,12 +1130,10 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
       while (z > 0 && !available[z]) --z;
       if (z == 0) { return FALSE; }
       res = available[z];
-      assert(z >= 0 && z < 32);
       available[z] = 0;
       add_entry(c, bit_reverse(res), i, m++, len[i], values);
       // propagate availability up the tree
       if (z != len[i]) {
-         assert(len[i] >= 0 && len[i] < 32);
          for (y=len[i]; y > z; --y) {
             assert(available[y] == 0);
             available[y] = res + (1 << (32-y));
@@ -1314,12 +1341,8 @@ static int STBV_CDECL point_compare(const void *p, const void *q)
 //
 /////////////////////// END LEAF SETUP FUNCTIONS //////////////////////////
 
-
-#if defined(STB_VORBIS_NO_STDIO)
-   #define USE_MEMORY(z)    TRUE
-#else
-   #define USE_MEMORY(z)    ((z)->stream)
-#endif
+#define USE_IO(z)        ((z)->io_user_data)
+#define USE_MEMORY(z)    ((z)->stream)
 
 static uint8 get8(vorb *z)
 {
@@ -1328,13 +1351,15 @@ static uint8 get8(vorb *z)
       return *z->stream++;
    }
 
-   #ifndef STB_VORBIS_NO_STDIO
-   {
-   int c = fgetc(z->f);
-   if (c == EOF) { z->eof = TRUE; return 0; }
-   return c;
+   if(USE_IO(z)) {
+      uint8 c;
+      if(z->io.read(z->io_user_data, (char*)&c, 1) == 1) {
+         return c;
+      }
    }
-   #endif
+
+   z->eof = TRUE;
+   return 0;
 }
 
 static uint32 get32(vorb *f)
@@ -1356,14 +1381,14 @@ static int getn(vorb *z, uint8 *data, int n)
       return 1;
    }
 
-   #ifndef STB_VORBIS_NO_STDIO
-   if (fread(data, n, 1, z->f) == 1)
-      return 1;
-   else {
-      z->eof = 1;
-      return 0;
+   if (USE_IO(z)) {
+      if (z->io.read(z->io_user_data, (char*)data, n) == n) {
+         return 1;
+      }
    }
-   #endif
+   
+   z->eof = TRUE;
+   return 0;
 }
 
 static void skip(vorb *z, int n)
@@ -1373,12 +1398,11 @@ static void skip(vorb *z, int n)
       if (z->stream >= z->stream_end) z->eof = 1;
       return;
    }
-   #ifndef STB_VORBIS_NO_STDIO
-   {
-      long x = ftell(z->f);
-      fseek(z->f, x+n, SEEK_SET);
+
+   if (USE_IO(z)) {
+      long x = z->io.tell(z->io_user_data);
+      z->io.seek(z->io_user_data, x+n, VORBIS_IO_Start);
    }
-   #endif
 }
 
 static int set_file_offset(stb_vorbis *f, unsigned int loc)
@@ -1397,19 +1421,20 @@ static int set_file_offset(stb_vorbis *f, unsigned int loc)
          return 1;
       }
    }
-   #ifndef STB_VORBIS_NO_STDIO
-   if (loc + f->f_start < loc || loc >= 0x80000000) {
-      loc = 0x7fffffff;
+
+   if (USE_IO(f)) {
+      if (loc + f->io_start < loc || loc >= 0x80000000) {
+	     loc = 0x7fffffff;
+		 f->eof = 1;
+	  } else {
+		 loc += f->io_start;
+	  }
+	  if (!f->io.seek(f->io_user_data, loc, VORBIS_IO_Start))
+         return 1;
       f->eof = 1;
-   } else {
-      loc += f->f_start;
+	  f->io.seek(f->io_user_data, f->io_start, VORBIS_IO_End);
    }
-   if (!fseek(f->f, loc, SEEK_SET))
-      return 1;
-   f->eof = 1;
-   fseek(f->f, f->f_start, SEEK_END);
    return 0;
-   #endif
 }
 
 
@@ -2579,34 +2604,33 @@ static void imdct_step3_inner_s_loop_ld654(int n, float *e, int i_off, float *A,
 
    while (z > base) {
       float k00,k11;
+      float l00,l11;
 
-      k00   = z[-0] - z[-8];
-      k11   = z[-1] - z[-9];
-      z[-0] = z[-0] + z[-8];
-      z[-1] = z[-1] + z[-9];
-      z[-8] =  k00;
-      z[-9] =  k11 ;
+      k00    = z[-0] - z[ -8];
+      k11    = z[-1] - z[ -9];
+      l00    = z[-2] - z[-10];
+      l11    = z[-3] - z[-11];
+      z[ -0] = z[-0] + z[ -8];
+      z[ -1] = z[-1] + z[ -9];
+      z[ -2] = z[-2] + z[-10];
+      z[ -3] = z[-3] + z[-11];
+      z[ -8] = k00;
+      z[ -9] = k11;
+      z[-10] = (l00+l11) * A2;
+      z[-11] = (l11-l00) * A2;
 
-      k00    = z[ -2] - z[-10];
-      k11    = z[ -3] - z[-11];
-      z[ -2] = z[ -2] + z[-10];
-      z[ -3] = z[ -3] + z[-11];
-      z[-10] = (k00+k11) * A2;
-      z[-11] = (k11-k00) * A2;
-
-      k00    = z[-12] - z[ -4];  // reverse to avoid a unary negation
+      k00    = z[ -4] - z[-12];
       k11    = z[ -5] - z[-13];
+      l00    = z[ -6] - z[-14];
+      l11    = z[ -7] - z[-15];
       z[ -4] = z[ -4] + z[-12];
       z[ -5] = z[ -5] + z[-13];
-      z[-12] = k11;
-      z[-13] = k00;
-
-      k00    = z[-14] - z[ -6];  // reverse to avoid a unary negation
-      k11    = z[ -7] - z[-15];
       z[ -6] = z[ -6] + z[-14];
       z[ -7] = z[ -7] + z[-15];
-      z[-14] = (k00+k11) * A2;
-      z[-15] = (k00-k11) * A2;
+      z[-12] = k11;
+      z[-13] = -k00;
+      z[-14] = (l11-l00) * A2;
+      z[-15] = (l00+l11) * -A2;
 
       iter_54(z);
       iter_54(z-8);
@@ -3071,6 +3095,7 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
       for (q=1; q < g->values; ++q) {
          j = g->sorted_order[q];
          #ifndef STB_VORBIS_NO_DEFER_FLOOR
+         STBV_NOTUSED(step2_flag);
          if (finalY[j] >= 0)
          #else
          if (step2_flag[j])
@@ -3173,6 +3198,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 
 // WINDOWING
 
+   STBV_NOTUSED(left_end);
    n = f->blocksize[m->blockflag];
    map = &f->mapping[m->mapping];
 
@@ -3370,7 +3396,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
       // this isn't to spec, but spec would require us to read ahead
       // and decode the size of all current frames--could be done,
       // but presumably it's not a commonly used feature
-      f->current_loc = -n2; // start of first frame is positioned for discard
+      f->current_loc = 0u - n2; // start of first frame is positioned for discard (NB this is an intentional unsigned overflow/wrap-around)
       // we might have to discard samples "from" the next frame too,
       // if we're lapping a large block then a small at the start?
       f->discard_samples_deferred = n - right_end;
@@ -3871,8 +3897,7 @@ static int start_decoder(vorb *f)
                unsigned int div=1;
                for (k=0; k < c->dimensions; ++k) {
                   int off = (z / div) % c->lookup_values;
-                  float val = mults[off];
-                  val = mults[off]*c->delta_value + c->minimum_value + last;
+                  float val = mults[off]*c->delta_value + c->minimum_value + last;
                   c->multiplicands[j*c->dimensions + k] = val;
                   if (c->sequence_p)
                      last = val;
@@ -3955,7 +3980,7 @@ static int start_decoder(vorb *f)
                if (g->class_masterbooks[j] >= f->codebook_count) return error(f, VORBIS_invalid_setup);
             }
             for (k=0; k < 1 << g->class_subclasses[j]; ++k) {
-               g->subclass_books[j][k] = get_bits(f,8)-1;
+               g->subclass_books[j][k] = (int16)get_bits(f,8)-1;
                if (g->subclass_books[j][k] >= f->codebook_count) return error(f, VORBIS_invalid_setup);
             }
          }
@@ -4250,9 +4275,7 @@ static void vorbis_deinit(stb_vorbis *p)
       setup_free(p, p->window[i]);
       setup_free(p, p->bit_reverse[i]);
    }
-   #ifndef STB_VORBIS_NO_STDIO
-   if (p->close_on_free) fclose(p->f);
-   #endif
+   if (p->io.close) p->io.close(p->io_user_data);
 }
 
 void stb_vorbis_close(stb_vorbis *p)
@@ -4275,10 +4298,7 @@ static void vorbis_init(stb_vorbis *p, const stb_vorbis_alloc *z)
    p->stream = NULL;
    p->codebooks = NULL;
    p->page_crc_tests = -1;
-   #ifndef STB_VORBIS_NO_STDIO
-   p->close_on_free = FALSE;
-   p->f = NULL;
-   #endif
+   p->io_user_data = NULL;
 }
 
 int stb_vorbis_get_sample_offset(stb_vorbis *f)
@@ -4513,6 +4533,7 @@ stb_vorbis *stb_vorbis_open_pushdata(
          *error = VORBIS_need_more_data;
       else
          *error = p.error;
+      vorbis_deinit(&p);
       return NULL;
    }
    f = vorbis_alloc(&p);
@@ -4534,9 +4555,9 @@ unsigned int stb_vorbis_get_file_offset(stb_vorbis *f)
    if (f->push_mode) return 0;
    #endif
    if (USE_MEMORY(f)) return (unsigned int) (f->stream - f->stream_start);
-   #ifndef STB_VORBIS_NO_STDIO
-   return (unsigned int) (ftell(f->f) - f->f_start);
-   #endif
+   if (USE_IO(f))
+      return (unsigned int)(f->io.tell(f->io_user_data) - f->io_start);
+   return 0;
 }
 
 #ifndef STB_VORBIS_NO_PULLDATA_API
@@ -4570,7 +4591,7 @@ static uint32 vorbis_find_page(stb_vorbis *f, uint32 *end, uint32 *last)
                header[i] = get8(f);
             if (f->eof) return 0;
             if (header[4] != 0) goto invalid;
-            goal = header[22] + (header[23] << 8) + (header[24]<<16) + (header[25]<<24);
+            goal = header[22] + (header[23] << 8) + (header[24]<<16) + ((uint32)header[25]<<24);
             for (i=22; i < 26; ++i)
                header[i] = 0;
             crc = 0;
@@ -4974,7 +4995,7 @@ unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f)
             // set. whoops!
             break;
          }
-         previous_safe = last_page_loc+1;
+         //previous_safe = last_page_loc+1; // NOTE: not used after this point, but note for debugging
          last_page_loc = stb_vorbis_get_file_offset(f);
       }
 
@@ -5034,15 +5055,41 @@ int stb_vorbis_get_frame_float(stb_vorbis *f, int *channels, float ***output)
 }
 
 #ifndef STB_VORBIS_NO_STDIO
+static void stdio_close(void *user) { fclose((FILE *)user); }
+static int stdio_read(void *user, char *data, int size) { return fread(data, 1, size, (FILE*)user); }
+static int stdio_seek(void *user, int offset, enum STBVorbisIOSeekMode mode) {
+	int whence = SEEK_SET;
+	switch (mode) {
+		case VORBIS_IO_Start:
+			whence = SEEK_SET;
+			break;
+		case VORBIS_IO_Current:
+			whence = SEEK_CUR;
+			break;
+		case VORBIS_IO_End:
+			whence = SEEK_END;
+			break;
+	}
+	return fseek((FILE*)user, offset, whence);
+}
+static int stdio_tell(void *user) { return (int)ftell((FILE*)user); }
+static int stdio_eof(void *user) { return feof((FILE*)user); }
 
 stb_vorbis * stb_vorbis_open_file_section(FILE *file, int close_on_free, int *error, const stb_vorbis_alloc *alloc, unsigned int length)
 {
    stb_vorbis *f, p;
    vorbis_init(&p, alloc);
-   p.f = file;
-   p.f_start = (uint32) ftell(file);
+   p.io_user_data = file;
+
+   p.io.close = (close_on_free) ? stdio_close : NULL;
+   p.io.read  = stdio_read;
+   p.io.seek  = stdio_seek;
+   p.io.tell = stdio_tell;
+   p.io.eof  = stdio_eof;
+   
+   p.io_start = (uint32) ftell(file);
    p.stream_len   = length;
-   p.close_on_free = close_on_free;
+    
    if (start_decoder(&p)) {
       f = vorbis_alloc(&p);
       if (f) {
@@ -5082,10 +5129,41 @@ stb_vorbis * stb_vorbis_open_filename(const char *filename, int *error, const st
 }
 #endif // STB_VORBIS_NO_STDIO
 
+stb_vorbis* stb_vorbis_open_from_callbacks(stbv_io_callbacks const* clbk, void* user, int* error, const stb_vorbis_alloc* alloc) {
+	stb_vorbis *f, p;
+	vorbis_init(&p, alloc);
+	
+    p.io = *clbk;
+    p.io_user_data = user;
+
+    unsigned int start = (unsigned int)p.io.tell(user);
+	p.io.seek(user, 0, VORBIS_IO_End);
+	unsigned int len = (unsigned int)(p.io.tell(user) - start);
+	p.io.seek(user, 0, VORBIS_IO_Start);
+
+	p.io_start = start;
+	p.stream_len = len;
+	if (start_decoder(&p)) {
+		f = vorbis_alloc(&p);
+		if (f) {
+			*f = p;
+			vorbis_pump_first_frame(f);
+			return f;
+		}
+	}
+	if (error)
+		*error = p.error;
+	vorbis_deinit(&p);
+	return NULL;
+}
+
 stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *error, const stb_vorbis_alloc *alloc)
 {
    stb_vorbis *f, p;
-   if (data == NULL) return NULL;
+   if (!data) {
+      if (error) *error = VORBIS_unexpected_eof;
+      return NULL;
+   }
    vorbis_init(&p, alloc);
    p.stream = (uint8 *) data;
    p.stream_end = (uint8 *) data + len;
@@ -5160,11 +5238,11 @@ static void copy_samples(short *dest, float *src, int len)
 
 static void compute_samples(int mask, short *output, int num_c, float **data, int d_offset, int len)
 {
-   #define BUFFER_SIZE  32
-   float buffer[BUFFER_SIZE];
-   int i,j,o,n = BUFFER_SIZE;
+   #define STB_BUFFER_SIZE  32
+   float buffer[STB_BUFFER_SIZE];
+   int i,j,o,n = STB_BUFFER_SIZE;
    check_endianness();
-   for (o = 0; o < len; o += BUFFER_SIZE) {
+   for (o = 0; o < len; o += STB_BUFFER_SIZE) {
       memset(buffer, 0, sizeof(buffer));
       if (o + n > len) n = len - o;
       for (j=0; j < num_c; ++j) {
@@ -5181,16 +5259,17 @@ static void compute_samples(int mask, short *output, int num_c, float **data, in
          output[o+i] = v;
       }
    }
+   #undef STB_BUFFER_SIZE
 }
 
 static void compute_stereo_samples(short *output, int num_c, float **data, int d_offset, int len)
 {
-   #define BUFFER_SIZE  32
-   float buffer[BUFFER_SIZE];
-   int i,j,o,n = BUFFER_SIZE >> 1;
+   #define STB_BUFFER_SIZE  32
+   float buffer[STB_BUFFER_SIZE];
+   int i,j,o,n = STB_BUFFER_SIZE >> 1;
    // o is the offset in the source data
    check_endianness();
-   for (o = 0; o < len; o += BUFFER_SIZE >> 1) {
+   for (o = 0; o < len; o += STB_BUFFER_SIZE >> 1) {
       // o2 is the offset in the output data
       int o2 = o << 1;
       memset(buffer, 0, sizeof(buffer));
@@ -5220,6 +5299,7 @@ static void compute_stereo_samples(short *output, int num_c, float **data, int d
          output[o2+i] = v;
       }
    }
+   #undef STB_BUFFER_SIZE
 }
 
 static void convert_samples_short(int buf_c, short **buffer, int b_offset, int data_c, float **data, int d_offset, int samples)
@@ -5292,8 +5372,6 @@ int stb_vorbis_get_samples_short_interleaved(stb_vorbis *f, int channels, short 
    float **outputs;
    int len = num_shorts / channels;
    int n=0;
-   int z = f->channels;
-   if (z > channels) z = channels;
    while (n < len) {
       int k = f->channel_buffer_end - f->channel_buffer_start;
       if (n+k >= len) k = len - n;
@@ -5312,8 +5390,6 @@ int stb_vorbis_get_samples_short(stb_vorbis *f, int channels, short **buffer, in
 {
    float **outputs;
    int n=0;
-   int z = f->channels;
-   if (z > channels) z = channels;
    while (n < len) {
       int k = f->channel_buffer_end - f->channel_buffer_start;
       if (n+k >= len) k = len - n;

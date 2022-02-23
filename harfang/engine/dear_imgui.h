@@ -90,9 +90,11 @@ void AddImageQuad(ImDrawList *draw_list, const hg::Texture &tex, const ImVec2 &a
 	const ImVec2 &uv_a = ImVec2(0, 0), const ImVec2 &uv_b = ImVec2(1, 0), const ImVec2 &uv_c = ImVec2(1, 1), const ImVec2 &uv_d = ImVec2(0, 1),
 	ImU32 col = IM_COL32_WHITE);
 void AddImageRounded(ImDrawList *draw_list, const hg::Texture &tex, uint8_t _flags, uint8_t _mip, const ImVec2 &a, const ImVec2 &b, const ImVec2 &uv_a,
-	const ImVec2 &uv_b, ImU32 col, float rounding, int rounding_corners = ImDrawCornerFlags_All);
+	const ImVec2 &uv_b, ImU32 col, float rounding, int rounding_corners = ImDrawFlags_RoundCornersAll);
 void AddImageRounded(ImDrawList *draw_list, const hg::Texture &tex, const ImVec2 &a, const ImVec2 &b, const ImVec2 &uv_a, const ImVec2 &uv_b, ImU32 col,
-	float rounding, int rounding_corners = ImDrawCornerFlags_All);
+	float rounding, int rounding_corners = ImDrawFlags_RoundCornersAll);
+
+static inline float GetWindowContentRegionWidth() { return GetWindowContentRegionMax().x - GetWindowContentRegionMin().x; }
 
 } // namespace ImGui
 

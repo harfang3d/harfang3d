@@ -41,8 +41,12 @@ using ProfilerSectionIndex = size_t;
 ProfilerSectionIndex BeginProfilerSection(const std::string &name, const std::string &section_details = {});
 void EndProfilerSection(ProfilerSectionIndex section_index);
 
-void EndProfilerFrame();
-const ProfilerFrame &GetLastFrameProfile();
+/// capture and end the current profiler frame
+ProfilerFrame EndProfilerFrame();
+/// capture current profiler frame without ending it
+ProfilerFrame CaptureProfilerFrame();
+
+void PrintProfilerFrame(const ProfilerFrame &frame);
 
 //
 class ProfilerPerfSection {

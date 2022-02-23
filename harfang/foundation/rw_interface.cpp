@@ -45,7 +45,12 @@ bool SkipString(const Reader &i, const Handle &h) {
 }
 
 //
+size_t Tell(const Reader &i, const Handle &h) { return i.tell(h); }
+size_t Tell(const Writer &i, const Handle &h) { return i.tell(h); }
+
+//
 bool Seek(const Reader &i, const Handle &h, ptrdiff_t offset, SeekMode mode) { return i.seek(h, offset, mode); }
+bool Seek(const Writer &i, const Handle &h, ptrdiff_t offset, SeekMode mode) { return i.seek(h, offset, mode); }
 
 //
 Data LoadData(const Reader &i, const Handle &h) {

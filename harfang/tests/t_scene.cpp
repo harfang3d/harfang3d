@@ -269,6 +269,49 @@ TEST(Scene, LoadSaveBench) {
 */
 
 //
+#if 0
+TEST(Scene, LoadAsync) {
+	InputInit();
+
+	auto window = NewWindow(1920, 1080);
+	EXPECT_TRUE(RenderInit(window));
+	bgfx::reset(1920, 1080, BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8);
+
+	//
+	EXPECT_TRUE(AddAssetsFolder("D:/assemble-demo-assets/cyber_city/assets"));
+
+	{
+		PipelineResources resources;
+
+		Scene scene;
+		LoadSceneContext ctx;
+
+		const auto now = time_now();
+		EXPECT_TRUE(LoadSceneFromAssets("preview_5.scn", scene, resources, GetForwardPipelineInfo(), ctx, LSSF_All | LSSF_QueueResourceLoads));
+		std::cout << "Load scenes: " << time_to_ms(time_now() - now) << "ms" << std::endl;
+
+		{
+			auto now = time_now();
+			while (ProcessLoadQueues(resources) > 0) {
+				const auto _now = time_now();
+				std::cout << "Process load queues: " << time_to_ms(_now - now) << "ms" << std::endl;
+				now = _now;
+				bgfx::frame();
+				UpdateWindow(window);
+			}
+		}
+
+		resources.DestroyAll();
+	}
+
+	bgfx::frame();
+
+	RenderShutdown();
+	InputShutdown();
+	DestroyWindow(window);
+}
+#endif
+
 TEST(Scene, LoadSaveEmptyJson) {
 	{
 		PipelineResources resources;
@@ -636,7 +679,7 @@ TEST(Scene, PhysicKinematicRigidBodyNoFreefall) {
 	for (int i = 0; i < 16; ++i) {
 		scene.ReadyWorldMatrices();
 		physics.StepSimulation(dt);
-		physics.SyncBodiesFromScene(scene);
+		physics.SyncTransformsToScene(scene);
 	}
 
 	EXPECT_EQ(GetT(sphere.GetTransform().GetWorld()).y, 0.f);
@@ -655,9 +698,9 @@ TEST(Scene, PhysicDynamicVsStaticRigidBodyCollisionCallback) {
 	size_t collision_count = 0;
 	for (int i = 0; i < 256; ++i) {
 		physics.StepSimulation(dt);
-		NodeNodeContacts node_node_contacts;
-		physics.CollectCollisionEvents(scene, node_node_contacts);
-		collision_count += node_node_contacts.size();
+		NodePairContacts contacts;
+		physics.CollectCollisionEvents(scene, contacts);
+		collision_count += contacts.size();
 	}
 
 	EXPECT_GT(collision_count, 0);
@@ -725,7 +768,7 @@ TEST(Scene, PhysicRaycastAllHits) {
 				found++;
 			}
 		}
-		EXPECT_EQ(found, j+1);
+		EXPECT_EQ(found, j + 1);
 	}
 }
 

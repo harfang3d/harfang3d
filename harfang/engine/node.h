@@ -167,7 +167,7 @@ struct Light { // 16B on 64 bit
 };
 
 //
-enum RigidBodyType : uint8_t { RBT_Dynamic, RBT_Kinematic, RBT_Static };
+enum RigidBodyType : uint8_t { RBT_Dynamic, RBT_Kinematic, RBT_Static, RBT_Last };
 
 struct RigidBody { // 16B on 64 bit
 	bool IsValid() const;
@@ -195,7 +195,7 @@ struct RigidBody { // 16B on 64 bit
 };
 
 //
-enum CollisionType : uint8_t { CT_Sphere, CT_Cube, CT_Cone, CT_Capsule, CT_Cylinder, CT_Mesh, CT_MeshConvex };
+enum CollisionType : uint8_t { CT_Sphere, CT_Cube, CT_Cone, CT_Capsule, CT_Cylinder, CT_Mesh, CT_MeshConvex, CT_Last };
 
 struct Collision { // 16B on 64 bit
 	bool IsValid() const;
@@ -369,6 +369,6 @@ struct Node { // 16B on 64 bit
 static const Node NullNode;
 
 //
-bool GetNodesMinMax(const std::vector<hg::Node> &nodes, const PipelineResources &resources, MinMax &minmax);
+bool GetNodesMinMax(const std::vector<Node> &nodes, const PipelineResources &resources, MinMax &minmax);
 
 } // namespace hg

@@ -171,6 +171,8 @@ def gather_uid_function_links(uid):
 		if fn.attrib['uid'] != uid:
 			if fn.attrib['returns'] == uid:
 				links.append('[%s]' % fn.attrib['uid'])
+			elif 'returns_constants_group' in fn.attrib and fn.attrib['returns_constants_group'] == uid:
+				links.append('[%s]' % fn.attrib['uid'])
 			else:
 				for parm in fn:
 					if (parm.attrib['type'] == uid) or ('constants_group' in parm.attrib and parm.attrib['constants_group'] == uid):
@@ -248,6 +250,7 @@ def make_api_glossary(tags):
 
 
 def prepare_proto(proto, lang):
+	#
 	out_parms = []
 	for parm in proto:
 		if parm.attrib['name'].startswith('OUTPUT'):  # output parameter
@@ -259,22 +262,42 @@ def prepare_proto(proto, lang):
 		if len(out_parms) == 0:
 			rvals.append('[void]')
 	else:
-		rvals.append('[%s]' % proto.attrib['returns'])
+		def get_parm_link(parm):
+			if 'returns_constants_group' in parm.attrib:
+				cg = parm.attrib['returns_constants_group']
+
+				for e in constants:
+					if e.attrib['name'] == cg:
+						return '[%s]' % cg
+
+			return '[%s]' % parm.attrib['returns']
+
+		rvals.append(get_parm_link(proto))
+
+	#
+	def get_parm_link(parm):
+		if 'constants_group' in parm.attrib:
+			cg = parm.attrib['constants_group']
+
+			for e in constants:
+				if e.attrib['name'] == cg:
+					return '[%s]' % cg
+
+		return '[%s]' % parm.attrib['type']
 
 	for out_parm in out_parms:
-		rvals.append('[%s]' % out_parm.attrib['type'])
+		rvals.append(get_parm_link(out_parm))
 
 	rval = ', '.join(rvals)
 
-	#
 	if lang == 'cpython':
-		args = ['_%s:_ [%s]' % (parm.attrib['name'], parm.attrib['type']) for parm in proto if not parm.attrib['name'].startswith('OUTPUT')]
+		_args = ['_%s:_ %s' % (parm.attrib['name'], get_parm_link(parm)) for parm in proto if not parm.attrib['name'].startswith('OUTPUT')]
 	else:
-		args = ['[%s] _%s_' % (parm.attrib['type'], parm.attrib['name']) for parm in proto if not parm.attrib['name'].startswith('OUTPUT')]
+		_args = ['%s _%s_' % (get_parm_link(parm), parm.attrib['name']) for parm in proto if not parm.attrib['name'].startswith('OUTPUT')]
 
-	args = ', '.join(args) if len(args) >  0 else ''
+	_args = ', '.join(_args) if len(_args) >  0 else ''
 
-	return rval, args
+	return rval, _args
 
 def generate_api_classes_page_content(lang):
 	out = '''\
@@ -473,6 +496,7 @@ toc: true
 
 			# processed content
 			md_lines = process_lines_links('cpython', man_page['lines'])
+			md_lines = [line.replace('${HG_VERSION}', args.version) for line in md_lines]
 			md.writelines(md_lines)
 
 		weight = weight + 10

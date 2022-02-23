@@ -48,8 +48,8 @@ install(TARGETS libluadll
 	COMPONENT go
 )
 
-if(WIN32)
-	install(TARGETS glfw RUNTIME DESTINATION hg_go COMPONENT go)
+if(HG_USE_GLFW)
+	install(FILES $<TARGET_FILE:glfw> DESTINATION hg_go COMPONENT go)
 endif()
 
 if(HG_ENABLE_OPENVR_API)

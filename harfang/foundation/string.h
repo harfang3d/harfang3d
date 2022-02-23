@@ -118,6 +118,7 @@ std::string utf32_to_utf8(const std::u32string &str);
 std::u32string utf8_to_utf32(const std::string &str);
 
 std::string wchar_to_utf8(const std::wstring &str);
+std::wstring utf8_to_wchar(const std::string &str);
 
 std::wstring ansi_to_wchar(const std::string &str);
 std::string ansi_to_utf8(const std::string &str);

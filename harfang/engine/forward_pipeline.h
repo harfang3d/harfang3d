@@ -39,13 +39,13 @@ struct ForwardPipelineLight { // 112B
 	float shadow_bias;
 };
 
-ForwardPipelineLight MakeForwardPipelinePointLight(const hg::Mat4 &world, const hg::Color &diffuse, const hg::Color &specular, float radius = 0.f,
-	float priority = 0.f, ForwardPipelineShadowType shadow_type = FPST_None, float shadow_bias = default_shadow_bias);
-ForwardPipelineLight MakeForwardPipelineSpotLight(const hg::Mat4 &world, const hg::Color &diffuse, const hg::Color &specular, float radius = 0.f,
-	float inner_angle = hg::Deg(40.f), float outer_angle = hg::Deg(45.f), float priority = 0.f, ForwardPipelineShadowType shadow_type = FPST_None,
+ForwardPipelineLight MakeForwardPipelinePointLight(const Mat4 &world, const Color &diffuse, const Color &specular, float radius = 0.f, float priority = 0.f,
+	ForwardPipelineShadowType shadow_type = FPST_None, float shadow_bias = default_shadow_bias);
+ForwardPipelineLight MakeForwardPipelineSpotLight(const Mat4 &world, const Color &diffuse, const Color &specular, float radius = 0.f,
+	float inner_angle = Deg(40.f), float outer_angle = Deg(45.f), float priority = 0.f, ForwardPipelineShadowType shadow_type = FPST_None,
 	float shadow_bias = default_shadow_bias);
-ForwardPipelineLight MakeForwardPipelineLinearLight(const hg::Mat4 &world, const hg::Color &diffuse, const hg::Color &specular,
-	const hg::Vec4 &pssm_split = {10.f, 50.f, 100.f, 500.f}, float priority = 0.f, ForwardPipelineShadowType shadow_type = FPST_None,
+ForwardPipelineLight MakeForwardPipelineLinearLight(const Mat4 &world, const Color &diffuse, const Color &specular,
+	const Vec4 &pssm_split = {10.f, 50.f, 100.f, 500.f}, float priority = 0.f, ForwardPipelineShadowType shadow_type = FPST_None,
 	float shadow_bias = default_shadow_bias);
 
 //
@@ -77,15 +77,6 @@ ForwardPipeline CreateForwardPipeline(int shadow_map_resolution = 1024, bool spo
 inline void DestroyForwardPipeline(ForwardPipeline &pipeline) { DestroyPipeline(pipeline); }
 
 //
-void UpdateForwardPipeline(ForwardPipeline &pipeline, const ForwardPipelineShadowData &shadow_data, const Color &ambient, const ForwardPipelineLights &lights,
-	const ForwardPipelineFog &fog);
-void UpdateForwardPipelineNoise(ForwardPipeline &pipeline, Texture noise);
-void UpdateForwardPipelinePBRProbe(ForwardPipeline &pipeline, Texture irradiance, Texture radiance, Texture brdf);
-void UpdateForwardPipelineAO(ForwardPipeline &pipeline, Texture ao);
-void UpdateForwardPipelineAAA(ForwardPipeline &pipeline, const iRect &rect, const Mat4 &view, const Mat44 &proj, const Mat4 &prv_view, const Mat44 &prv_proj,
-	const Vec2 &jitter, bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio, float temporal_aa_weight, float motion_blur_strength,
-	float exposure, float gamma, int sample_count, float max_distance);
-
 const PipelineInfo &GetForwardPipelineInfo();
 
 //

@@ -10,21 +10,18 @@
 
 namespace hg {
 
-static std::string FormatGenRef(gen_ref ref) { return hg::format("%1.%2").arg(ref.idx).arg(ref.gen); }
+static std::string FormatGenRef(gen_ref ref) { return format("%1.%2").arg(ref.idx).arg(ref.gen); }
 
 static std::string FormatAnimRef(const Scene &scene, AnimRef ref) {
-	return scene.IsValidAnim(ref) ? hg::format("AnimRef %1.%2").arg(ref.gen).arg(ref.idx) : hg::format("AnimRef %1.%2: InvalidRef").arg(ref.idx).arg(ref.gen);
+	return scene.IsValidAnim(ref) ? format("AnimRef %1.%2").arg(ref.gen).arg(ref.idx) : format("AnimRef %1.%2: InvalidRef").arg(ref.idx).arg(ref.gen);
 }
 
 static std::string FormatNodeRef(const Scene &scene, NodeRef ref) {
-	return hg::format("NodeRef %1.%2: %3").arg(ref.idx).arg(ref.gen).arg(scene.IsValidNodeRef(ref) ? scene.GetNodeName(ref).c_str() : "InvalidRef");
+	return format("NodeRef %1.%2: %3").arg(ref.idx).arg(ref.gen).arg(scene.IsValidNodeRef(ref) ? scene.GetNodeName(ref).c_str() : "InvalidRef");
 }
 
 static std::string FormatSceneAnimRef(const Scene &scene, SceneAnimRef ref) {
-	return hg::format("SceneAnimRef %1.%2: %3")
-		.arg(ref.idx)
-		.arg(ref.gen)
-		.arg(scene.IsValidSceneAnim(ref) ? scene.GetSceneAnim(ref)->name.c_str() : "InvalidRef");
+	return format("SceneAnimRef %1.%2: %3").arg(ref.idx).arg(ref.gen).arg(scene.IsValidSceneAnim(ref) ? scene.GetSceneAnim(ref)->name.c_str() : "InvalidRef");
 }
 
 template <typename T> void DebugAnimTrack(AnimTrackT<T> &track) {
