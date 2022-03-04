@@ -2,6 +2,9 @@
 
 # HARFANG® 3D engine
 
+[![Downloads](https://pepy.tech/badge/harfang)](https://pepy.tech/project/harfang)
+[![Downloads](https://pepy.tech/badge/harfang/month)](https://pepy.tech/project/harfang)
+
 HARFANG®3D is an all-in-one 3D visualization library usable in C++, Python, Lua and Go.
 #### Table of contents
 
