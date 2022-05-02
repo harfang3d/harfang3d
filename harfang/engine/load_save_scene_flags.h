@@ -25,6 +25,7 @@ static const uint32_t LSSF_DoNotLoadResources = 0x40000; // skip loading any res
 static const uint32_t LSSF_QueueModelLoads = 0x80000;
 static const uint32_t LSSF_DoNotChangeCurrentCameraIfValid = 0xa0000; // default behavior when loading a scene is to set the current camera if specified, when
 																	  // this flag is raised this will only be done if the current camera is invalid
+static const uint32_t LSSF_Silent = 0xb0000; // do not log errors
 
 static const uint32_t LSSF_QueueResourceLoads = LSSF_QueueTextureLoads | LSSF_QueueModelLoads;
 

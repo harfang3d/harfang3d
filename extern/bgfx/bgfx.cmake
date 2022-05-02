@@ -56,11 +56,6 @@ target_include_directories( bgfx
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bgfx/include>
 )
 
-target_compile_definitions( bgfx PRIVATE "$<$<CONFIG:Debug>:BGFX_CONFIG_DEBUG=1>" )
-if(BGFX_CONFIG_DEBUG)
-	target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_DEBUG=1 )
-endif()
-
 if( MSVC )
 	target_compile_definitions( bgfx PRIVATE "_CRT_SECURE_NO_WARNINGS" )
 endif()

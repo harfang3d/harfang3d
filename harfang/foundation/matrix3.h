@@ -149,10 +149,10 @@ void SetScale(Mat3 &m, const Vec3 &S);
 
 void SetAxises(Mat3 &m, const Vec3 &x, const Vec3 &y, const Vec3 &z);
 
-/// Return this matrix after normalization.
-Mat3 Normalize(const Mat3 &m);
-/// Normalize as orthonormal base.
+/// Orthonormalize matrix.
 Mat3 Orthonormalize(const Mat3 &m);
+/// Normalize matrix.
+Mat3 Normalize(const Mat3 &m);
 /// Return an Euler orientation equivalent to this matrix.
 Vec3 ToEuler(const Mat3 &m, RotationOrder order = RO_Default);
 

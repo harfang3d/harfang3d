@@ -361,6 +361,20 @@ struct Node { // 16B on 64 bit
 	void RemoveScript(size_t slot_idx);
 	void RemoveScript(const Script &c) { RemoveScript(c.ref); }
 
+	/// Get world matrix from the scene graph
+	Mat4 GetWorld() const;
+	/*!
+		@short Set node world matrix.
+		Set a node world matrix and flag it as updated so that it won't be computed by the next call to ComputeWorldMatrices().
+		@note This function INTENTIONALLY does not decompose the provided matrix to the transfrom position/rotation/scale fields.
+	*/
+	void SetWorld(const Mat4 &world);
+	/*!
+		@short Compute node world matrix from scratch on-the-fly.
+		This function is slow but useful when scene matrices are not yet up-to-date.
+	*/
+	Mat4 ComputeWorld() const;
+
 	//
 	intrusive_shared_ptr_st<SceneRef> scene_ref;
 	NodeRef ref;

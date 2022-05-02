@@ -246,18 +246,6 @@ std::string strip_prefix(const std::string &str, const std::string &prefix) { re
 std::string strip_suffix(const std::string &str, const std::string &suffix) { return ends_with(str, suffix) ? slice(str, 0, -int(suffix.length())) : str; }
 
 //
-std::string utf16_to_utf8(const std::u16string &str) {
-	std::vector<unsigned char> utf8string;
-	utf8::utf16to8(str.begin(), str.end(), std::back_inserter(utf8string));
-	return std::string((char *)utf8string.data(), utf8string.size());
-}
-
-std::u16string utf8_to_utf16(const std::string &str) {
-	std::vector<uint16_t> utf16string;
-	utf8::utf8to16(str.begin(), str.end(), std::back_inserter(utf16string));
-	return std::u16string(reinterpret_cast<char16_t *>(utf16string.data()), utf16string.size());
-}
-
 std::string utf32_to_utf8(const std::u32string &str) {
 	std::vector<unsigned char> utf8string;
 	utf8::utf32to8(str.begin(), str.end(), std::back_inserter(utf8string));
@@ -297,6 +285,7 @@ std::wstring ansi_to_wchar(const std::string &str) {
 
 std::string ansi_to_utf8(const std::string &string) { return wchar_to_utf8(ansi_to_wchar(string)); }
 
+//
 void tolower_inplace(std::string &str, size_t start, size_t end) {
 	transform(std::begin(str) + start, end ? std::begin(str) + end : std::end(str), std::begin(str) + start,
 		[](char c) -> char { return c >= 65 && c <= 90 ? c + (97 - 65) : c; });

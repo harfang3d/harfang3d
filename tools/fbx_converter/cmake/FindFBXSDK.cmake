@@ -98,46 +98,48 @@ find_package_handle_standard_args(FBXSDK
 
 set(FBX_SDK_LIBRARIES ${FBX_SDK_LIBRARY})
 
-if(FBXSDK_FOUND)
-    if(NOT TARGET fbxsdk)
-        add_library(fbxsdk SHARED IMPORTED)
-        set_target_properties(fbxsdk PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FBXSDK_INCLUDE_DIRECTORY}")
+if(FBXSDK_FOUND AND NOT TARGET fbxsdk)
+    add_library(fbxsdk SHARED IMPORTED)
+    set_target_properties(fbxsdk PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FBXSDK_INCLUDE_DIRECTORY}")
         
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-            if(FBXSDK_LIBRARY_RELEASE)
-                set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
-                set_target_properties(fbxsdk PROPERTIES
-                    IMPORTED_LOCATION_RELEASE ${FBXSDK_SHARED_LIBRARY_RELEASE}
-                    IMPORTED_IMPLIB_RELEASE ${FBXSDK_LIBRARY_RELEASE}
-                )
-            endif()
-
-            if(FBXSDK_LIBRARY_DEBUG)
-                set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
-                set_target_properties(fbxsdk PROPERTIES
-                    IMPORTED_LOCATION_DEBUG ${FBXSDK_SHARED_LIBRARY_DEBUG}
-                    IMPORTED_IMPLIB_DEBUG ${FBXSDK_LIBRARY_DEBUG}
-                )
-            endif()
-
-            if(NOT FBXSDK_LIBRARY_RELEASE AND NOT FBXSDK_LIBRARY_DEBUG)
-                set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_LOCATION "${FBXSDK_SHARED_LIBRARY}")
-                set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_IMPLIB "${FBXSDK_LIBRARY}")
-            endif()
-        else()
-            if(FBXSDK_LIBRARY_RELEASE)
-                set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
-                set_target_properties(fbxsdk PROPERTIES IMPORTED_LOCATION_RELEASE "${FBXSDK_LIBRARY_RELEASE}")
-            endif()
-
-            if(FBXSDK_LIBRARY_DEBUG)
-                set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
-                set_target_properties(fbxsdk PROPERTIES IMPORTED_LOCATION_DEBUG "${FBXSDK_LIBRARY_DEBUG}")
-            endif()
-
-            if(NOT FBXSDK_LIBRARY_RELEASE AND NOT FBXSDK_LIBRARY_DEBUG)
-                set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_LOCATION "${FBXSDK_LIBRARY}")
-            endif()
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        if(FBXSDK_LIBRARY_RELEASE)
+            set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+            set_target_properties(fbxsdk PROPERTIES
+                IMPORTED_LOCATION_RELEASE ${FBXSDK_SHARED_LIBRARY_RELEASE}
+                IMPORTED_IMPLIB_RELEASE ${FBXSDK_LIBRARY_RELEASE}
+            )
         endif()
+
+        if(FBXSDK_LIBRARY_DEBUG)
+            set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
+            set_target_properties(fbxsdk PROPERTIES
+                IMPORTED_LOCATION_DEBUG ${FBXSDK_SHARED_LIBRARY_DEBUG}
+                IMPORTED_IMPLIB_DEBUG ${FBXSDK_LIBRARY_DEBUG}
+            )
+        endif()
+
+        if(NOT FBXSDK_LIBRARY_RELEASE AND NOT FBXSDK_LIBRARY_DEBUG)
+            set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_LOCATION "${FBXSDK_SHARED_LIBRARY}")
+            set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_IMPLIB "${FBXSDK_LIBRARY}")
+        endif()
+    else()
+        if(FBXSDK_LIBRARY_RELEASE)
+            set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+            set_target_properties(fbxsdk PROPERTIES IMPORTED_LOCATION_RELEASE "${FBXSDK_LIBRARY_RELEASE}")
+        endif()
+
+        if(FBXSDK_LIBRARY_DEBUG)
+            set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
+            set_target_properties(fbxsdk PROPERTIES IMPORTED_LOCATION_DEBUG "${FBXSDK_LIBRARY_DEBUG}")
+        endif()
+
+        if(NOT FBXSDK_LIBRARY_RELEASE AND NOT FBXSDK_LIBRARY_DEBUG)
+            set_property(TARGET fbxsdk APPEND PROPERTY IMPORTED_LOCATION "${FBXSDK_LIBRARY}")
+        endif()
+
+	if(UNIX AND NOT APPLE)
+		set_target_properties(fbxsdk PROPERTIES IMPORTED_LINK_INTERFACE_LIBRARIES LibXml2::LibXml2)
+	endif()
     endif()
 endif()

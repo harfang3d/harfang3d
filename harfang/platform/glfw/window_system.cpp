@@ -12,16 +12,16 @@
 
 #include <map>
 
-#if defined(WIN32)
+#if defined(GLFW_WIN32)
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define GLFW_GET_NATIVE_WINDOW_HANDLE glfwGetWin32Window
-#elif defined(__APPLE__)
+#elif defined(GLFW_COCOA)
 #define GLFW_EXPOSE_NATIVE_COCOA
 #define GLFW_GET_NATIVE_WINDOW_HANDLE glfwGetCocoaWindow
-#elif defined(HG_USE_GLFW_WAYLAND)
+#elif defined(GLFW_WAYLAND)
 #define GLFW_EXPOSE_NATIVE_WAYLAND
 #define GLFW_GET_NATIVE_WINDOW_HANDLE glfwGetWaylandWindow
-#elif defined(__linux__)
+#elif defined(GLFW_X11)
 #define GLFW_EXPOSE_NATIVE_X11
 #define GLFW_GET_NATIVE_WINDOW_HANDLE glfwGetX11Window
 #else
@@ -30,9 +30,9 @@
 
 #include <GLFW/glfw3native.h>
 
-#if defined(HG_USE_GLFW_WAYLAND)
+#if defined(GLFW_WAYLAND)
 #include <wayland-egl.h>
-#endif // HG_USE_GLFW_WAYLAND
+#endif // GLFW_WAYLAND
 
 namespace hg {
 
@@ -52,9 +52,9 @@ void *main_window_handle = nullptr;
 
 struct GLFWWindowData {
 	char *title;
-#if defined(HG_USE_GLFW_WAYLAND)
+#if GLFW_WAYLAND
 	struct wl_egl_window *egl_win;
-#endif // HG_USE_GLFW_WAYLAND
+#endif // GLFW_WAYLAND
 };
 
 static void ErrorCallback(int error_code, const char *description) { error(description); }
@@ -156,9 +156,9 @@ struct Window {
 };
 
 void *GetDisplay() {
-#if defined(HG_USE_GLFW_WAYLAND)
+#if GLFW_WAYLAND
 	return glfwGetWaylandDisplay();
-#elif defined(__linux__)
+#elif GLFW_LINUX
 	return glfwGetX11Display();
 #else
 	return nullptr;
@@ -169,7 +169,7 @@ void *GetWindowHandle(const Window *w) {
 	if (!w) {
 		return nullptr;
 	}
-#if defined(HG_USE_GLFW_WAYLAND)
+#if GLFW_WAYLAND
 	GLFWwindow *glfw_win = (GLFWwindow *)w;
 	GLFWWindowData *data = reinterpret_cast<GLFWWindowData *>(glfwGetWindowUserPointer(glfw_win));
 	if (!data) {
@@ -187,7 +187,7 @@ void *GetWindowHandle(const Window *w) {
 	return data->egl_win;
 #else
 	return (void *)GLFW_GET_NATIVE_WINDOW_HANDLE((GLFWwindow *)w);
-#endif // HG_USE_GLFW_WAYLAND
+#endif // GLFW_WAYLAND
 }
 
 static void WindowFocusCallback(GLFWwindow *window, int focused) {
@@ -215,12 +215,12 @@ static Window *NewGLFWWindow(int width, int height, int bpp, const GLFWmonitor *
 	if (window) {
 		GLFWWindowData *data = new GLFWWindowData;
 		data->title = strdup(g_default_window_title);
-#if defined(HG_USE_GLFW_WAYLAND)
+#if GLFW_WAYLAND
 		struct wl_surface *surface = (struct wl_surface *)glfwGetWaylandWindow(window);
 		if (surface) {
 			data->egl_win = wl_egl_window_create(surface, width, height);
 		}
-#endif // HG_USE_GLFW_WAYLAND
+#endif // GLFW_WAYLAND
 		glfwSetWindowUserPointer(window, data);
 		glfwSetWindowFocusCallback(window, WindowFocusCallback);
 		glfwSetWindowCloseCallback(window, WindowCloseCallback);
@@ -318,11 +318,11 @@ bool DestroyWindow(Window *w) {
 			if (data->title) {
 				free(data->title);
 			}
-#if defined(HG_USE_GLFW_WAYLAND)
+#if GLFW_WAYLAND
 			if (data->egl_win) {
 				wl_egl_window_destroy(data->egl_win);
 			}
-#endif // HG_USE_GLFW_WAYLAND
+#endif // GLFW_WAYLAND
 			free(data);
 		}
 
@@ -345,7 +345,7 @@ bool SetWindowClientSize(Window *w, int width, int height) {
 		return false;
 
 	glfwSetWindowSize((GLFWwindow *)w, width, height);
-#if defined(HG_USE_GLFW_WAYLAND)
+#if GLFW_WAYLAND
 	GLFWWindowData *data = reinterpret_cast<GLFWWindowData *>(glfwGetWindowUserPointer((GLFWwindow *)w));
 	if (data) {
 		struct wl_surface *surface = (struct wl_surface *)glfwGetWaylandWindow((GLFWwindow *)w);
@@ -357,7 +357,7 @@ bool SetWindowClientSize(Window *w, int width, int height) {
 		}
 		data->egl_win = wl_egl_window_create(surface, width, height);
 	}
-#endif // HG_USE_GLFW_WAYLAND
+#endif // GLFW_WAYLAND
 	return true;
 }
 

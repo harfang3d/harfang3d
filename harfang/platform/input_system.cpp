@@ -4,9 +4,6 @@
 #include "foundation/log.h"
 
 #include "platform/input_system.h"
-#if HG_USE_GLFW
-#include "glfw/input_system_glfw.h"
-#endif
 
 #include <algorithm>
 #include <cstring>
@@ -249,18 +246,5 @@ std::vector<std::string> GetVRGenericTrackerNames() {
 VRGenericTracker::VRGenericTracker(const char *n) : name(n) {}
 
 void VRGenericTracker::Update() { state = ReadVRGenericTracker(name.c_str()); }
-
-//
-void InputInit() {
-#if HG_USE_GLFW
-	RegisterGLFW3InputSystem();
-#endif
-}
-
-void InputShutdown() {
-#if HG_USE_GLFW
-	UnregisterGLFW3InputSystem();
-#endif
-}
 
 } // namespace hg

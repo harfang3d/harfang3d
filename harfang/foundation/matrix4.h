@@ -42,8 +42,10 @@ bool Inverse(const Mat4 &m, Mat4 &i);
 /// Return the inverse of an affine transformation matrix.
 Mat4 InverseFast(const Mat4 &m);
 
-/// Normalize matrix.
+/// Ortho-normalize matrix.
 Mat4 Orthonormalize(const Mat4 &m);
+/// Normalize matrix.
+Mat4 Normalize(const Mat4 &m);
 
 /// Decompose a transformation matrix into a position vector, a scale vector and a 3x3 rotation matrix.
 void Decompose(const Mat4 &m, Vec3 *position, Mat3 *rotation = nullptr, Vec3 *scale = nullptr);

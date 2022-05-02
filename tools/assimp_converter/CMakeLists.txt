@@ -23,12 +23,11 @@ set_target_properties(assimp_converter PROPERTIES FOLDER "harfang/tools")
 # add_dependencies(assimp_converter bind_hg_lua)
 
 install(FILES $<TARGET_FILE:assimp_converter> DESTINATION assimp_converter COMPONENT assimp_converter)
-install(TARGETS assimp_converter libluadll
+install(TARGETS assimp_converter
 	RUNTIME DESTINATION assimp_converter
 	LIBRARY DESTINATION assimp_converter
 	COMPONENT assimp_converter
 )
 
-install(FILES $<TARGET_FILE:glfw> DESTINATION assimp_converter COMPONENT assimp_converter)
-
+install_cppsdk_dependencies(assimp_converter)
 install(TARGETS assimp_converter RUNTIME DESTINATION assimp_converter COMPONENT assimp_converter)

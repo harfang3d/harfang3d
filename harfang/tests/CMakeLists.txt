@@ -67,7 +67,3 @@ install(TARGETS tests
 	LIBRARY DESTINATION cppsdk/bin/$<CONFIG>
 	COMPONENT cppsdk
 )
-
-if(CMAKE_CXX_LINKER_SUPPORTS_PDB)
-	install(FILES $<TARGET_PDB_FILE:tests> DESTINATION cppsdk/pdb OPTIONAL COMPONENT cppsdk)
-endif()

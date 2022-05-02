@@ -1,5 +1,7 @@
 // HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
+#include "platform/platform.h"
+#include "platform/win32/platform.h"
 #include "foundation/assert.h"
 #include "foundation/format.h"
 #include "foundation/log.h"
@@ -7,7 +9,6 @@
 #include "foundation/string.h"
 #include "platform/input_system.h"
 #include "platform/win32/assert.h"
-#include "platform/win32/platform.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -21,15 +22,15 @@ bool InitPlatform() {
 }
 
 std::string GetPlatformLocale() {
-	char16_t locale_name[LOCALE_NAME_MAX_LENGTH];
+	wchar_t locale_name[LOCALE_NAME_MAX_LENGTH];
 	if (!GetSystemDefaultLocaleName((LPWSTR)locale_name, LOCALE_NAME_MAX_LENGTH)) {
 		warn("Failed to retrieve system locale");
 		locale_name[0] = 0;
 	}
-	return utf16_to_utf8(std::u16string(locale_name));
+	return wchar_to_utf8(locale_name);
 }
 
-bool OpenFolderDialog(const std::string &title, std::string &OUTPUT, const std::string &initial_dir) {
+bool OpenFolderDialog(const std::string &title, std::string &output, const std::string &initial_dir) {
 	IFileOpenDialog *pFileOpen;
 
 	// create the FileOpenDialog object
@@ -38,19 +39,16 @@ bool OpenFolderDialog(const std::string &title, std::string &OUTPUT, const std::
 
 	if (SUCCEEDED(hr)) {
 		// set title
-		if (!title.empty()) {
-			const auto wtitle = utf8_to_utf16(title);
-			pFileOpen->SetTitle((LPCWSTR)wtitle.c_str());
-		}
+		if (!title.empty())
+			pFileOpen->SetTitle(utf8_to_wchar(title).c_str());
 
 		// set base folder
 		if (!initial_dir.empty()) {
 			auto win_path = initial_dir;
 			replace_all(win_path, "/", "\\");
-			const auto winitial_dir = utf8_to_utf16(win_path);
 
 			IShellItem *psiFolder;
-			const auto hr = SHCreateItemFromParsingName((LPCWSTR)winitial_dir.c_str(), NULL, IID_PPV_ARGS(&psiFolder));
+			const auto hr = SHCreateItemFromParsingName(utf8_to_wchar(win_path).c_str(), NULL, IID_PPV_ARGS(&psiFolder));
 
 			if (SUCCEEDED(hr)) {
 				pFileOpen->SetFolder(psiFolder);
@@ -77,7 +75,7 @@ bool OpenFolderDialog(const std::string &title, std::string &OUTPUT, const std::
 
 					// display the file name to the user
 					if (SUCCEEDED(hr))
-						OUTPUT = CleanPath(utf16_to_utf8(std::u16string((char16_t *)pszFilePath)));
+						output = CleanPath(wchar_to_utf8(pszFilePath));
 					pItem->Release();
 				}
 			}
@@ -87,7 +85,7 @@ bool OpenFolderDialog(const std::string &title, std::string &OUTPUT, const std::
 	return SUCCEEDED(hr);
 }
 
-bool OpenFileDialog(const std::string &title, const std::string &filter, std::string &OUTPUT, const std::string &initial_dir) {
+bool OpenFileDialog(const std::string &title, const std::vector<hg::FileFilter> &filters, std::string &output, const std::string &initial_dir) {
 	IFileOpenDialog *pFileOpen;
 
 	// create the FileOpenDialog object
@@ -96,19 +94,16 @@ bool OpenFileDialog(const std::string &title, const std::string &filter, std::st
 
 	if (SUCCEEDED(hr)) {
 		// set title
-		if (!title.empty()) {
-			const auto wtitle = utf8_to_utf16(title);
-			pFileOpen->SetTitle((LPCWSTR)wtitle.c_str());
-		}
+		if (!title.empty())
+			pFileOpen->SetTitle(utf8_to_wchar(title).c_str());
 
 		// set base folder
 		if (!initial_dir.empty()) {
 			auto win_path = initial_dir;
 			replace_all(win_path, "/", "\\");
-			const auto winitial_dir = utf8_to_utf16(win_path);
 
 			IShellItem *psiFolder;
-			hr = SHCreateItemFromParsingName((LPCWSTR)winitial_dir.c_str(), NULL, IID_PPV_ARGS(&psiFolder));
+			hr = SHCreateItemFromParsingName(utf8_to_wchar(win_path).c_str(), NULL, IID_PPV_ARGS(&psiFolder));
 
 			if (SUCCEEDED(hr)) {
 				hr = pFileOpen->SetDefaultFolder(psiFolder);
@@ -121,9 +116,20 @@ bool OpenFileDialog(const std::string &title, const std::string &filter, std::st
 		}
 
 		// add filters
-		auto wfilter = utf8_to_utf16(filter);
-		COMDLG_FILTERSPEC filters[] = {{L"", (LPCWSTR)wfilter.c_str()}};
-		pFileOpen->SetFileTypes(1, filters);
+		std::vector<COMDLG_FILTERSPEC> w32_filters;
+		std::vector<std::wstring> wstring_buffer;
+		if (!filters.empty()) {
+			w32_filters.resize(filters.size());
+			wstring_buffer.reserve(2 * filters.size());
+			for (size_t i = 0; i < filters.size(); i++) {
+				wstring_buffer.emplace_back(utf8_to_wchar(filters[i].name));
+				w32_filters[i].pszName = wstring_buffer.back().c_str();
+
+				wstring_buffer.emplace_back(utf8_to_wchar(filters[i].pattern));
+				w32_filters[i].pszSpec = wstring_buffer.back().c_str();
+			}
+			pFileOpen->SetFileTypes(static_cast<UINT>(w32_filters.size()), w32_filters.data());
+		}
 
 		// show the open dialog box
 		hr = pFileOpen->Show(NULL);
@@ -138,7 +144,7 @@ bool OpenFileDialog(const std::string &title, const std::string &filter, std::st
 
 				// display the file name to the user
 				if (SUCCEEDED(hr))
-					OUTPUT = CleanPath(utf16_to_utf8(std::u16string((char16_t *)pszFilePath)));
+					output = CleanPath(wchar_to_utf8(pszFilePath));
 				pItem->Release();
 			}
 		}
@@ -147,7 +153,7 @@ bool OpenFileDialog(const std::string &title, const std::string &filter, std::st
 	return SUCCEEDED(hr);
 }
 
-bool SaveFileDialog(const std::string &title, const std::string &filter, std::string &OUTPUT, const std::string &initial_dir) {
+bool SaveFileDialog(const std::string &title, const std::vector<hg::FileFilter> &filters, std::string &output, const std::string &initial_dir) {
 	IFileSaveDialog *pFileSave;
 
 	// create the FilSaveDialog object
@@ -157,25 +163,20 @@ bool SaveFileDialog(const std::string &title, const std::string &filter, std::st
 	if (SUCCEEDED(hr)) {
 
 		// set title
-		if (!title.empty()) {
-			const auto wtitle = utf8_to_utf16(title);
-			pFileSave->SetTitle((LPCWSTR)wtitle.c_str());
-		}
+		if (!title.empty())
+			pFileSave->SetTitle(utf8_to_wchar(title).c_str());
 
 		// set file name
-		if (!OUTPUT.empty()) {
-			const auto wfile = utf8_to_utf16(OUTPUT);
-			pFileSave->SetFileName((LPCWSTR)wfile.c_str());
-		}
+		if (!output.empty())
+			pFileSave->SetFileName(utf8_to_wchar(output).c_str());
 
 		// set base folder
 		if (!initial_dir.empty()) {
 			auto win_path = initial_dir;
 			replace_all(win_path, "/", "\\");
-			const auto winitial_dir = utf8_to_utf16(win_path);
 
 			IShellItem *psiFolder;
-			hr = SHCreateItemFromParsingName((LPCWSTR)winitial_dir.c_str(), NULL, IID_PPV_ARGS(&psiFolder));
+			hr = SHCreateItemFromParsingName(utf8_to_wchar(win_path).c_str(), NULL, IID_PPV_ARGS(&psiFolder));
 
 			if (SUCCEEDED(hr)) {
 				hr = pFileSave->SetFolder(psiFolder);
@@ -186,10 +187,20 @@ bool SaveFileDialog(const std::string &title, const std::string &filter, std::st
 		}
 
 		// add filters
-		auto wfilter = utf8_to_utf16(filter);
-		COMDLG_FILTERSPEC filters[] = {{L"", (LPCWSTR)wfilter.c_str()}};
-		pFileSave->SetFileTypes(1, filters);
-		pFileSave->SetDefaultExtension((LPCWSTR)wfilter.c_str());
+		std::vector<COMDLG_FILTERSPEC> w32_filters;
+		std::vector<std::wstring> wstring_buffer;
+		if (!filters.empty()) {
+			w32_filters.resize(filters.size());
+			wstring_buffer.reserve(2 * filters.size());
+			for (size_t i = 0; i < filters.size(); i++) {
+				wstring_buffer.emplace_back(utf8_to_wchar(filters[i].name));
+				w32_filters[i].pszName = wstring_buffer.back().c_str();
+
+				wstring_buffer.emplace_back(utf8_to_wchar(filters[i].pattern));
+				w32_filters[i].pszSpec = wstring_buffer.back().c_str();
+			}
+			pFileSave->SetFileTypes(static_cast<UINT>(w32_filters.size()), w32_filters.data());
+		}
 
 		// show the Save dialog box
 		hr = pFileSave->Show(NULL);
@@ -204,7 +215,7 @@ bool SaveFileDialog(const std::string &title, const std::string &filter, std::st
 
 				// display the file name to the user
 				if (SUCCEEDED(hr))
-					OUTPUT = CleanPath(utf16_to_utf8(std::u16string((char16_t *)pszFilePath)));
+					output = CleanPath(wchar_to_utf8(pszFilePath));
 				pItem->Release();
 			}
 		}
@@ -217,14 +228,15 @@ void DebugBreak() { ::DebugBreak(); }
 
 //
 std::string GetLastError_Win32() {
-	std::string err;
 	LPWSTR err_win32 = NULL;
 
 	FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(),
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&err_win32, 0, NULL);
 
+	std::string err;
+
 	if (err_win32) {
-		err = utf16_to_utf8(std::u16string(reinterpret_cast<const char16_t *>(err_win32)));
+		err = wchar_to_utf8(err_win32);
 		LocalFree(err_win32);
 	}
 

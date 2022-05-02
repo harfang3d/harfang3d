@@ -14,10 +14,6 @@ set(SRCS
 	window_system_base.cpp)
 
 if(HG_USE_GLFW)
-	list(APPEND HDRS
-		glfw/input_system_glfw.h
-	)
-
 	list(APPEND SRCS
 		glfw/input_system_glfw.cpp
 		glfw/window_system.cpp
@@ -87,6 +83,10 @@ if(WIN32)
 	target_link_libraries(platform foundation User32 Gdi32 Ws2_32 Wldap32 Winmm DbgHelp Shlwapi)
 	target_include_directories(platform PUBLIC ${GLFW_INCLUDE_DIRS})
 	target_link_libraries(platform foundation glfw)
+	if(MSVC)
+		target_compile_options(platform PRIVATE "$<$<CONFIG:Release>:/Zi>")
+		target_link_options(platform PRIVATE "$<$<CONFIG:Release>:/DEBUG>")
+	endif()
 elseif(ANDROID)
 	target_include_directories(platform PRIVATE ${ANDROID_NDK}/sources/android/native_app_glue)
 	target_link_libraries(platform foundation android log)
@@ -95,12 +95,15 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 else()
 	target_include_directories(platform PUBLIC ${GLFW_INCLUDE_DIRS})
 	target_link_libraries(platform foundation glfw)
-	if(UNIX AND NOT APPLE)
-		if(NOT HG_EMBEDDED)
-			find_package(PkgConfig REQUIRED)
-			pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-			target_include_directories(platform PRIVATE ${GTK3_INCLUDE_DIRS})
-			target_link_libraries(platform ${GTK3_LIBRARIES})
+	if(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
+		find_package(PkgConfig)
+		if(PkgConfig_FOUND)
+			pkg_check_modules(GTK3 gtk+-3.0)
+			if(GTK3_FOUND)
+				target_include_directories(platform PRIVATE ${GTK3_INCLUDE_DIRS})
+				target_link_libraries(platform ${GTK3_LIBRARIES})
+				target_compile_definitions(platform PUBLIC HG_USE_GTK3)
+			endif()
 		endif()
 		target_link_libraries(platform dl)
 	endif()

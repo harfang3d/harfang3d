@@ -15,17 +15,9 @@ function(gltf_build_tool name)
 
 	add_dependencies(${name} bind_hg_lua)
 
-	install(TARGETS ${name} libluadll RUNTIME DESTINATION ${name} LIBRARY DESTINATION ${name} COMPONENT ${name})
+	install(TARGETS ${name} RUNTIME DESTINATION ${name} LIBRARY DESTINATION ${name} COMPONENT ${name})
 	
-	install(FILES $<TARGET_FILE:glfw> DESTINATION ${name} COMPONENT ${name})
-
-	if(HG_ENABLE_OPENVR_API)
-		install(FILES ${OPENVR_DLL} DESTINATION ${name} COMPONENT ${name})
-	endif()
-
-	if(HG_ENABLE_SRANIPAL_API)
-		install(FILES ${SRANIPAL_DLL} DESTINATION ${name} COMPONENT ${name})
-	endif()
+	install_cppsdk_dependencies(${name})
 endfunction()
 
 

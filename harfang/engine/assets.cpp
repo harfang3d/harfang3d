@@ -138,28 +138,29 @@ Asset OpenAsset(const char *name, bool silent) {
 
 	// look in archive
 	for (auto &p : assets_packages) {
-		int index = mz_zip_reader_locate_file(&p.archive, name, NULL, MZ_ZIP_FLAG_CASE_SENSITIVE);
+		const int index = mz_zip_reader_locate_file(&p.archive, name, NULL, MZ_ZIP_FLAG_CASE_SENSITIVE);
 		if (index == -1)
 			continue; // missing file
 
 		size_t size;
-		char *buffer = (char *)mz_zip_reader_extract_to_heap(&p.archive, index, &size, 0);
+		const char *buffer = (char *)mz_zip_reader_extract_to_heap(&p.archive, index, &size, 0);
 		if (buffer) {
 			std::string data(buffer, size);
 			return {assets.add_ref({{}, {std::move(data), 0}, Package_file_GetSize, Package_file_Read, Package_file_Seek, Package_file_Tell, Package_file_Close,
 				Package_file_is_EOF})};
 		} else {
-			mz_zip_error err = mz_zip_get_last_error(&p.archive);
-			error(format("Failed to open asset '%1' from file '%2' (asset was found but failed to open) : %3")
-					  .arg(name)
-					  .arg(p.filename)
-					  .arg(mz_zip_get_error_string(err)));
+			const mz_zip_error err = mz_zip_get_last_error(&p.archive);
+			if (!silent)
+				error(format("Failed to open asset '%1' from file '%2' (asset was found but failed to open) : %3")
+						  .arg(name)
+						  .arg(p.filename)
+						  .arg(mz_zip_get_error_string(err)));
 			break;
 		}
 	}
 
 	if (!silent)
-		error(format("Failed to open asset '%1'").arg(name));
+		error(format("Failed to open asset '%1' (file not found)").arg(name));
 
 	return {};
 }

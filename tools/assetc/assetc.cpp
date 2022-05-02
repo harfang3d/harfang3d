@@ -190,7 +190,14 @@ static std::string FullInputPath(const std::string &path) { return PathJoin({inp
 static std::string FullOutputPath(const std::string &path) { return PathJoin({output_dir, path}); }
 
 static std::string FullOutputDir(const std::string &path) { return CutFileName(FullOutputPath(path)); }
-static void MkOutputTree(const std::string &path) { MkTree(FullOutputDir(path).c_str()); }
+static bool MkOutputTree(const std::string &path) {
+	const auto res = MkTree(FullOutputDir(path).c_str());
+	if (!res) {
+		const json json_err = {{"type", "FailedToMkOutputTree"}, {"path", path}};
+		log_error(json_err);
+	}
+	return res;
+}
 
 #if HASH_METHOD == 0
 using Hash = SHA1Hash;
@@ -336,15 +343,20 @@ void Reset() {
 //
 void SetInputDir(const std::string &path) { input_dir = CleanPath(path); }
 
-void SetOutputDir(const std::string &path) {
+bool SetOutputDir(const std::string &path) {
 	output_dir = CleanPath(path);
-	MkTree(output_dir.c_str());
+	const auto res = MkTree(output_dir.c_str());
+	if (!res) {
+		const json json_err = {{"type", "SetOutputDirFailedToMkTree"}, {"path", output_dir}};
+		log_error(json_err);
+	}
+	return res;
 }
 
 //
 static json LoadMeta(const std::string &path) {
 	ProfilerPerfSection perf("Manage/LoadMeta");
-	return LoadResourceMetaFromFile(FullInputPath(path));
+	return LoadResourceMetaFromFile(FullInputPath(path), true);
 }
 
 //
@@ -900,7 +912,7 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 	GetMetaValue(meta_db, "generate-mips", generate_mips, profile);
 	bool generate_probe = false;
 	GetMetaValue(meta_db, "generate-probe", generate_probe, profile);
-	int max_probe_size = 64;
+	int max_probe_size = 512;
 	GetMetaValue(meta_db, "max-probe-size", max_probe_size, profile);
 	bool radiance_edge_fixup = false;
 	GetMetaValue(meta_db, "radiance-edge-fixup", radiance_edge_fixup, profile);
@@ -979,6 +991,8 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 			Data build_ctx;
 			Write(build_ctx, max_probe_size);
 			Write(build_ctx, radiance_edge_fixup);
+			Write(build_ctx, 20); // gloss scale
+			Write(build_ctx, 0); // gloss bias
 
 			if (toolchain.cmft.empty()) {
 				warn("    Skipping, no compiler found for radiance probe resource");
@@ -987,8 +1001,8 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 					MkOutputTree(path + ".radiance");
 					CleanOutputs({path + ".radiance"});
 
-					const auto cmd = format("%1 --input \"%2\" --output0 \"%3\" --output0params dds,rgba16f,cubemap --useOpenCL false --filter radiance "
-											"--srcFaceSize %4 --edgeFixup %5")
+					const auto cmd = format("%1 --input \"%2\" --output0 \"%3\" --output0params dds,rgba16f,cubemap --useOpenCL true --filter radiance "
+											"--srcFaceSize %4 --edgeFixup %5 --glossScale 20 --glossBias 0")
 										 .arg(toolchain.cmft)
 										 .arg(src)
 										 .arg(dst)
@@ -1250,10 +1264,10 @@ static void BuildPipelineShaderVariant(std::map<std::string, Hash> &hashes, cons
 	const std::string &fs_path, const std::string &varying_path, const std::string &defines) {
 	ProfilerPerfSection perf("Manage/BuildPipelineShaderVariant");
 
-	size_t stage = 0;
+	size_t config = 0;
 	for (auto &variant : pipeline.configs) {
-		log(format("    Pipeline shader variant '%1' for pipeline config %2").arg(name).arg(stage));
-		const auto variant_name = format("%1_pipe-%2-cfg-%3").arg(name).arg(pipeline.name).arg(stage++);
+		log(format("    Pipeline shader variant '%1' for pipeline config %2").arg(name).arg(config));
+		const auto variant_name = format("%1_pipe-%2-cfg-%3").arg(name).arg(pipeline.name).arg(config++);
 		const auto variant_defines = join(std::begin(variant), std::end(variant), ";") + ";" + defines;
 		BuildShader(hashes, variant_name, vs_path, fs_path, varying_path, global_shader_defines + variant_defines);
 	}
@@ -1276,7 +1290,7 @@ static bool IterateProgramFeatureStates(const std::vector<PipelineProgramFeature
 			process_states(feats, states);
 	}
 	return true;
-};
+}
 
 static std::string GetDefines(const std::vector<PipelineProgramFeature> &feats, const std::vector<int> &states) {
 	std::vector<std::string> defines;
@@ -1744,7 +1758,7 @@ static void OutputUsage(const CmdLineFormat &cmd_format) {
 int wmain(int narg, wchar_t **argv) {
 	std::vector<std::string> args_utf8(narg + 1);
 	for (int i = 0; i < narg; ++i)
-		args_utf8[i] = hg::utf16_to_utf8(std::u16string((const char16_t *)argv[i]));
+		args_utf8[i] = hg::wchar_to_utf8(argv[i]);
 
 	std::vector<const char *> _args(narg + 1);
 	for (int i = 0; i < narg; ++i)

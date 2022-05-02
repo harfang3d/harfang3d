@@ -1,57 +1,67 @@
 cmake_minimum_required(VERSION 3.16.2)
 
 include(CMakePackageConfigHelpers) 
-
-project(harfang CXX C)
-set(CMAKE_CXX_STANDARD 14)
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+include(CMakeDependentOption)
 
 file(READ harfang/version.txt HG_VERSION)
 string(STRIP ${HG_VERSION} HG_VERSION)
 
+project(harfang 
+	VERSION ${HG_VERSION}
+	LANGUAGES CXX C
+	HOMEPAGE_URL "harfang3D.com"
+)
+
+set(CMAKE_CXX_STANDARD 14)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/harfang/cmake")
+
+# -----------------------------------------------------------------------------
 # Debug/tooling options
 # -----------------------------------------------------------------------------
-
 option(HG_ENABLE_TSA "Harfang: Enable TSA" OFF)
 option(HG_ENABLE_TSAN "Harfang: Enable TSAN" OFF)
 option(HG_ENABLE_ASAN "Harfang: Enable ASAN" OFF)
 
+# -----------------------------------------------------------------------------
 # Build options
 # -----------------------------------------------------------------------------
-
 option(HG_BUILD_ASSIMP_CONVERTER "Harfang: Build Assimp converter" ON)
 option(HG_BUILD_FBX_CONVERTER "Harfang: Build FBX converter" ON)
 option(HG_BUILD_GLTF_EXPORTER "Harfang: Build GLTF exporter" ON)
 option(HG_BUILD_GLTF_IMPORTER "Harfang: Build GLTF importer" ON)
 option(HG_BUILD_ASSETC "Harfang: Build AssetC" ON)
+
 option(HG_BUILD_CPP_SDK "Harfang: Build C++ SDK" OFF)
 option(HG_BUILD_TESTS "Harfang: Build Unit tests" OFF)
+
 option(HG_BUILD_DOCS "Harfang: Build documentation" OFF)
+
 option(HG_BUILD_HG_LUA "Harfang: Build Harfang Lua extension" OFF)
 option(HG_BUILD_HG_PYTHON "Harfang: Build Harfang CPython 3.2+ extension" OFF)
 option(HG_BUILD_HG_GO "Harfang: Build Harfang Go extension" OFF)
 
-option(HG_EMBEDDED "Harfang: Build for embedded system" OFF)
-
 option(HG_USE_GLFW "Harfang: Use GLFW backend" ON)
-option(HG_USE_GLFW_WAYLAND "Harfang: Use GLFW Wayland backend" OFF)
-option(HG_REBUILD_GLFW "Harfang: Rebuild GLFW backend" ON)
-option(HG_USE_EGL "Harfang: Use EGL for GL context management" OFF)
 
 option(HG_ENABLE_BULLET3_SCENE_PHYSICS "Harfang: Scene physics using Bullet Dynamics" ON)
 option(HG_ENABLE_RECAST_DETOUR_API "Harfang: Enable Recast/Detour API" ON)
 
 option(HG_ENABLE_OPENVR_API "Harfang: Enable OpenVR API" OFF)
-option(HG_ENABLE_SRANIPAL_API "Harfang: Enable VIVE Eye and Facial Tracking SDK (SRanipal) API" OFF)
+cmake_dependent_option(HG_ENABLE_SRANIPAL_API "Harfang: Enable VIVE Eye and Facial Tracking SDK (SRanipal) API" OFF "HG_ENABLE_OPENVR_API;MSVC" OFF)
 
 set(HG_FABGEN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../fabgen" CACHE PATH "Harfang: Path to FabGen script installation")
 get_filename_component(HG_FABGEN_PATH ${HG_FABGEN_PATH} REALPATH)
+message(CHECK_START "Checking FabGen path")
+if(EXISTS ${HG_FABGEN_PATH})
+	message(CHECK_PASS "ok")
+else()
+	message(FATAL_ERROR "unable to access ${HG_FABGEN_PATH}")
+endif()
 
+# -----------------------------------------------------------------------------
 # Configuration constraints
 # -----------------------------------------------------------------------------
-
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 	message(STATUS "! Forcing build type to RelWithDebInfo since CMAKE_BUILD_TYPE is not set")
 	SET(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -67,47 +77,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 	set(HG_USE_GLFW OFF FORCE)
 endif()
 
-if(HG_EMBEDDED) 
-	message(STATUS "! Forcing EGL for GL context management since building for embedded")
-	set(HG_USE_EGL ON FORCE)
-endif()
-
-if(NOT HG_BUILD_HG_PYTHON)
-	message(STATUS "! Disabling Harfang CPython install since the module is not being build")
-endif()
-
-if(NOT HG_BUILD_HG_GO)
-	message(STATUS "! Disabling Harfang Go install since the module is not being build")	
-endif()
-
-if(HG_ENABLE_SRANIPAL_API)
+if(HG_ENABLE_SRANIPAL_API AND MSVC)
 	if (NOT HG_ENABLE_OPENVR_API)
 		message(STATUS "! Enabling OpenVR API")
 		set(HG_ENABLE_OPENVR_API ON FORCE)
 	endif()
 endif()
 
+# -----------------------------------------------------------------------------
 # Configuration flags
 # -----------------------------------------------------------------------------
-
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	message(STATUS "Building for 64-bit")
 	add_definitions(-DMARCH_WORD_SIZE=64)
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 	message(STATUS "Building for 32-bit")
 	add_definitions(-DMARCH_WORD_SIZE=32)
-endif()
-
-if(HG_USE_GLFW_WAYLAND)
-	add_compile_definitions(HG_USE_GLFW_WAYLAND)
-endif()
-
-if(HG_USE_GLFW)
-	add_compile_definitions(HG_USE_GLFW)
-endif()
-
-if(HG_EMBEDDED) 
-	add_compile_definitions(HG_EMBEDDED)
 endif()
 
 if(MSVC)
@@ -169,6 +154,10 @@ else()
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O0")
 endif()
 
+if(HG_EMBEDDED) 
+	add_compile_definitions(HG_EMBEDDED)
+endif()
+
 if(HG_ENABLE_OPENVR_API)
 	add_compile_definitions(HG_ENABLE_OPENVR_API)
 endif()
@@ -185,21 +174,9 @@ if(HG_ENABLE_RECAST_DETOUR_API)
 	add_compile_definitions(HG_ENABLE_RECAST_DETOUR_API)
 endif()
 
-if(NOT HG_GRAPHIC_API)
-	if(MSVC)
-		set(HG_GRAPHIC_API "DX11")
-	elseif(HG_EMBEDDED)
-		set(HG_GRAPHIC_API "GLES")
-	else()
-		set(HG_GRAPHIC_API "GL")
-	endif()
-endif(NOT HG_GRAPHIC_API)
-
-add_compile_definitions(HG_GRAPHIC_API="${HG_GRAPHIC_API}")
-
+# -----------------------------------------------------------------------------
 # Dependencies
 # -----------------------------------------------------------------------------
-
 if(NOT Python3_FOUND)
 	if(HG_BUILD_HG_PYTHON)
 		find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
@@ -212,9 +189,9 @@ if(HG_BUILD_DOCS)
 	find_package(Doxygen REQUIRED)
 endif()
 
-# Install helper
 # -----------------------------------------------------------------------------
-
+# System configuration
+# -----------------------------------------------------------------------------
 if(NOT HG_HOST_PREFIX)
 	string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} HG_HOST_PREFIX)
 	if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "amd64.*|x86_64.*|AMD64.*")
@@ -253,10 +230,24 @@ if(_hasParent)	# after 3.21 use if(NOT PROJECT_IS_TOP_LEVEL)
 endif()
 unset(_hasParent)
 
+if(NOT HG_GRAPHIC_API)
+	if(MSVC)
+		set(HG_GRAPHIC_API "DX11")
+	elseif(NOT HG_GRAPHC_API)
+		set(HG_GRAPHIC_API "GL")
+	endif()
+endif(NOT HG_GRAPHIC_API)
+
+add_compile_definitions(HG_GRAPHIC_API="${HG_GRAPHIC_API}")
+
+# -----------------------------------------------------------------------------
+# Install helper
+# -----------------------------------------------------------------------------
 set(CppSdkLibraryDestination cppsdk/lib/$<CONFIG>)
 set(CppSdkRuntimeDestination cppsdk/bin/$<CONFIG>)
 set(CppSdkHeadersDestination cppsdk/include)
 
+# helper function for cppsdk library install.
 function(install_cppsdk_target TARGET)
 	if(NOT HG_BUILD_CPP_SDK)
 		return()
@@ -279,9 +270,43 @@ function(install_cppsdk_target TARGET)
 		RUNTIME DESTINATION ${CppSdkRuntimeDestination}
 		INCLUDES DESTINATION ${CppSdkHeadersDestination}
 	)
+	if(CMAKE_CXX_LINKER_SUPPORTS_PDB)
+		if(TargetType STREQUAL "STATIC_LIBRARY")
+			install(DIRECTORY $<TARGET_PROPERTY:${TARGET},BINARY_DIR>/$<CONFIG>/ DESTINATION cppsdk/pdb OPTIONAL COMPONENT cppsdk FILES_MATCHING PATTERN "*.pdb")
+		else()
+			install(FILES $<TARGET_PDB_FILE:${TARGET}> DESTINATION cppsdk/pdb OPTIONAL COMPONENT cppsdk)
+		endif()
+	endif()
 endfunction(install_cppsdk_target)
 
-# All targets
+# Helper function to deploy shared libraries of CPPSDK external dependencies.
+# This function is used only when building CPPSDK.
+# Its "SDK" counterpart is defined in harfangConfig.cmake.
+function(install_cppsdk_dependencies Destination)
+	if (DEFINED ARGV1)
+		set(ComponentName ${ARGV1})
+	else()
+		set(ComponentName ${Destination})
+	endif()
+
+	if(HG_USE_GLFW)
+		install(FILES $<TARGET_FILE:glfw> DESTINATION ${Destination} COMPONENT ${ComponentName})
+	endif()
+
+	install(FILES $<TARGET_FILE:libluadll> DESTINATION ${Destination} COMPONENT ${ComponentName})
+	if(HG_ENABLE_OPENVR_API)
+		get_target_property(OpenVRTargetFiles OpenVR IMPORTED_LOCATION)
+		install(FILES ${OpenVRTargetFiles} DESTINATION ${Destination} COMPONENT ${ComponentName})
+	endif()
+
+	if(HG_ENABLE_SRANIPAL_API)
+		get_target_property(SRanipalTargetFiles SRanipal IMPORTED_LOCATION)
+		install(FILES ${SRanipalTargetFiles} DESTINATION ${Destination} COMPONENT ${ComponentName})
+	endif()
+endfunction()
+
+# -----------------------------------------------------------------------------
+# Build targets
 # -----------------------------------------------------------------------------
 SET(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
 
@@ -311,13 +336,13 @@ if(HG_BUILD_DOCS)
 	add_subdirectory(doc)
 endif()
 
+# -----------------------------------------------------------------------------
 # Setup/recap dump
 # -----------------------------------------------------------------------------
-
-message(STATUS "")
-
-message(STATUS "Configuration report:")
-message(STATUS "=====================")
+message(STATUS [[
+=====================
+Configuration report:
+=====================]])
 
 message(STATUS "Harfang version: " ${HG_VERSION})
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
@@ -327,30 +352,30 @@ message(STATUS "Graphic API: " ${HG_GRAPHIC_API})
 message(STATUS "Host prefix: " ${HG_HOST_PREFIX})
 message(STATUS "Target prefix: " ${HG_TARGET_PREFIX})
 
-message(STATUS "Enable TSA=" ${HG_ENABLE_TSA})
-message(STATUS "Enable TSAN=" ${HG_ENABLE_TSAN})
-message(STATUS "Enable ASAN=" ${HG_ENABLE_ASAN})
+message(STATUS "Enable TSA: " ${HG_ENABLE_TSA})
+message(STATUS "Enable TSAN: " ${HG_ENABLE_TSAN})
+message(STATUS "Enable ASAN: " ${HG_ENABLE_ASAN})
 
-message(STATUS "Build Assimp converter=" ${HG_BUILD_ASSIMP_CONVERTER})
-message(STATUS "Build FBX converter=" ${HG_BUILD_FBX_CONVERTER})
-message(STATUS "Build GLTF exporter=" ${HG_BUILD_GLTF_EXPORTER})
-message(STATUS "Build GLTF importer=" ${HG_BUILD_GLTF_IMPORTER})
-message(STATUS "Build AssetC=" ${HG_BUILD_ASSETC})
-message(STATUS "Build C++ SDK=" ${HG_BUILD_CPP_SDK})
-message(STATUS "Build documentation=" ${HG_BUILD_DOCS})
+message(STATUS "Build Assimp converter: " ${HG_BUILD_ASSIMP_CONVERTER})
+message(STATUS "Build FBX converter: " ${HG_BUILD_FBX_CONVERTER})
+message(STATUS "Build GLTF exporter: " ${HG_BUILD_GLTF_EXPORTER})
+message(STATUS "Build GLTF importer: " ${HG_BUILD_GLTF_IMPORTER})
+message(STATUS "Build AssetC: " ${HG_BUILD_ASSETC})
+message(STATUS "Build C++ SDK: " ${HG_BUILD_CPP_SDK})
+message(STATUS "Build documentation: " ${HG_BUILD_DOCS})
 
-message(STATUS "Build Lua extension=" ${HG_BUILD_HG_LUA})
+message(STATUS "Build Lua extension: " ${HG_BUILD_HG_LUA})
 
-message(STATUS "Build CPython module=" ${HG_BUILD_HG_PYTHON})
+message(STATUS "Build CPython module: " ${HG_BUILD_HG_PYTHON})
 if(HG_BUILD_HG_PYTHON)
 	message(STATUS "    Using CPython libraries: " ${Python3_LIBRARIES})
 	message(STATUS "    Install CPython module to " ${Python3_EXECUTABLE})
 endif()
 
-message(STATUS "Build Go module=" ${HG_BUILD_HG_GO})
+message(STATUS "Build Go module: " ${HG_BUILD_HG_GO})
 
-message(STATUS "Embedded system build=" ${HG_EMBEDDED})
-message(STATUS "Binding defines=" ${HG_BINDING_DEFINES})
+message(STATUS "Embedded system build: " ${HG_EMBEDDED})
+message(STATUS "Binding defines: " ${HG_BINDING_DEFINES})
 
 message(STATUS "Available APIs:")
 message(STATUS " - Core")
@@ -367,20 +392,23 @@ if(HG_ENABLE_RECAST_DETOUR_API)
 	message(STATUS " - RecastDetour")
 endif()
 
-message(STATUS "Use GLFW backend=" ${HG_USE_GLFW})
-message(STATUS "Use GLFW Wayland backend=" ${HG_USE_GLFW_WAYLAND})
-message(STATUS "EGL for GL context management=" ${HG_USE_EGL})
-
+message(STATUS "Use GLFW backend: " ${HG_USE_GLFW})
 message(STATUS "Fabgen dir: " ${HG_FABGEN_PATH})
-
 message(STATUS "Installation dir: " ${CMAKE_INSTALL_PREFIX})
 
 message(STATUS "")
+
+# -----------------------------------------------------------------------------
+# Package configuration
+# -----------------------------------------------------------------------------
 
 # [WARNING] Don't forget to add any new shared library target to this list!
 set(HG_SHARED_LIBRARY_TARGETS "hg::glfw;hg::libluadll")
 if(HG_ENABLE_OPENVR_API)
     list(APPEND HG_SHARED_LIBRARY_TARGETS OpenVR)
+	if(HG_ENABLE_SRANIPAL_API)
+		list(APPEND HG_SHARED_LIBRARY_TARGETS SRanipal)
+	endif()
 endif()
 
 if(HG_BUILD_CPP_SDK)

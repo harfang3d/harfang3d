@@ -575,7 +575,7 @@ template <int ID> std::string DeviceNameJoystick() {
 //
 static Signal<void(const Window *)>::Connection on_new_window_connection;
 
-void RegisterGLFW3InputSystem() {
+void InputInit() {
 	on_new_window_connection = new_window_signal.Connect(&OnNewWindow);
 
 	AddMouseReader("default", ReadMouse);
@@ -627,6 +627,6 @@ void RegisterGLFW3InputSystem() {
 #endif
 }
 
-void UnregisterGLFW3InputSystem() { new_window_signal.Disconnect(on_new_window_connection); }
+void InputShutdown() { new_window_signal.Disconnect(on_new_window_connection); }
 
 } // namespace hg

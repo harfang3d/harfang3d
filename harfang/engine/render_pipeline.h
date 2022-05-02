@@ -15,6 +15,7 @@
 #include "foundation/matrix44.h"
 #include "foundation/minmax.h"
 #include "foundation/rw_interface.h"
+#include "foundation/time.h"
 #include "foundation/vector2.h"
 
 #include <bgfx/bgfx.h>
@@ -95,24 +96,24 @@ void SetViewOrthographic(bgfx::ViewId id, int x, int y, int res_x, int res_y, co
 	const Vec2 &aspect_ratio = {});
 
 //
-bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *vs_name, const char *fs_name);
-bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *name);
-bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip, const char *cs_name);
+bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *vs_name, const char *fs_name, bool silent = false);
+bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *name, bool silent = false);
+bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip, const char *cs_name, bool silent = false);
 
-bgfx::ProgramHandle LoadProgramFromFile(const char *vs_path, const char *fs_path);
-bgfx::ProgramHandle LoadProgramFromAssets(const char *vs_name, const char *fs_name);
-bgfx::ProgramHandle LoadProgramFromFile(const char *path);
-bgfx::ProgramHandle LoadProgramFromAssets(const char *name);
-bgfx::ProgramHandle LoadComputeProgramFromFile(const char *cs_path);
-bgfx::ProgramHandle LoadComputeProgramFromAssets(const char *cs_name);
+bgfx::ProgramHandle LoadProgramFromFile(const char *vs_path, const char *fs_path, bool silent = false);
+bgfx::ProgramHandle LoadProgramFromAssets(const char *vs_name, const char *fs_name, bool silent = false);
+bgfx::ProgramHandle LoadProgramFromFile(const char *path, bool silent = false);
+bgfx::ProgramHandle LoadProgramFromAssets(const char *name, bool silent = false);
+bgfx::ProgramHandle LoadComputeProgramFromFile(const char *cs_path, bool silent = false);
+bgfx::ProgramHandle LoadComputeProgramFromAssets(const char *cs_name, bool silent = false);
 
 //
 std::vector<bgfx::ShaderHandle> GetProgramShaders(bgfx::ProgramHandle prg_h);
 
 //
-json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::string &name);
-json LoadResourceMetaFromFile(const std::string &path);
-json LoadResourceMetaFromAssets(const std::string &name);
+json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent = false);
+json LoadResourceMetaFromFile(const std::string &path, bool silent = false);
+json LoadResourceMetaFromAssets(const std::string &name, bool silent = false);
 
 bool SaveResourceMetaToFile(const std::string &path, const json &meta);
 
@@ -150,9 +151,9 @@ enum PipelineProgramFeature {
 	Count,
 };
 
-std::vector<PipelineProgramFeature> LoadPipelineProgramFeatures(const Reader &ir, const ReadProvider &ip, const char *name, bool &success);
-std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromFile(const char *path, bool &success);
-std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromAssets(const char *name, bool &success);
+std::vector<PipelineProgramFeature> LoadPipelineProgramFeatures(const Reader &ir, const ReadProvider &ip, const char *name, bool &success, bool silent = false);
+std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromFile(const char *path, bool &success, bool silent = false);
+std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromAssets(const char *name, bool &success, bool silent = false);
 
 //
 struct PipelineProgram;
@@ -200,17 +201,20 @@ struct PipelineProgram {
 	Reader ir;
 };
 
-PipelineProgram LoadPipelineProgram(const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources, const PipelineInfo &pipeline);
-PipelineProgram LoadPipelineProgramFromFile(const char *path, PipelineResources &resources, const PipelineInfo &pipeline);
-PipelineProgram LoadPipelineProgramFromAssets(const char *name, PipelineResources &resources, const PipelineInfo &pipeline);
+PipelineProgram LoadPipelineProgram(
+	const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources, const PipelineInfo &pipeline, bool silent = false);
+PipelineProgram LoadPipelineProgramFromFile(const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool silent = false);
+PipelineProgram LoadPipelineProgramFromAssets(const char *name, PipelineResources &resources, const PipelineInfo &pipeline, bool silent = false);
 
 void Destroy(PipelineProgram &pipeline_program);
 
 //
 bool LoadPipelineProgramUniforms(const Reader &ir, const ReadProvider &ip, const char *name, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs,
-	PipelineResources &resources);
-bool LoadPipelineProgramUniformsFromFile(const char *path, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs, PipelineResources &resources);
-bool LoadPipelineProgramUniformsFromAssets(const char *name, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs, PipelineResources &resources);
+	PipelineResources &resources, bool silent = false);
+bool LoadPipelineProgramUniformsFromFile(
+	const char *path, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs, PipelineResources &resources, bool silent = false);
+bool LoadPipelineProgramUniformsFromAssets(
+	const char *name, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs, PipelineResources &resources, bool silent = false);
 
 //
 struct DisplayList { // 4B
@@ -225,14 +229,16 @@ Texture CreateTextureFromPicture(const Picture &pic, const char *name, uint64_t 
 
 void UpdateTextureFromPicture(Texture &tex, const Picture &pic);
 
-uint64_t LoadTextureFlags(const Reader &ir, const ReadProvider &ip, const std::string &name);
-uint64_t LoadTextureFlagsFromFile(const std::string &path);
-uint64_t LoadTextureFlagsFromAssets(const std::string &name);
+uint64_t LoadTextureFlags(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent = false);
+uint64_t LoadTextureFlagsFromFile(const std::string &path, bool silent = false);
+uint64_t LoadTextureFlagsFromAssets(const std::string &name, bool silent = false);
 
 Texture LoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, bgfx::TextureInfo *info = nullptr,
-	bimg::Orientation::Enum *orientation = nullptr);
-Texture LoadTextureFromFile(const char *path, uint64_t flags, bgfx::TextureInfo *info = nullptr, bimg::Orientation::Enum *orientation = nullptr);
-Texture LoadTextureFromAssets(const char *name, uint64_t flags, bgfx::TextureInfo *info = nullptr, bimg::Orientation::Enum *orientation = nullptr);
+	bimg::Orientation::Enum *orientation = nullptr, bool silent = false);
+Texture LoadTextureFromFile(
+	const char *path, uint64_t flags, bgfx::TextureInfo *info = nullptr, bimg::Orientation::Enum *orientation = nullptr, bool silent = false);
+Texture LoadTextureFromAssets(
+	const char *name, uint64_t flags, bgfx::TextureInfo *info = nullptr, bimg::Orientation::Enum *orientation = nullptr, bool silent = false);
 
 void Destroy(Texture &texture);
 
@@ -416,9 +422,9 @@ struct ModelInfo {
 	uint32_t tri_count{};
 };
 
-Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *info = nullptr);
-Model LoadModelFromFile(const char *path, ModelInfo *info = nullptr);
-Model LoadModelFromAssets(const char *name, ModelInfo *info = nullptr);
+Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *info = nullptr, bool silent = false);
+Model LoadModelFromFile(const char *path, ModelInfo *info = nullptr, bool silent = false);
+Model LoadModelFromAssets(const char *name, ModelInfo *info = nullptr, bool silent = false);
 
 size_t GetModelMaterialCount(const Model &model);
 
@@ -458,33 +464,34 @@ struct PipelineResources {
 };
 
 //
-size_t ProcessTextureLoadQueue(PipelineResources &resources, size_t limit = 1);
+size_t ProcessTextureLoadQueue(PipelineResources &resources, time_ns t_budget = time_from_ms(4), bool silent = false);
 
 TextureRef QueueLoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, PipelineResources &resources);
 TextureRef QueueLoadTextureFromFile(const char *path, uint64_t flags, PipelineResources &resources);
 TextureRef QueueLoadTextureFromAssets(const char *name, uint64_t flags, PipelineResources &resources);
 
 TextureRef SkipLoadOrQueueTextureLoad(
-	const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load);
+	const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load, bool silent = false);
 
 //
-size_t ProcessModelLoadQueue(PipelineResources &resources, size_t limit = 1);
+size_t ProcessModelLoadQueue(PipelineResources &resources, time_ns t_budget = time_from_ms(4), bool silent = false);
 ModelRef QueueLoadModel(const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources);
 
 ModelRef QueueLoadModelFromFile(const char *path, PipelineResources &resources);
 ModelRef QueueLoadModelFromAssets(const char *name, PipelineResources &resources);
 
-ModelRef SkipLoadOrQueueModelLoad(const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load);
+ModelRef SkipLoadOrQueueModelLoad(
+	const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load, bool silent = false);
 
 //
 Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources, const PipelineInfo &pipeline,
-	bool queue_texture_loads, bool do_not_load_resources);
+	bool queue_texture_loads, bool do_not_load_resources, bool silent = false);
 Material LoadMaterial(const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
-	const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
+	const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent = false);
 Material LoadMaterialFromFile(
-	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
+	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent = false);
 Material LoadMaterialFromAssets(
-	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
+	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent = false);
 
 bool SaveMaterial(const Material &mat, json &js, const PipelineResources &resources);
 bool SaveMaterial(const Material &mat, const Writer &iw, const Handle &h, const PipelineResources &resources);
@@ -492,37 +499,38 @@ bool SaveMaterialToFile(const char *path, const Material &m, const PipelineResou
 
 //
 PipelineProgramRef LoadPipelineProgramRef(
-	const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources, const PipelineInfo &pipeline);
-PipelineProgramRef LoadPipelineProgramRefFromFile(const char *path, PipelineResources &resources, const PipelineInfo &pipeline);
-PipelineProgramRef LoadPipelineProgramRefFromAssets(const char *name, PipelineResources &resources, const PipelineInfo &pipeline);
+	const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources, const PipelineInfo &pipeline, bool silent = false);
+PipelineProgramRef LoadPipelineProgramRefFromFile(const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool silent = false);
+PipelineProgramRef LoadPipelineProgramRefFromAssets(const char *name, PipelineResources &resources, const PipelineInfo &pipeline, bool silent = false);
 
-ModelRef LoadModel(const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources);
-ModelRef LoadModelFromFile(const char *path, PipelineResources &resources);
-ModelRef LoadModelFromAssets(const char *path, PipelineResources &resources);
+ModelRef LoadModel(const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool silent = false);
+ModelRef LoadModelFromFile(const char *path, PipelineResources &resources, bool silent = false);
+ModelRef LoadModelFromAssets(const char *path, PipelineResources &resources, bool silent = false);
 
 struct TextureMeta {
 	uint64_t flags{};
 };
 
-TextureMeta LoadTextureMeta(const Reader &ir, const ReadProvider &ip, const std::string &name);
-TextureMeta LoadTextureMetaFromFile(const std::string &path);
-TextureMeta LoadTextureMetaFromAssets(const std::string &name);
+TextureMeta LoadTextureMeta(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent = false);
+TextureMeta LoadTextureMetaFromFile(const std::string &path, bool silent = false);
+TextureMeta LoadTextureMetaFromAssets(const std::string &name, bool silent = false);
 
-TextureRef LoadTexture(const Reader &ir, const ReadProvider &ip, const char *path, uint64_t flags, PipelineResources &resources);
-TextureRef LoadTextureFromFile(const char *path, uint64_t flags, PipelineResources &resources);
-TextureRef LoadTextureFromAssets(const char *path, uint64_t flags, PipelineResources &resources);
+TextureRef LoadTexture(const Reader &ir, const ReadProvider &ip, const char *path, uint64_t flags, PipelineResources &resources, bool silent = false);
+TextureRef LoadTextureFromFile(const char *path, uint64_t flags, PipelineResources &resources, bool silent = false);
+TextureRef LoadTextureFromAssets(const char *path, uint64_t flags, PipelineResources &resources, bool silent = false);
 
 uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t, Picture &pic);
 
 MaterialRef LoadMaterialRef(const Reader &ir, const Handle &h, const char *path, const Reader &deps_ir, const ReadProvider &deps_ip,
-	PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
+	PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent = false);
 MaterialRef LoadMaterialRefFromFile(
-	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
+	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent = false);
 MaterialRef LoadMaterialRefFromAssets(
-	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources);
+	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent = false);
 
 //
-size_t ProcessLoadQueues(PipelineResources &res, size_t limit = 1);
+size_t GetQueuedResourceCount(const PipelineResources &res);
+size_t ProcessLoadQueues(PipelineResources &res, time_ns t_budget = time_from_ms(4), bool silent = false);
 
 //
 std::vector<int> GetMaterialPipelineProgramFeatureStates(const Material &mat, const std::vector<PipelineProgramFeature> &features);
@@ -659,7 +667,7 @@ void DrawSprites(bgfx::ViewId view_id, const Mat3 &inv_view_R, bgfx::VertexLayou
 	uint32_t depth = 0);
 
 //
-static const float default_shadow_bias = 0.00001f;
+static const float default_shadow_bias = 0.0001f;
 static const Vec4 default_pssm_split = {10.f, 50.f, 100.f, 500.f};
 
 //

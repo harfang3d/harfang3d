@@ -47,6 +47,10 @@ struct ForwardPipelineAAAConfig {
 	ForwardPipelineAAADebugBuffer debug_buffer = FPAAADB_None;
 };
 
+bool LoadForwardPipelineAAAConfigFromFile(const char *path, ForwardPipelineAAAConfig &config);
+bool LoadForwardPipelineAAAConfigFromAssets(const char *name, ForwardPipelineAAAConfig &config);
+bool SaveForwardPipelineAAAConfigToFile(const char *path, const ForwardPipelineAAAConfig &config);
+
 //
 struct ForwardPipelineAAA {
 	std::array<Texture, 64> noise;
@@ -141,7 +145,6 @@ ForwardPipelineAAA CreateForwardPipelineAAAFromFile(const char *path, const Forw
 ForwardPipelineAAA CreateForwardPipelineAAAFromAssets(const char *path, const ForwardPipelineAAAConfig &config, uint16_t rb_width, uint16_t rb_height,
 	bgfx::BackbufferRatio::Enum ssgi_ratio = bgfx::BackbufferRatio::Half, bgfx::BackbufferRatio::Enum ssr_ratio = bgfx::BackbufferRatio::Half);
 
-
 void DestroyForwardPipelineAAA(ForwardPipelineAAA &aaa);
 
 bool IsValid(const ForwardPipelineAAA &aaa);
@@ -204,8 +207,7 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 
 void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, const Rect<int> &rect, const ViewState &view_state, ForwardPipeline &pipeline,
 	const SceneForwardPipelineRenderData &render_data, const PipelineResources &resources, SceneForwardPipelinePassViewId &views, ForwardPipelineAAA &aaa,
-	const ForwardPipelineAAAConfig &aaa_config, int frame, bgfx::FrameBufferHandle fb = BGFX_INVALID_HANDLE,
-	const char *debug_name = "scene");
+	const ForwardPipelineAAAConfig &aaa_config, int frame, bgfx::FrameBufferHandle fb = BGFX_INVALID_HANDLE, const char *debug_name = "scene");
 
 /// High-level submit scene to forward pipeline using a custom view state.
 void SubmitSceneToPipeline(bgfx::ViewId &view_id, const Scene &scene, const Rect<int> &rect, const ViewState &view_state, ForwardPipeline &pipeline,

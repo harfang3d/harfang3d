@@ -42,22 +42,6 @@ install(FILES
 	COMPONENT go
 )
 
-install(TARGETS libluadll 
-	RUNTIME DESTINATION hg_go 
-	LIBRARY DESTINATION hg_go
-	COMPONENT go
-)
-
-if(HG_USE_GLFW)
-	install(FILES $<TARGET_FILE:glfw> DESTINATION hg_go COMPONENT go)
-endif()
-
-if(HG_ENABLE_OPENVR_API)
-	install(FILES ${OPENVR_DLL} DESTINATION hg_go COMPONENT go)
-endif()
-
-if(HG_ENABLE_SRANIPAL_API)
-	install(FILES ${SRANIPAL_DLL} DESTINATION hg_go COMPONENT go)
-endif()
+install_cppsdk_dependencies(hg_go go)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)

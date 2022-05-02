@@ -1,3 +1,58 @@
+# [3.2.1] - 2022-04-10
+
+This minor release brings both code and submodules maintenance, several fixes in the toolchain, in the scenegraph and physics interchange and in the rendering pipeline.
+
+### Source code maintenance
+- Updated GLFW (3.3.6).
+- Updated BGFX to the latest version.
+- Updated OpenAL (v.1.6.10b).
+- Updated OpenVR (v1.16.8).
+- Fixed the debug build with Visual Studio Build Tools 2022.
+- Fixed the installation of PDB files.
+- CMake misc. fixes and updates.
+
+### Toolchain
+
+- FBX Importer: changed the unit of command line argument `max smoothing angle` to degrees and fixed the internal vertex/tangent computation.
+- GLTF Importer: improved the way non-Windows-compliant filenames are handled.
+
+### Engine
+
+- Fixed an issue in the Wavefront OBJ export that flipped the model on the X axis.
+- Improve the error message issued by OpenAssets in case of missing file.
+- Fixed a crash when parsing a corrupted .HPS file.
+- Added `hg::Picture::SaveBC7` and `hg::Picture::SaveBC6H` functions.
+- Switched to a time limit based resource queue processing
+- Return the size on disk of a folder
+- Implemented a _ComputeNodeWorldMatrix_ to compute a node world matrix on the fly (`ComputeWorld`, `GetWorld`, `SetWorld`). :warning: This function is slow but useful when scene matrices are not yet up-to-date
+- Improved the way unicode paths are handled on Windows
+- Preliminary support for scene properties animation (`AmbientColor`, `FogNear`, `FogFar`, `FogColor`) while preserving the legacy file format.
+- Add an `LSSF_Silent` scene flag, add many boolean flags to silence errors in the rendering IO.
+- Allow 32 bit indices in geometries (In the future we might introduce a _force 16 bit indice flag_ if required).
+- Validate index and vertex buffer handles when creating geometries.
+- Flag instantiated nodes as `NF_InstanceDisabled` if the host node is disabled.
+- Added file filter descriptions to the file selector dialogs (`OpenFileDialog`, `SaveFileDialog`). 
+
+### Rendering
+
+ - Added a _depth only_ pass to render shadow maps (`DEPTH_ONLY=1`).
+ - Set a higher probe resolution by default (from 64 to 512, using the `--glossScale 20` `--glossBias 0` parameters sent to CMFT).
+ - Load/save AAA config (`LoadForwardPipelineAAAConfigFromFile`, `LoadForwardPipelineAAAConfigFromAssets`, `SaveForwardPipelineAAAConfigToFile`)
+ - Tweaked the default light values (_default_shadow_bias_ set to 0.0001, _pssm_split_ of a the linear light set to 200m).
+ - Switched the jitter sequence to Halton (2,3).
+ - Added a function to retrieve the size of the OpenVR framebuffers
+ - Added a `RGBA32` pixel format to improve the performance when playing a video stream.
+
+### Physics
+
+- Fixed an issue in synchronizing state from scene to kinematic body
+
+### Documentation
+
+- Added an explanation of why using integer representation for time is important.
+- Documented the profiler API.
+- Added a HARFANG logo in the Doxygen documentation
+
 # [3.2.0] - 2022-02-21
 
 This minor release brings several fixes, performance improvements and new features to the rendering, physics and audio APIs.

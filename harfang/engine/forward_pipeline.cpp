@@ -330,10 +330,10 @@ void GenerateLinearShadowMapForForwardPipeline(bgfx::ViewId &view_id, const View
 				std::vector<ModelDisplayList> culled_display_lists = display_lists;
 				CullModelDisplayLists(frustum, culled_display_lists, mtxs, res);
 
-				DrawModelDisplayLists(view_id, culled_display_lists, 0, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res);
+				DrawModelDisplayLists(view_id, culled_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
 
 				// FIXME cull skinned models!
-				DrawSkinnedModelDisplayLists(view_id, skinned_display_lists, 0, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res);
+				DrawSkinnedModelDisplayLists(view_id, skinned_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
 
 				views[FPSP_Slot0LinearSplit0 + i] = view_id++;
 			}
@@ -377,10 +377,10 @@ void GenerateSpotShadowMapForForwardPipeline(bgfx::ViewId &view_id, const std::v
 		std::vector<ModelDisplayList> culled_display_lists = display_lists;
 		CullModelDisplayLists(frustum, culled_display_lists, mtxs, res);
 
-		DrawModelDisplayLists(view_id, culled_display_lists, 0, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res);
+		DrawModelDisplayLists(view_id, culled_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
 
 		// FIXME cull skinned models!
-		DrawSkinnedModelDisplayLists(view_id, skinned_display_lists, 0, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res);
+		DrawSkinnedModelDisplayLists(view_id, skinned_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
 
 		views[FPSP_Slot1Spot] = view_id++;
 	}
@@ -404,6 +404,9 @@ static const PipelineInfo forward_pipeline_info = {
 		{"FORWARD_PIPELINE_AAA=1", "FORWARD_PIPELINE=1", "SLOT0_SHADOWS=1"},
 		{"FORWARD_PIPELINE_AAA=1", "FORWARD_PIPELINE=1", "SLOT1_SHADOWS=1"},
 		{"FORWARD_PIPELINE_AAA=1", "FORWARD_PIPELINE=1", "SLOT0_SHADOWS=1", "SLOT1_SHADOWS=1"},
+
+		// depth only
+		{"DEPTH_ONLY=1"},
 	},
 };
 

@@ -1,0 +1,1 @@
+End a named profiler section. Call [BeginProfilerSection] to begin a new section.

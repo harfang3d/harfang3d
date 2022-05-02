@@ -11,10 +11,11 @@
 
 #include "fabgen.h"
 
+#include <json/json.hpp>
+
 namespace bgfx {
 void getTextureSizeFromRatio(BackbufferRatio::Enum _ratio, uint16_t &_width, uint16_t &_height);
 } // namespace bgfx
-
 
 namespace hg {
 
@@ -33,6 +34,61 @@ static const uint64_t attribute_texture_flags = 0 | BGFX_TEXTURE_RT | BGFX_SAMPL
 void ForwardPipelineAAA::Flip(const ViewState &view_state) {
 	std::swap(prv_frame_hdr_fb, next_frame_hdr_fb);
 	prv_view_state = view_state;
+}
+
+//
+bool LoadForwardPipelineAAAConfig(const json &js, ForwardPipelineAAAConfig &config) {
+	config.temporal_aa_weight = js["taa_weight"];
+
+	config.sample_count = js["sample_count"];
+	config.max_distance = js["max_distance"];
+	config.z_thickness = js["z_thickness"];
+
+	config.bloom_threshold = js["bloom_threshold"];
+	config.bloom_bias = js["bloom_bias"];
+	config.bloom_intensity = js["bloom_intensity"];
+
+	config.motion_blur = js["motion_blur"];
+
+	config.exposure = js["exposure"];
+	config.gamma = js["gamma"];
+
+	return true;
+}
+
+void SaveForwardPipelineAAAConfig(json &js, const ForwardPipelineAAAConfig &config) {
+	js["taa_weight"] = config.temporal_aa_weight;
+
+	js["sample_count"] = config.sample_count;
+	js["max_distance"] = config.max_distance;
+	js["z_thickness"] = config.z_thickness;
+
+	js["bloom_threshold"] = config.bloom_threshold;
+	js["bloom_bias"] = config.bloom_bias;
+	js["bloom_intensity"] = config.bloom_intensity;
+
+	js["motion_blur"] = config.motion_blur;
+
+	js["exposure"] = config.exposure;
+	js["gamma"] = config.gamma;
+}
+
+bool LoadForwardPipelineAAAConfigFromFile(const char *path, ForwardPipelineAAAConfig &config) {
+	bool result;
+	const auto js = LoadJsonFromFile(path, &result);
+	return result ? LoadForwardPipelineAAAConfig(js, config) : false;
+}
+
+bool LoadForwardPipelineAAAConfigFromAssets(const char *name, ForwardPipelineAAAConfig &config) {
+	bool result;
+	const auto js = LoadJsonFromAssets(name, &result);
+	return result ? LoadForwardPipelineAAAConfig(js, config) : false;
+}
+
+bool SaveForwardPipelineAAAConfigToFile(const char *path, const ForwardPipelineAAAConfig &config) {
+	json js;
+	SaveForwardPipelineAAAConfig(js, config);
+	return SaveJsonToFile(js, path);
 }
 
 //
@@ -87,7 +143,7 @@ bool IsValid(const ForwardPipelineAAA &aaa) {
 }
 
 static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const ReadProvider &ip, const char *path, const ForwardPipelineAAAConfig &config,
-	const RenderBufferResourceFactory& rb_factory, bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio) {
+	const RenderBufferResourceFactory &rb_factory, bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio) {
 	ForwardPipelineAAA aaa;
 
 	const uint64_t flags = attribute_texture_flags;
@@ -178,10 +234,10 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 		aaa.frame_hdr_fb = bgfx::createFrameBuffer(2, texs, false);
 
 		aaa.work_frame_hdr_fb = rb_factory.create_framebuffer(bgfx::BackbufferRatio::Equal, bgfx::TextureFormat::RGBA16F, flags);
-		
-		aaa.prv_frame_hdr_fb = rb_factory.create_framebuffer(bgfx::BackbufferRatio::Equal, bgfx::TextureFormat::RGBA16F, flags); // (reprojected) input to SSR/SSGI
-		aaa.next_frame_hdr_fb =
-			rb_factory.create_framebuffer(bgfx::BackbufferRatio::Equal, bgfx::TextureFormat::RGBA16F, flags); // current frame with SSR/SSGI
+
+		aaa.prv_frame_hdr_fb =
+			rb_factory.create_framebuffer(bgfx::BackbufferRatio::Equal, bgfx::TextureFormat::RGBA16F, flags); // (reprojected) input to SSR/SSGI
+		aaa.next_frame_hdr_fb = rb_factory.create_framebuffer(bgfx::BackbufferRatio::Equal, bgfx::TextureFormat::RGBA16F, flags); // current frame with SSR/SSGI
 	}
 
 	{
@@ -237,13 +293,13 @@ ForwardPipelineAAA CreateForwardPipelineAAAFromAssets(
 	return _CreateForwardPipelineAAA(g_assets_reader, g_assets_read_provider, path, config, rb_factory, ssgi_ratio, ssr_ratio);
 }
 
-ForwardPipelineAAA CreateForwardPipelineAAAFromFile(const char* path, const ForwardPipelineAAAConfig& config, uint16_t rb_width, uint16_t rb_height,
+ForwardPipelineAAA CreateForwardPipelineAAAFromFile(const char *path, const ForwardPipelineAAAConfig &config, uint16_t rb_width, uint16_t rb_height,
 	bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio) {
 	auto rb_factory = RenderBufferResourceFactory::Custom(rb_width, rb_height);
 	return _CreateForwardPipelineAAA(g_file_reader, g_file_read_provider, path, config, rb_factory, ssgi_ratio, ssr_ratio);
 }
 
-ForwardPipelineAAA CreateForwardPipelineAAAFromAssets(const char* path, const ForwardPipelineAAAConfig& config, uint16_t rb_width, uint16_t rb_height,
+ForwardPipelineAAA CreateForwardPipelineAAAFromAssets(const char *path, const ForwardPipelineAAAConfig &config, uint16_t rb_width, uint16_t rb_height,
 	bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio) {
 	auto rb_factory = RenderBufferResourceFactory::Custom(rb_width, rb_height);
 	return _CreateForwardPipelineAAA(g_assets_reader, g_assets_read_provider, path, config, rb_factory, ssgi_ratio, ssr_ratio);
@@ -434,6 +490,9 @@ static int ComputeForwardPipelineConfigurationIdx(ForwardPipelineStage pipeline_
 	if (pipeline_stage == FPS_AttributeBuffers)
 		return 0;
 
+	if (pipeline_stage == FPS_DepthOnly)
+		return 9;
+
 	int light_config_idx = 0;
 
 	if (lights.lights[0].shadow_type == FPST_Map)
@@ -531,13 +590,15 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 
 	// update pipeline
 	UpdateForwardPipeline(pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, render_data.fog, fb_size);
-	UpdateForwardPipelineAAA(pipeline, rect, view_state.view, view_state.proj, aaa.prv_view_state.view, aaa.prv_view_state.proj, TAAProjectionJitter8(frame),
+	UpdateForwardPipelineAAA(pipeline, rect, view_state.view, view_state.proj, aaa.prv_view_state.view, aaa.prv_view_state.proj, TAAHaltonJitter8(frame),
 		aaa.ssgi_ratio, aaa.ssr_ratio, aaa_config.temporal_aa_weight, aaa_config.motion_blur, aaa_config.exposure, aaa_config.gamma, aaa_config.sample_count,
 		aaa_config.max_distance); // [todo] ssgi_ratio/ssr_ratio
 
 	// TAA jittered projection matrix
-	const auto jitter = TAAProjectionJitter8(frame) / Vec2(float(GetWidth(rect)), float(GetHeight(rect)));
-	const auto proj_jittered = to_bgfx(TranslationMat4({jitter.x, jitter.y, 0}) * view_state.proj);
+	const auto jitter = TAAHaltonJitter8(frame) / Vec2(float(GetWidth(rect)), float(GetHeight(rect)));
+	auto proj_jittered = to_bgfx(view_state.proj);
+	proj_jittered[8] += jitter.x;
+	proj_jittered[9] += jitter.y;
 
 	// fill attribute buffers (linear depth/normal/velocity)
 	{
@@ -722,8 +783,8 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 		view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.next_frame_hdr_fb)}, aaa.attr0, aaa.attr1, noise, aaa.work_frame_hdr_fb, aaa.motion_blur);
 
 	// bloom
-	ApplyBloom(view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.work_frame_hdr_fb)}, fb_size, aaa.frame_hdr_fb, aaa.bloom, aaa_config.bloom_threshold,
-		aaa_config.bloom_bias, aaa_config.bloom_intensity);
+	ApplyBloom(view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.work_frame_hdr_fb)}, fb_size, aaa.frame_hdr_fb, aaa.bloom,
+		aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity);
 
 	// final compositing for presentation (exposure/gamma correction)
 	{
@@ -768,7 +829,6 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	SubmitSceneToForwardPipeline(view_id, scene, rect, view_state, pipeline, render_data, resources, views, aaa, aaa_config, frame, 0, 0, fb, debug_name);
 }
 
-
 // basic rendering path
 void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, const Rect<int> &rect, const ViewState &view_state, ForwardPipeline &pipeline,
 	const SceneForwardPipelineRenderData &render_data, const PipelineResources &resources, SceneForwardPipelinePassViewId &views, bgfx::FrameBufferHandle fb,
@@ -776,8 +836,8 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	std::fill(std::begin(views), std::end(views), 65535);
 
 	// update pipeline
-	UpdateForwardPipeline(pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, render_data.fog,
-		hg::iVec2(GetWidth(rect), GetHeight(rect)));
+	UpdateForwardPipeline(
+		pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, render_data.fog, hg::iVec2(GetWidth(rect), GetHeight(rect)));
 	//	UpdateForwardPipelineAAA(pipeline, rect, view_state.view, view_state.proj, view_state.view, view_state.proj, {});
 
 	{

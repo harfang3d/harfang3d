@@ -293,7 +293,13 @@ Mat4 InverseFast(const Mat4 &m) {
 
 //
 Mat4 Orthonormalize(const Mat4 &m) {
-	return Mat4(Orthonormalize(Mat3(m.m[0][0], m.m[1][0], m.m[2][0], m.m[0][1], m.m[1][1], m.m[2][1], m.m[0][2], m.m[1][2], m.m[2][2])));
+	const auto T = GetT(m);
+	return TransformationMat4(T, Orthonormalize(Mat3(m)));
+}
+
+Mat4 Normalize(const Mat4 &m) {
+	const auto T = GetT(m);
+	return TransformationMat4(T, Normalize(Mat3(m)));
 }
 
 //

@@ -23,7 +23,8 @@
 enum VideoFrameFormat { 
 	VFF_UNKNOWN = -1,		///< Unknown/Unsupported 
 	VFF_YUV422 = 0,			///< 16 bits per pixels. 2 channels per pixel. 8 bits per channel. U and V are shared between two pixels.
-	VFF_RGB24				///< 24 bits per pixels. 8 bits per channel (Red, Green, Blue).
+	VFF_RGB24,				///< 24 bits per pixels. 8 bits per channel (Red, Green, Blue).
+	VFF_RGBA32,				///< 32 bits per pixels. 8 bits per channel (Red, Green, Blue, Alpha).
 };
 
 /// Opaque handle for video stream.

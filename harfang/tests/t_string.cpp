@@ -50,9 +50,9 @@ TEST(string, Upper) {
 
 TEST(string, ToUCS2AndBack) {
 	std::string in("D:/test.bin_!@#{]]}/*-=This is a TEST,;'");
-	auto u16 = utf8_to_utf16(in);
-	auto out = utf16_to_utf8(u16);
-	EXPECT_EQ(in, out);
+	auto wide = utf8_to_wchar(in);
+	auto narrow = wchar_to_utf8(wide);
+	EXPECT_EQ(in, narrow);
 }
 
 TEST(string, Slicing) {

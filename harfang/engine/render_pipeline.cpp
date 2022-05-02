@@ -567,39 +567,44 @@ static std::map<bgfx::ProgramHandle, std::vector<bgfx::ShaderHandle>, ProgramCom
 std::vector<bgfx::ShaderHandle> GetProgramShaders(bgfx::ProgramHandle prg_h) { return program_shaders[prg_h]; }
 
 //
-bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *vs_name, const char *fs_name) {
+bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *vs_name, const char *fs_name, bool silent) {
 	ProfilerPerfSection section("LoadProgram", vs_name);
 
-	ScopedReadHandle vs_h(ip, vs_name), fs_h(ip, fs_name);
+	ScopedReadHandle vs_h(ip, vs_name, silent), fs_h(ip, fs_name, silent);
 
 	if (!ir.is_valid(vs_h)) {
-		error(format("Vertex shader '%1' not found").arg(vs_name));
+		if (!silent)
+			error(format("Vertex shader '%1' not found").arg(vs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
 	if (!ir.is_valid(fs_h)) {
-		error(format("Fragment shader '%1' not found").arg(fs_name));
+		if (!silent)
+			error(format("Fragment shader '%1' not found").arg(fs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
 	const auto vs = LoadShader(ir, vs_h, vs_name);
 
 	if (!bgfx::isValid(vs)) {
-		error(format("Failed to load vertex shader '%1'").arg(vs_name));
+		if (!silent)
+			error(format("Failed to load vertex shader '%1'").arg(vs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
 	const auto fs = LoadShader(ir, fs_h, fs_name);
 
 	if (!bgfx::isValid(fs)) {
-		error(format("Failed to load fragment shader '%1'").arg(vs_name));
+		if (!silent)
+			error(format("Failed to load fragment shader '%1'").arg(vs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
 	const auto prg_h = bgfx::createProgram(vs, fs, true);
 
 	if (!bgfx::isValid(prg_h)) {
-		error(format("Failed to create program from shader '%1' and '%2'").arg(vs_name).arg(fs_name));
+		if (!silent)
+			error(format("Failed to create program from shader '%1' and '%2'").arg(vs_name).arg(fs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -608,32 +613,35 @@ bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const 
 	return prg_h;
 }
 
-bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *name) {
+bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const char *name, bool silent) {
 	const std::string _name(name);
-	return LoadProgram(ir, ip, (_name + ".vsb").c_str(), (_name + ".fsb").c_str());
+	return LoadProgram(ir, ip, (_name + ".vsb").c_str(), (_name + ".fsb").c_str(), silent);
 }
 
-bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip, const char *cs_name) {
+bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip, const char *cs_name, bool silent) {
 	ProfilerPerfSection section("LoadComputeProgram", cs_name);
 
 	ScopedReadHandle cs_h(ip, cs_name);
 
 	if (!ir.is_valid(cs_h)) {
-		error(format("Compute shader '%1' not found").arg(cs_name));
+		if (!silent)
+			error(format("Compute shader '%1' not found").arg(cs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
 	const auto cs = LoadShader(ir, cs_h, nullptr);
 
 	if (!bgfx::isValid(cs)) {
-		error(format("Failed to load compute shader '%1'").arg(cs_name));
+		if (!silent)
+			error(format("Failed to load compute shader '%1'").arg(cs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
 	const auto prg_h = bgfx::createProgram(cs, BGFX_INVALID_HANDLE, true);
 
 	if (!bgfx::isValid(prg_h)) {
-		error(format("Failed to create program from shader '%1'").arg(cs_name));
+		if (!silent)
+			error(format("Failed to create program from shader '%1'").arg(cs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -643,37 +651,30 @@ bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip,
 }
 
 //
-bgfx::ProgramHandle LoadProgramFromFile(const char *vs, const char *fs) { return LoadProgram(g_file_reader, g_file_read_provider, vs, fs); }
-bgfx::ProgramHandle LoadProgramFromAssets(const char *vs, const char *fs) { return LoadProgram(g_assets_reader, g_assets_read_provider, vs, fs); }
+bgfx::ProgramHandle LoadProgramFromFile(const char *vs, const char *fs, bool silent) {
+	return LoadProgram(g_file_reader, g_file_read_provider, vs, fs, silent);
+}
+bgfx::ProgramHandle LoadProgramFromAssets(const char *vs, const char *fs, bool silent) {
+	return LoadProgram(g_assets_reader, g_assets_read_provider, vs, fs, silent);
+}
 
-bgfx::ProgramHandle LoadProgramFromFile(const char *path) { return LoadProgram(g_file_reader, g_file_read_provider, path); }
-bgfx::ProgramHandle LoadProgramFromAssets(const char *name) { return LoadProgram(g_assets_reader, g_assets_read_provider, name); }
+bgfx::ProgramHandle LoadProgramFromFile(const char *path, bool silent) { return LoadProgram(g_file_reader, g_file_read_provider, path, silent); }
+bgfx::ProgramHandle LoadProgramFromAssets(const char *name, bool silent) { return LoadProgram(g_assets_reader, g_assets_read_provider, name, silent); }
 
-bgfx::ProgramHandle LoadComputeProgramFromFile(const char *cs_path) { return LoadComputeProgram(g_file_reader, g_file_read_provider, cs_path); }
-bgfx::ProgramHandle LoadComputeProgramFromAssets(const char *cs_name) { return LoadComputeProgram(g_assets_reader, g_assets_read_provider, cs_name); }
+bgfx::ProgramHandle LoadComputeProgramFromFile(const char *cs_path, bool silent) {
+	return LoadComputeProgram(g_file_reader, g_file_read_provider, cs_path, silent);
+}
+bgfx::ProgramHandle LoadComputeProgramFromAssets(const char *cs_name, bool silent) {
+	return LoadComputeProgram(g_assets_reader, g_assets_read_provider, cs_name, silent);
+}
 
 //
-std::vector<PipelineProgramFeature> LoadPipelineProgramFeatures(const Reader &ir, const ReadProvider &ip, const char *name, bool &success) {
+std::vector<PipelineProgramFeature> LoadPipelineProgramFeatures(const Reader &ir, const ReadProvider &ip, const char *name, bool &success, bool silent) {
 	ProfilerPerfSection section("LoadPipelineProgramFeatures", name);
 
-	success = false;
-
-	const auto json_text = LoadString(ir, ScopedReadHandle(ip, name));
-
-	if (json_text.empty()) {
-		if (!ends_with(name, ".hps"))
-			warn(format("Request to load pipeline program features from a path not ending with '.hps' ('%1')").arg(name));
+	const auto js = LoadJson(ir, ScopedReadHandle(ip, name, true), &success);
+	if (!success)
 		return {};
-	}
-
-	json js;
-
-	try {
-		js = json::parse(json_text);
-	} catch (...) {
-		debug(format("Failed to parse json '%1'").arg(name));
-		return {};
-	}
 
 	std::vector<PipelineProgramFeature> features;
 
@@ -720,7 +721,7 @@ std::vector<PipelineProgramFeature> LoadPipelineProgramFeatures(const Reader &ir
 				features.push_back(OptionalSkinning);
 			else if (feat == "OptionalAlphaCut")
 				features.push_back(OptionalAlphaCut);
-			else
+			else if (!silent)
 				warn(format("Ignoring unknown pipeline shader feature '%1' in '%2'").arg(feat).arg(name));
 		}
 	}
@@ -730,30 +731,29 @@ std::vector<PipelineProgramFeature> LoadPipelineProgramFeatures(const Reader &ir
 	return features;
 }
 
-std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromFile(const char *path, bool &success) {
+std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromFile(const char *path, bool &success, bool silent) {
 	try {
-		return LoadPipelineProgramFeatures(g_file_reader, g_file_read_provider, path, success);
+		return LoadPipelineProgramFeatures(g_file_reader, g_file_read_provider, path, success, silent);
 	} catch (...) { debug(format("Failed to read program features from file '%1'").arg(path)); }
 	return {};
 }
 
-std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromAssets(const char *name, bool &success) {
+std::vector<PipelineProgramFeature> LoadPipelineProgramFeaturesFromAssets(const char *name, bool &success, bool silent) {
 	try {
-		return LoadPipelineProgramFeatures(g_assets_reader, g_assets_read_provider, name, success);
+		return LoadPipelineProgramFeatures(g_assets_reader, g_assets_read_provider, name, success, silent);
 	} catch (...) { debug(format("Failed to read program features from asset '%1'").arg(name)); }
 	return {};
 }
 
 //
 bool LoadPipelineProgramUniforms(const Reader &ir, const ReadProvider &ip, const char *name, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs,
-	PipelineResources &resources) {
+	PipelineResources &resources, bool silent) {
 	ProfilerPerfSection section("LoadPipelineProgramUniforms", name);
 
-	const auto json_text = LoadString(ir, ScopedReadHandle(ip, name, true));
-	if (json_text.empty())
+	bool result;
+	const auto js = LoadJson(ir, ScopedReadHandle(ip, name, true), &result);
+	if (!result)
 		return false;
-
-	const auto js = json::parse(json_text);
 
 	const auto i = js.find("uniforms");
 	if (i == std::end(js))
@@ -793,7 +793,7 @@ bool LoadPipelineProgramUniforms(const Reader &ir, const ReadProvider &ip, const
 					if (v->is_string()) {
 						const auto path = v->get<std::string>();
 						const auto flags = LoadTextureFlags(ir, ip, path);
-						u.tex_ref = LoadTexture(ir, ip, path.c_str(), flags, resources);
+						u.tex_ref = LoadTexture(ir, ip, path.c_str(), flags, resources, silent);
 					}
 
 				texs.push_back(u);
@@ -806,27 +806,30 @@ bool LoadPipelineProgramUniforms(const Reader &ir, const ReadProvider &ip, const
 	return true;
 }
 
-bool LoadPipelineProgramUniformsFromFile(const char *path, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs, PipelineResources &resources) {
-	return LoadPipelineProgramUniforms(g_file_reader, g_file_read_provider, path, texs, vecs, resources);
+bool LoadPipelineProgramUniformsFromFile(
+	const char *path, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs, PipelineResources &resources, bool silent) {
+	return LoadPipelineProgramUniforms(g_file_reader, g_file_read_provider, path, texs, vecs, resources, silent);
 }
 
-bool LoadPipelineProgramUniformsFromAssets(const char *name, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs, PipelineResources &resources) {
-	return LoadPipelineProgramUniforms(g_assets_reader, g_assets_read_provider, name, texs, vecs, resources);
+bool LoadPipelineProgramUniformsFromAssets(
+	const char *name, std::vector<TextureUniform> &texs, std::vector<Vec4Uniform> &vecs, PipelineResources &resources, bool silent) {
+	return LoadPipelineProgramUniforms(g_assets_reader, g_assets_read_provider, name, texs, vecs, resources, silent);
 }
 
 //
-PipelineProgram LoadPipelineProgram(const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources, const PipelineInfo &pipeline) {
+PipelineProgram LoadPipelineProgram(
+	const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources, const PipelineInfo &pipeline, bool silent) {
 	PipelineProgram prg;
 
 	bool success;
-	prg.features = LoadPipelineProgramFeatures(ir, ip, name, success);
+	prg.features = LoadPipelineProgramFeatures(ir, ip, name, success, silent);
 
 	if (!success)
 		error(format("Failed to load pipeline program features '%1'").arg(name));
 	else
 		prg.programs.resize(GetPipelineProgramVariantCount(prg.features) * pipeline.configs.size());
 
-	if (!LoadPipelineProgramUniforms(ir, ip, name, prg.texture_uniforms, prg.vec4_uniforms, resources))
+	if (!LoadPipelineProgramUniforms(ir, ip, name, prg.texture_uniforms, prg.vec4_uniforms, resources, silent))
 		error(format("Failed to load pipeline program uniforms '%1'").arg(name));
 
 	prg.name = CutFileExtension(name);
@@ -837,12 +840,12 @@ PipelineProgram LoadPipelineProgram(const Reader &ir, const ReadProvider &ip, co
 	return prg;
 }
 
-PipelineProgram LoadPipelineProgramFromFile(const char *path, PipelineResources &resources, const PipelineInfo &pipeline) {
-	return LoadPipelineProgram(g_file_reader, g_file_read_provider, path, resources, pipeline);
+PipelineProgram LoadPipelineProgramFromFile(const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool silent) {
+	return LoadPipelineProgram(g_file_reader, g_file_read_provider, path, resources, pipeline, silent);
 }
 
-PipelineProgram LoadPipelineProgramFromAssets(const char *name, PipelineResources &resources, const PipelineInfo &pipeline) {
-	return LoadPipelineProgram(g_assets_reader, g_assets_read_provider, name, resources, pipeline);
+PipelineProgram LoadPipelineProgramFromAssets(const char *name, PipelineResources &resources, const PipelineInfo &pipeline, bool silent) {
+	return LoadPipelineProgram(g_assets_reader, g_assets_read_provider, name, resources, pipeline, silent);
 }
 
 //
@@ -939,7 +942,7 @@ static void CreateMissingMaterialSampler(
 		TextureRef ref{};
 		if (!tex.empty()) {
 			debug(format("Loading missing material sampler uniform texture %1").arg(tex));
-			ref = LoadTexture(ir, ip, tex.c_str(), 0, resources);
+			ref = LoadTexture(ir, ip, tex.c_str(), 0, resources, true);
 		}
 
 		SetMaterialTexture(mat, name.c_str(), ref, stage);
@@ -1018,21 +1021,21 @@ void UpdateMaterialPipelineProgramVariant(Material &mat, const PipelineResources
 static bx::DefaultAllocator g_allocator;
 
 //
-json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::string &name) {
+json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent) {
 	const auto meta_path = name + ".meta";
-	return LoadJson(ir, ScopedReadHandle(ip, meta_path.c_str(), true));
+	return LoadJson(ir, ScopedReadHandle(ip, meta_path.c_str(), silent));
 }
 
-json LoadResourceMetaFromFile(const std::string &path) { return LoadResourceMeta(g_file_reader, g_file_read_provider, path); }
-json LoadResourceMetaFromAssets(const std::string &name) { return LoadResourceMeta(g_assets_reader, g_assets_read_provider, name); }
+json LoadResourceMetaFromFile(const std::string &path, bool silent) { return LoadResourceMeta(g_file_reader, g_file_read_provider, path, silent); }
+json LoadResourceMetaFromAssets(const std::string &name, bool silent) { return LoadResourceMeta(g_assets_reader, g_assets_read_provider, name, silent); }
 
 bool SaveResourceMetaToFile(const std::string &path, const json &meta) { return SaveJsonToFile(meta, (path + ".meta").c_str()); }
 
 //
-TextureMeta LoadTextureMeta(const Reader &ir, const ReadProvider &ip, const std::string &name) {
+TextureMeta LoadTextureMeta(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent) {
 	ProfilerPerfSection section("LoadTextureMeta", name);
 
-	const auto js = LoadResourceMeta(ir, ip, name);
+	const auto js = LoadResourceMeta(ir, ip, name, silent);
 
 	TextureMeta meta;
 
@@ -1089,14 +1092,16 @@ TextureMeta LoadTextureMeta(const Reader &ir, const ReadProvider &ip, const std:
 	return meta;
 }
 
-TextureMeta LoadTextureMetaFromFile(const std::string &path) { return LoadTextureMeta(g_file_reader, g_file_read_provider, path); }
-TextureMeta LoadTextureMetaFromAssets(const std::string &name) { return LoadTextureMeta(g_assets_reader, g_assets_read_provider, name); }
+TextureMeta LoadTextureMetaFromFile(const std::string &path, bool silent) { return LoadTextureMeta(g_file_reader, g_file_read_provider, path, silent); }
+TextureMeta LoadTextureMetaFromAssets(const std::string &name, bool silent) { return LoadTextureMeta(g_assets_reader, g_assets_read_provider, name, silent); }
 
 //
-uint64_t LoadTextureFlags(const Reader &ir, const ReadProvider &ip, const std::string &name) { return LoadTextureMeta(ir, ip, name).flags; }
+uint64_t LoadTextureFlags(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent) {
+	return LoadTextureMeta(ir, ip, name, silent).flags;
+}
 
-uint64_t LoadTextureFlagsFromFile(const std::string &path) { return LoadTextureFlags(g_file_reader, g_file_read_provider, path); }
-uint64_t LoadTextureFlagsFromAssets(const std::string &name) { return LoadTextureFlags(g_assets_reader, g_assets_read_provider, name); }
+uint64_t LoadTextureFlagsFromFile(const std::string &path, bool silent) { return LoadTextureFlags(g_file_reader, g_file_read_provider, path, silent); }
+uint64_t LoadTextureFlagsFromAssets(const std::string &name, bool silent) { return LoadTextureFlags(g_assets_reader, g_assets_read_provider, name, silent); }
 
 //
 Texture CreateTexture(int width, int height, const char *name, uint64_t flags, bgfx::TextureFormat::Enum texture_format) {
@@ -1144,17 +1149,19 @@ void UpdateTextureFromPicture(Texture &tex, const Picture &pic) {
 }
 
 //
-Texture LoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, bgfx::TextureInfo *info, bimg::Orientation::Enum *orientation) {
+Texture LoadTexture(
+	const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, bgfx::TextureInfo *info, bimg::Orientation::Enum *orientation, bool silent) {
 	ProfilerPerfSection section("LoadTexture", name);
 
-	log(format("Loading texture '%1'").arg(name).c_str());
+	if (!silent)
+		log(format("Loading texture '%1'").arg(name).c_str());
 
 	bgfx::TextureHandle handle = BGFX_INVALID_HANDLE;
 
-	const auto data = LoadData(ir, ScopedReadHandle(ip, name));
+	const auto data = LoadData(ir, ScopedReadHandle(ip, name, silent));
 
 	if (data.GetSize() > 0) {
-		if (auto container = bimg::imageParse(&g_allocator, data.GetData(), uint32_t(data.GetSize()), bimg::TextureFormat::Count)) {
+		if (auto container = bimg::imageParse(&g_allocator, data.GetData(), numeric_cast<uint32_t>(data.GetSize()), bimg::TextureFormat::Count)) {
 			const auto *mem = bgfx::makeRef(
 				container->m_data, container->m_size, [](void *ptr, void *user) { BX_ALIGNED_FREE(&g_allocator, user, 16); }, container);
 
@@ -1175,7 +1182,8 @@ Texture LoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, 
 		}
 
 		if (!bgfx::isValid(handle)) {
-			error(format("Failed to load texture '%1', unsupported format").arg(name).c_str());
+			if (!silent)
+				error(format("Failed to load texture '%1', unsupported format").arg(name).c_str());
 
 			static const uint32_t dummy = 0xff00ffff;
 			handle = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::RGBA8, BGFX_SAMPLER_NONE, bgfx::copy(&dummy, 4));
@@ -1184,18 +1192,19 @@ Texture LoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, 
 		if (bgfx::isValid(handle))
 			bgfx::setName(handle, name);
 	} else {
-		error(format("Failed to load texture '%1', could not load data").arg(name).c_str());
+		if (!silent)
+			error(format("Failed to load texture '%1', could not load data").arg(name).c_str());
 	}
 
 	return MakeTexture(handle, flags);
 }
 
-Texture LoadTextureFromFile(const char *name, uint64_t flags, bgfx::TextureInfo *info, bimg::Orientation::Enum *orientation) {
-	return LoadTexture(g_file_reader, g_file_read_provider, name, flags, info, orientation);
+Texture LoadTextureFromFile(const char *name, uint64_t flags, bgfx::TextureInfo *info, bimg::Orientation::Enum *orientation, bool silent) {
+	return LoadTexture(g_file_reader, g_file_read_provider, name, flags, info, orientation, silent);
 }
 
-Texture LoadTextureFromAssets(const char *name, uint64_t flags, bgfx::TextureInfo *info, bimg::Orientation::Enum *orientation) {
-	return LoadTexture(g_assets_reader, g_assets_read_provider, name, flags, info, orientation);
+Texture LoadTextureFromAssets(const char *name, uint64_t flags, bgfx::TextureInfo *info, bimg::Orientation::Enum *orientation, bool silent) {
+	return LoadTexture(g_assets_reader, g_assets_read_provider, name, flags, info, orientation, silent);
 }
 
 RenderBufferResourceFactory RenderBufferResourceFactory::Custom(uint16_t width, uint16_t height) {
@@ -1346,26 +1355,26 @@ template <typename T> T GetOptional(const json &js, const char *key, T dflt) {
 }
 
 TextureRef SkipLoadOrQueueTextureLoad(
-	const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load) {
+	const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load, bool silent) {
 	if (do_not_load)
 		return resources.textures.Add(path, {});
 
 	auto ref = resources.textures.Has(path);
 
 	if (ref == InvalidTextureRef) {
-		const auto meta = LoadTextureMeta(ir, ip, path);
+		const auto meta = LoadTextureMeta(ir, ip, path, silent);
 
 		if (queue_load)
 			ref = QueueLoadTexture(ir, ip, path, meta.flags, resources);
 		else
-			ref = LoadTexture(ir, ip, path, meta.flags, resources);
+			ref = LoadTexture(ir, ip, path, meta.flags, resources, silent);
 	}
 
 	return ref;
 }
 
 Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources, const PipelineInfo &pipeline,
-	bool queue_texture_loads, bool do_not_load_resources) {
+	bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	Material mat;
 
 	const std::string prg_name = js.at("program");
@@ -1373,7 +1382,7 @@ Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider 
 	if (do_not_load_resources)
 		mat.program = resources.programs.Add(prg_name.c_str(), {});
 	else
-		mat.program = LoadPipelineProgramRef(deps_ir, deps_ip, prg_name.c_str(), resources, pipeline);
+		mat.program = LoadPipelineProgramRef(deps_ir, deps_ip, prg_name.c_str(), resources, pipeline, silent);
 
 	const auto i_values = js.find("values");
 
@@ -1417,7 +1426,7 @@ Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider 
 			}
 
 			if (!path.empty())
-				t.texture = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, path.c_str(), resources, queue_texture_loads, do_not_load_resources);
+				t.texture = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, path.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
 
 			t.uniform = BGFX_INVALID_HANDLE;
 			if (IsRenderUp())
@@ -1457,7 +1466,7 @@ Material LoadMaterial(const json &js, const Reader &deps_ir, const ReadProvider 
 }
 
 Material LoadMaterial(const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
-	const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources) {
+	const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	ProfilerPerfSection section("LoadMaterial");
 
 	Material mat;
@@ -1468,7 +1477,7 @@ Material LoadMaterial(const Reader &ir, const Handle &h, const Reader &deps_ir, 
 	if (do_not_load_resources)
 		mat.program = resources.programs.Add(name.c_str(), {});
 	else
-		mat.program = LoadPipelineProgramRef(deps_ir, deps_ip, name.c_str(), resources, pipeline);
+		mat.program = LoadPipelineProgramRef(deps_ir, deps_ip, name.c_str(), resources, pipeline, silent);
 
 	const auto value_count = Read<uint16_t>(ir, h);
 
@@ -1508,7 +1517,7 @@ Material LoadMaterial(const Reader &ir, const Handle &h, const Reader &deps_ir, 
 			Read(ir, h, dummy_flags);
 
 			if (!tex_name.empty())
-				t.texture = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, tex_name.c_str(), resources, queue_texture_loads, do_not_load_resources);
+				t.texture = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, tex_name.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
 		}
 
 		t.uniform = BGFX_INVALID_HANDLE;
@@ -1526,34 +1535,34 @@ Material LoadMaterial(const Reader &ir, const Handle &h, const Reader &deps_ir, 
 }
 
 Material LoadMaterialFromFile(
-	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources) {
+	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	return LoadMaterial(g_file_reader, ScopedReadHandle(g_file_read_provider, path), g_file_reader, g_file_read_provider, resources, pipeline,
-		queue_texture_loads, do_not_load_resources);
+		queue_texture_loads, do_not_load_resources, silent);
 }
 
 Material LoadMaterialFromAssets(
-	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources) {
+	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	return LoadMaterial(g_assets_reader, ScopedReadHandle(g_assets_read_provider, path), g_assets_reader, g_assets_read_provider, resources, pipeline,
-		queue_texture_loads, do_not_load_resources);
+		queue_texture_loads, do_not_load_resources, silent);
 }
 
 //
 PipelineProgramRef LoadPipelineProgramRef(
-	const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources, const PipelineInfo &pipeline) {
+	const Reader &ir, const ReadProvider &ip, const char *name, PipelineResources &resources, const PipelineInfo &pipeline, bool silent) {
 	auto ref = resources.programs.Has(name);
 	if (ref == InvalidPipelineProgramRef) {
-		auto prg = LoadPipelineProgram(ir, ip, name, resources, pipeline);
+		auto prg = LoadPipelineProgram(ir, ip, name, resources, pipeline, silent);
 		ref = resources.programs.Add(name, std::move(prg));
 	}
 	return ref;
 }
 
-PipelineProgramRef LoadPipelineProgramRefFromFile(const char *path, PipelineResources &resources, const PipelineInfo &pipeline) {
-	return LoadPipelineProgramRef(g_file_reader, g_file_read_provider, path, resources, pipeline);
+PipelineProgramRef LoadPipelineProgramRefFromFile(const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool silent) {
+	return LoadPipelineProgramRef(g_file_reader, g_file_read_provider, path, resources, pipeline, silent);
 }
 
-PipelineProgramRef LoadPipelineProgramRefFromAssets(const char *name, PipelineResources &resources, const PipelineInfo &pipeline) {
-	return LoadPipelineProgramRef(g_assets_reader, g_assets_read_provider, name, resources, pipeline);
+PipelineProgramRef LoadPipelineProgramRefFromAssets(const char *name, PipelineResources &resources, const PipelineInfo &pipeline, bool silent) {
+	return LoadPipelineProgramRef(g_assets_reader, g_assets_read_provider, name, resources, pipeline, silent);
 }
 
 //
@@ -1603,28 +1612,35 @@ bgfx::VertexLayout VertexLayoutPosFloatNormUInt8TexCoord0UInt8() {
 }
 
 //
-size_t ProcessModelLoadQueue(PipelineResources &res, size_t limit) {
+size_t ProcessModelLoadQueue(PipelineResources &res, time_ns t_budget, bool silent) {
 	ProfilerPerfSection section("ProcessModelLoadQueue");
 
 	size_t processed = 0;
 
-	for (; limit > 0 && !res.model_loads.empty(); --limit) {
+	const auto t_start = time_now();
+
+	while (!res.model_loads.empty()) {
 		const auto &m = res.model_loads.front();
 
 		if (res.models.IsValidRef(m.ref)) {
 			auto &mdl = res.models.Get(m.ref);
 			const auto name = res.models.GetName(m.ref);
-			debug(format("Queued model load '%1'").arg(name));
+			if (!silent)
+				debug(format("Queued model load '%1'").arg(name));
 
 			ModelInfo info;
-			ScopedReadHandle h(m.ip, name.c_str(), false);
-			mdl = LoadModel(m.ir, h, name.c_str(), &info);
+			ScopedReadHandle h(m.ip, name.c_str(), silent);
+			mdl = LoadModel(m.ir, h, name.c_str(), &info, silent);
 			res.model_infos[m.ref.ref] = info;
 		}
 
 		res.model_loads.pop_front();
 
 		++processed;
+
+		const auto elapsed = time_now() - t_start;
+		if (elapsed >= t_budget)
+			break;
 	}
 
 	return processed;
@@ -1646,7 +1662,8 @@ ModelRef QueueLoadModelFromAssets(const char *name, PipelineResources &resources
 	return QueueLoadModel(g_assets_reader, g_assets_read_provider, name, resources);
 }
 
-ModelRef SkipLoadOrQueueModelLoad(const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load) {
+ModelRef SkipLoadOrQueueModelLoad(
+	const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool queue_load, bool do_not_load, bool silent) {
 	if (do_not_load)
 		return resources.models.Add(path, {});
 
@@ -1656,37 +1673,41 @@ ModelRef SkipLoadOrQueueModelLoad(const Reader &ir, const ReadProvider &ip, cons
 		if (queue_load)
 			ref = QueueLoadModel(ir, ip, path, resources);
 		else
-			ref = LoadModel(ir, ip, path, resources);
+			ref = LoadModel(ir, ip, path, resources, silent);
 	}
 
 	return ref;
 }
 
 //
-Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *info) {
+Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *info, bool silent) {
 	ProfilerPerfSection section("LoadModel", name);
 
 	const auto t = time_now();
 
 	if (!ir.is_valid(h)) {
-		error(format("Cannot load model '%1', invalid file handle").arg(name));
+		if (!silent)
+			error(format("Cannot load model '%1', invalid file handle").arg(name));
 		return {};
 	}
 
 	if (Read<uint32_t>(ir, h) != HarfangMagic) {
-		error(format("Cannot load model '%1', invalid magic marker").arg(name));
+		if (!silent)
+			error(format("Cannot load model '%1', invalid magic marker").arg(name));
 		return {};
 	}
 
 	if (Read<uint8_t>(ir, h) != ModelMarker) {
-		error(format("Cannot load model '%1', invalid file marker").arg(name));
+		if (!silent)
+			error(format("Cannot load model '%1', invalid file marker").arg(name));
 		return {};
 	}
 
 	const auto version = Read<uint8_t>(ir, h);
 
 	if (version > 2) {
-		error(format("Cannot load model '%1', unsupported version %2").arg(name).arg(version));
+		if (!silent)
+			error(format("Cannot load model '%1', unsupported version %2").arg(name).arg(version));
 		return {};
 	}
 
@@ -1720,14 +1741,24 @@ Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *
 		tri_count += (size / idx_type_size) / 3;
 
 		const auto idx_hnd = bgfx::createIndexBuffer(idx_mem, idx_type_size == 4 ? BGFX_BUFFER_INDEX32 : BGFX_BUFFER_NONE);
-		bgfx::setName(idx_hnd, name);
+		if (!bgfx::isValid(idx_hnd)) {
+			error(format("%1: failed to create index buffer").arg(name));
+			break;
+		}
 
+		bgfx::setName(idx_hnd, name);
+		
 		// vertex buffer
 		size = Read<uint32_t>(ir, h);
 		const auto vtx_mem = bgfx::alloc(size);
 		ir.read(h, vtx_mem->data, vtx_mem->size);
 
 		const auto vtx_hnd = bgfx::createVertexBuffer(vtx_mem, vs_decl);
+		if (!bgfx::isValid(vtx_hnd)) {
+			error(format("%1: failed to create vertex buffer").arg(name));
+			bgfx::destroy(idx_hnd);
+			break;
+		}
 		bgfx::setName(vtx_hnd, name);
 
 		// bones table
@@ -1755,18 +1786,24 @@ Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *
 			Read(ir, h, model.bind_pose[j]);
 	}
 
-	log(format("Load model '%1' (%2 triangles, %3 lists), took %4 ms")
-			.arg(name)
-			.arg(tri_count)
-			.arg(model.lists.size())
-			.arg(time_to_ms(time_now() - t))
-			.c_str());
+	if (!silent)
+		log(format("Load model '%1' (%2 triangles, %3 lists), took %4 ms")
+				.arg(name)
+				.arg(tri_count)
+				.arg(model.lists.size())
+				.arg(time_to_ms(time_now() - t))
+				.c_str());
+
 	return model;
 }
 
-Model LoadModelFromFile(const char *path, ModelInfo *info) { return LoadModel(g_file_reader, ScopedReadHandle(g_file_read_provider, path), path, info); }
+Model LoadModelFromFile(const char *path, ModelInfo *info, bool silent) {
+	return LoadModel(g_file_reader, ScopedReadHandle(g_file_read_provider, path, silent), path, info, silent);
+}
 
-Model LoadModelFromAssets(const char *name, ModelInfo *info) { return LoadModel(g_assets_reader, ScopedReadHandle(g_assets_read_provider, name), name, info); }
+Model LoadModelFromAssets(const char *name, ModelInfo *info, bool silent) {
+	return LoadModel(g_assets_reader, ScopedReadHandle(g_assets_read_provider, name, silent), name, info, silent);
+}
 
 //
 size_t GetModelMaterialCount(const Model &model) {
@@ -2164,48 +2201,54 @@ void DrawSkinnedModelDisplayLists(bgfx::ViewId view_id, const std::vector<Skinne
 }
 
 //
-ModelRef LoadModel(const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources) {
+ModelRef LoadModel(const Reader &ir, const ReadProvider &ip, const char *path, PipelineResources &resources, bool silent) {
 	auto ref = resources.models.Has(path);
 	if (ref == InvalidModelRef) {
-		auto mdl = LoadModel(ir, ScopedReadHandle(ip, path), path);
+		auto mdl = LoadModel(ir, ScopedReadHandle(ip, path), path, nullptr, silent);
 		ref = resources.models.Add(path, std::move(mdl));
 	}
 	return ref;
 }
 
-ModelRef LoadModelFromFile(const char *path, PipelineResources &resources) { return LoadModel(g_file_reader, g_file_read_provider, path, resources); }
+ModelRef LoadModelFromFile(const char *path, PipelineResources &resources, bool silent) {
+	return LoadModel(g_file_reader, g_file_read_provider, path, resources, silent);
+}
 
-ModelRef LoadModelFromAssets(const char *path, PipelineResources &resources) { return LoadModel(g_assets_reader, g_assets_read_provider, path, resources); }
+ModelRef LoadModelFromAssets(const char *path, PipelineResources &resources, bool silent) {
+	return LoadModel(g_assets_reader, g_assets_read_provider, path, resources, silent);
+}
 
 MaterialRef LoadMaterialRef(const Reader &ir, const Handle &h, const char *path, const Reader &deps_ir, const ReadProvider &deps_ip,
-	PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources) {
+	PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	auto ref = resources.materials.Has(path);
 	if (ref == InvalidMaterialRef) {
-		auto mat = LoadMaterial(ir, h, deps_ir, deps_ip, resources, pipeline, queue_texture_loads, do_not_load_resources);
+		auto mat = LoadMaterial(ir, h, deps_ir, deps_ip, resources, pipeline, queue_texture_loads, do_not_load_resources, silent);
 		ref = resources.materials.Add(path, std::move(mat));
 	}
 	return ref;
 }
 
 MaterialRef LoadMaterialRefFromFile(
-	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources) {
+	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	return LoadMaterialRef(g_file_reader, ScopedReadHandle(g_file_read_provider, path), path, g_file_reader, g_file_read_provider, resources, pipeline,
-		queue_texture_loads, do_not_load_resources);
+		queue_texture_loads, do_not_load_resources, silent);
 }
 
 MaterialRef LoadMaterialRefFromAssets(
-	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources) {
+	const char *path, PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	return LoadMaterialRef(g_assets_reader, ScopedReadHandle(g_assets_read_provider, path), path, g_assets_reader, g_assets_read_provider, resources, pipeline,
-		queue_texture_loads, do_not_load_resources);
+		queue_texture_loads, do_not_load_resources, silent);
 }
 
 //
-size_t ProcessTextureLoadQueue(PipelineResources &res, size_t limit) {
+size_t ProcessTextureLoadQueue(PipelineResources &res, time_ns t_budget, bool silent) {
 	ProfilerPerfSection section("ProcessTextureLoadQueue");
 
 	size_t processed = 0;
 
-	for (; limit > 0 && !res.texture_loads.empty(); --limit) {
+	const auto t_start = time_now();
+
+	while (!res.texture_loads.empty()) {
 		const auto &t = res.texture_loads.front();
 
 		if (res.textures.IsValidRef(t.ref)) {
@@ -2214,13 +2257,17 @@ size_t ProcessTextureLoadQueue(PipelineResources &res, size_t limit) {
 			debug(format("Queued texture load '%1'").arg(name));
 
 			bgfx::TextureInfo info;
-			tex = LoadTexture(t.ir, t.ip, name.c_str(), tex.flags, &info);
+			tex = LoadTexture(t.ir, t.ip, name.c_str(), tex.flags, &info, nullptr, silent);
 			res.texture_infos[t.ref.ref] = info;
 		}
 
 		res.texture_loads.pop_front();
 
 		++processed;
+
+		const auto elapsed = time_now() - t_start;
+		if (elapsed >= t_budget)
+			break;
 	}
 
 	return processed;
@@ -2245,23 +2292,23 @@ TextureRef QueueLoadTextureFromAssets(const char *name, uint64_t flags, Pipeline
 }
 
 //
-TextureRef LoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, PipelineResources &resources) {
+TextureRef LoadTexture(const Reader &ir, const ReadProvider &ip, const char *name, uint64_t flags, PipelineResources &resources, bool silent) {
 	auto ref = resources.textures.Has(name);
 	if (ref == InvalidTextureRef) {
 		bgfx::TextureInfo info;
-		const auto tex = LoadTexture(ir, ip, name, flags, &info);
+		const auto tex = LoadTexture(ir, ip, name, flags, &info, nullptr, silent);
 		ref = resources.textures.Add(name, tex);
 		resources.texture_infos[ref.ref] = info;
 	}
 	return ref;
 }
 
-TextureRef LoadTextureFromFile(const char *path, uint64_t flags, PipelineResources &resources) {
-	return LoadTexture(g_file_reader, g_file_read_provider, path, flags, resources);
+TextureRef LoadTextureFromFile(const char *path, uint64_t flags, PipelineResources &resources, bool silent) {
+	return LoadTexture(g_file_reader, g_file_read_provider, path, flags, resources, silent);
 }
 
-TextureRef LoadTextureFromAssets(const char *name, uint64_t flags, PipelineResources &resources) {
-	return LoadTexture(g_assets_reader, g_assets_read_provider, name, flags, resources);
+TextureRef LoadTextureFromAssets(const char *name, uint64_t flags, PipelineResources &resources, bool silent) {
+	return LoadTexture(g_assets_reader, g_assets_read_provider, name, flags, resources, silent);
 }
 
 //
@@ -2271,18 +2318,15 @@ uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t,
 }
 
 //
-size_t ProcessLoadQueues(PipelineResources &res, size_t limit) {
+size_t GetQueuedResourceCount(const PipelineResources &res) { return res.model_loads.size() + res.texture_loads.size(); }
+
+size_t ProcessLoadQueues(PipelineResources &res, time_ns t_budget, bool silent) {
 	ProfilerPerfSection section("ProcessLoadQueues");
 
-	size_t total = 0, processed;
+	size_t total = 0;
 
-	processed = ProcessModelLoadQueue(res, limit);
-	limit -= processed;
-	total += processed;
-
-	processed = ProcessTextureLoadQueue(res, limit);
-	limit -= processed;
-	total += processed;
+	total += ProcessModelLoadQueue(res, t_budget, silent);
+	total += ProcessTextureLoadQueue(res, t_budget, silent);
 
 	return total;
 }

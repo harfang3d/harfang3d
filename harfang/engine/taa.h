@@ -27,6 +27,9 @@ void ApplyTAA(bgfx::ViewId &view_id, const iRect &rect, const Texture &color, co
 Vec2 TAAProjectionJitter8(int frame);
 Vec2 TAAProjectionJitter16(int frame);
 
+Vec2 TAAHaltonJitter8(int frame);
+Vec2 TAAHaltonJitter16(int frame);
+
 bool IsValid(const TAA &taa);
 
 } // namespace hg

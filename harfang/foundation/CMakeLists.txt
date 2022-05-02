@@ -1,5 +1,3 @@
-message("Generating build_info.cpp")
-
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/build_info.cpp
 	COMMAND ${Python3_EXECUTABLE} gen_build_info_cpp.py --host_prefix=${HG_HOST_PREFIX} --target_prefix=${HG_TARGET_PREFIX}
@@ -152,6 +150,10 @@ if(NOT WIN32)
 	target_link_libraries(foundation PUBLIC uuid)
 else()
 	target_link_libraries(foundation PUBLIC Iphlpapi)
+	if(MSVC)
+		target_compile_options(foundation PRIVATE "$<$<CONFIG:Release>:/Zi>")
+		target_link_options(foundation PRIVATE "$<$<CONFIG:Release>:/DEBUG>")
+	endif()
 endif()
 
 install_cppsdk_target(foundation)

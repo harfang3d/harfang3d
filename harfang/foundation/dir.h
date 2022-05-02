@@ -20,11 +20,13 @@ struct DirEntry {
 std::vector<DirEntry> ListDir(const char *path, int mask = DE_All);
 std::vector<DirEntry> ListDirRecursive(const char *path, int mask = DE_All);
 
-bool MkDir(const char *path, int permissions = 01777);
-bool RmDir(const char *path);
+size_t GetDirSize(const char *path);
 
-bool MkTree(const char *path, int permissions = 01777);
-bool RmTree(const char *path);
+bool MkDir(const char *path, int permissions = 01777, bool verbose = false);
+bool RmDir(const char *path, bool verbose = false);
+
+bool MkTree(const char *path, int permissions = 01777, bool verbose = false);
+bool RmTree(const char *path, bool verbose = false);
 
 /// tmplt should end with at least six trailing 'x' characters
 char *MkTempDir(const char *tmplt);

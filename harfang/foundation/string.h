@@ -111,9 +111,6 @@ template <typename T> std::string join(T begin_it, T end_it, const std::string &
 
 bool contains(const std::string &in, const std::string &what);
 
-std::string utf16_to_utf8(const std::u16string &str);
-std::u16string utf8_to_utf16(const std::string &str);
-
 std::string utf32_to_utf8(const std::u32string &str);
 std::u32string utf8_to_utf32(const std::string &str);
 
@@ -122,7 +119,6 @@ std::wstring utf8_to_wchar(const std::string &str);
 
 std::wstring ansi_to_wchar(const std::string &str);
 std::string ansi_to_utf8(const std::string &str);
-
 
 void tolower_inplace(std::string &inplace_str, size_t start = 0, size_t end = 0);
 std::string tolower(std::string str, size_t start = 0, size_t end = 0);

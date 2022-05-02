@@ -13,9 +13,9 @@ if(UNIX)
 endif()
 
 # assetc installation
-install(TARGETS assetc libluadll RUNTIME DESTINATION assetc LIBRARY DESTINATION assetc COMPONENT assetc)
+install(TARGETS assetc RUNTIME DESTINATION assetc LIBRARY DESTINATION assetc COMPONENT assetc)
 
-install(FILES $<TARGET_FILE:glfw> DESTINATION assetc COMPONENT assetc)
+install_cppsdk_dependencies(assetc)
 
 if(NOT ASSETC_TARGET_PREFIX)
 	set(ASSETC_TARGET_PREFIX ${HG_TARGET_PREFIX})

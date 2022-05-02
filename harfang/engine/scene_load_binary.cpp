@@ -105,17 +105,17 @@ void LoadComponent(Scene::Camera_ *data_, const Reader &ir, const Handle &h) {
 }
 
 void LoadComponent(Scene::Object_ *data_, const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
-	const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources) {
+	const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	std::string name;
 	Read(ir, h, name);
 
 	if (!name.empty())
-		data_->model = SkipLoadOrQueueModelLoad(deps_ir, deps_ip, name.c_str(), resources, queue_model_loads, do_not_load_resources);
+		data_->model = SkipLoadOrQueueModelLoad(deps_ir, deps_ip, name.c_str(), resources, queue_model_loads, do_not_load_resources, silent);
 
 	const auto mat_count = Read<uint16_t>(ir, h);
 	data_->materials.resize(mat_count);
 	for (auto i = 0; i < mat_count; ++i)
-		data_->materials[i] = LoadMaterial(ir, h, deps_ir, deps_ip, resources, pipeline, queue_texture_loads, do_not_load_resources);
+		data_->materials[i] = LoadMaterial(ir, h, deps_ir, deps_ip, resources, pipeline, queue_texture_loads, do_not_load_resources, silent);
 
 	data_->material_infos.resize(mat_count);
 	for (auto i = 0; i < mat_count; ++i)
@@ -473,25 +473,30 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 	ProfilerPerfSection section("Scene::Load_binary");
 
 	const auto t_start = time_now();
+	const auto silent = load_flags & LSSF_Silent;
 
 	if (!ir.is_valid(h)) {
-		error(format("Cannot load scene '%1', invalid read handle").arg(name));
+		if (!silent)
+			error(format("Cannot load scene '%1', invalid read handle").arg(name));
 		return false;
 	}
 
 	if (Read<uint32_t>(ir, h) != HarfangMagic) {
-		error(format("Cannot load scene '%1', invalid magic marker").arg(name));
+		if (!silent)
+			error(format("Cannot load scene '%1', invalid magic marker").arg(name));
 		return false;
 	}
 
 	if (Read<uint8_t>(ir, h) != SceneMarker) {
-		error(format("Cannot load scene '%1', invalid scene marker").arg(name));
+		if (!silent)
+			error(format("Cannot load scene '%1', invalid scene marker").arg(name));
 		return false;
 	}
 
 	const auto version = Read<uint32_t>(ir, h);
 	if (version != GetSceneBinaryFormatVersion()) {
-		error(format("Cannot load scene '%1', unsupported binary version %2").arg(name).arg(version));
+		if (!silent)
+			error(format("Cannot load scene '%1', unsupported binary version %2").arg(name).arg(version));
 		return false;
 	}
 
@@ -520,7 +525,7 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 	for (size_t i = 0; i < object_count; ++i) {
 		const auto ref = object_refs[i] = CreateObject().ref;
 		LoadComponent(&objects[ref.idx], ir, h, deps_ir, deps_ip, resources, pipeline, load_flags & LSSF_QueueModelLoads, load_flags & LSSF_QueueTextureLoads,
-			load_flags & LSSF_DoNotLoadResources);
+			load_flags & LSSF_DoNotLoadResources, silent);
 	}
 
 	const auto light_count = Read<uint32_t>(ir, h);
@@ -677,17 +682,17 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 				Read(ir, h, name);
 				if (!name.empty())
 					environment.irradiance_map = SkipLoadOrQueueTextureLoad(
-						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
+						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, silent);
 
 				Read(ir, h, name);
 				if (!name.empty())
 					environment.radiance_map = SkipLoadOrQueueTextureLoad(
-						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
+						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, silent);
 
 				Read(ir, h, name);
 				if (!name.empty())
 					environment.brdf_map = SkipLoadOrQueueTextureLoad(
-						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
+						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, silent);
 			}
 
 			Read(ir, h, canvas.clear_z);
@@ -815,7 +820,9 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 	}
 
 	//
-	debug(format("Load scene '%1' took %2 ms").arg(name).arg(time_to_ms(time_now() - t_start)));
+	if (!silent)
+		debug(format("Load scene '%1' took %2 ms").arg(name).arg(time_to_ms(time_now() - t_start)));
+
 	return true;
 }
 

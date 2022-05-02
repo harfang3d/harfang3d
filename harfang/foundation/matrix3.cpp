@@ -51,7 +51,7 @@ Mat3 CrossProductMat3(const Vec3 &v) { return {0, -v.z, v.y, v.z, 0, -v.x, -v.y,
 Mat3 Normalize(const Mat3 &m) { return {Normalize(GetRow(m, 0)), Normalize(GetRow(m, 1)), Normalize(GetRow(m, 2))}; }
 
 Mat3 Orthonormalize(const Mat3 &m) {
-	auto x = GetRow(m, 0), y = GetRow(m, 1), z = Normalize(Cross(x, y));
+	const auto x = GetRow(m, 0), y = GetRow(m, 1), z = Normalize(Cross(x, y));
 	return {Normalize(x), Normalize(Cross(z, x)), z};
 }
 

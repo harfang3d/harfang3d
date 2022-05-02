@@ -127,6 +127,8 @@ static inline bgfx::TextureFormat::Enum VideoFrameTextureFormat(VideoFrameFormat
 			return bgfx::TextureFormat::RG8;
 		case VFF_RGB24:
 			return bgfx::TextureFormat::RGB8;
+		case VFF_RGBA32:
+			return bgfx::TextureFormat::RGBA8;
 		default:
 			return bgfx::TextureFormat::Unknown;
 	}
@@ -184,7 +186,7 @@ bool UpdateTexture(IVideoStreamer &streamer, VideoStreamHandle &handle, hg::Text
 	helper->id = id;
 	helper->handle = handle;
 	pitch = 0;
-	const auto *mem = bgfx::makeRef(data, width*height*3, ReleaseFrame, helper);
+	const auto *mem = bgfx::makeRef(data, pitch * height, ReleaseFrame, helper);
 	bgfx::updateTexture2D(texture.handle, 0, 0, 0, 0, width, height, mem);
 	return true;
 }

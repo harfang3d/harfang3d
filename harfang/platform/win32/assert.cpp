@@ -1,5 +1,6 @@
 #include "foundation/string.h"
 #include "platform/call_stack.h"
+
 #include <sstream>
 
 #define WINDOWS_LEAN_AND_MEAN
@@ -17,7 +18,7 @@ void win32_trigger_assert(const char *source, int line, const char *function, co
 	CaptureCallstack(callstack);
 	description << "\nCallstack:\n" << to_string(callstack);
 
-	MessageBoxW(nullptr, (LPCWSTR)utf8_to_utf16(description.str()).c_str(), L"Assertion failed", MB_ICONSTOP);
+	MessageBoxW(nullptr, utf8_to_wchar(description.str()).c_str(), L"Assertion failed", MB_ICONSTOP);
 #if _DEBUG || MIXED_RELEASE
 	DebugBreak();
 #endif

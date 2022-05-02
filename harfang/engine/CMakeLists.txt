@@ -141,6 +141,11 @@ if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
 	target_link_libraries(engine PRIVATE BulletDynamics)
 endif()
 
+if(MSVC)
+	target_compile_options(engine PRIVATE "$<$<CONFIG:Release>:/Zi>")
+	target_link_options(engine PRIVATE "$<$<CONFIG:Release>:/DEBUG>")
+endif()
+
 set_property(TARGET engine PROPERTY PUBLIC_HEADER ${HDRS})
 set_target_properties(engine PROPERTIES FOLDER "harfang")
 
