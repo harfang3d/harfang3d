@@ -59,7 +59,7 @@ static bool operator==(const Vertex &a, const Vertex &b) {
 	return a.pos == b.pos && a.normal == b.normal && a.tangent == b.tangent && a.binormal == b.binormal && uv && c && i && w;
 }
 
-uint16_t ModelBuilder::AddVertex(const Vertex &vtx) {
+VtxIdxType ModelBuilder::AddVertex(const Vertex &vtx) {
 	auto &list = lists.back();
 
 	size_t idx = list.vtx.size();
@@ -68,10 +68,10 @@ uint16_t ModelBuilder::AddVertex(const Vertex &vtx) {
 	const auto i_vtx = list.vtx_lookup.find(hash);
 
 	if (i_vtx == std::end(list.vtx_lookup)) {
-		list.vtx_lookup[hash] = uint16_t(idx); // store hash
+		list.vtx_lookup[hash] = VtxIdxType(idx); // store hash
 		list.vtx.push_back(vtx); // commit candidate
 	} else {
-		const uint16_t hashed_idx = i_vtx->second;
+		const auto hashed_idx = i_vtx->second;
 
 		if (list.vtx[hashed_idx] == vtx) {
 			idx = hashed_idx;
@@ -85,11 +85,11 @@ uint16_t ModelBuilder::AddVertex(const Vertex &vtx) {
 				list.vtx.push_back(vtx); // commit candidate
 		}
 	}
-	return uint16_t(idx);
+	return VtxIdxType(idx);
 }
 
 //
-void ModelBuilder::AddTriangle(uint16_t a, uint16_t b, uint16_t c) {
+void ModelBuilder::AddTriangle(VtxIdxType a, VtxIdxType b, VtxIdxType c) {
 	auto &list = lists.back();
 
 	list.idx.push_back(a);
@@ -97,7 +97,7 @@ void ModelBuilder::AddTriangle(uint16_t a, uint16_t b, uint16_t c) {
 	list.idx.push_back(c);
 }
 
-void ModelBuilder::AddQuad(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
+void ModelBuilder::AddQuad(VtxIdxType a, VtxIdxType b, VtxIdxType c, VtxIdxType d) {
 	auto &list = lists.back();
 
 	list.idx.push_back(a);
@@ -106,7 +106,7 @@ void ModelBuilder::AddQuad(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
 	list.idx.push_back(d);
 }
 
-void ModelBuilder::AddPolygon(const std::vector<uint16_t> &idxs) {
+void ModelBuilder::AddPolygon(const std::vector<VtxIdxType> &idxs) {
 	for (int i = 1; i < idxs.size() - 1; ++i)
 		AddTriangle(idxs[0], idxs[i], idxs[i + 1]);
 }
@@ -122,7 +122,7 @@ void ModelBuilder::Make(
 	const bgfx::VertexLayout &decl, end_list_cb on_end_list, void *userdata, ModelOptimisationLevel optimisation_level, bool verbose) const {
 	ProfilerPerfSection section("ModelBuilder::Make");
 
-	const uint16_t stride = decl.getStride();
+	const auto stride = decl.getStride();
 
 	Model model;
 	model.lists.reserve(lists.size());
@@ -226,10 +226,11 @@ Model ModelBuilder::MakeModel(const bgfx::VertexLayout &decl, ModelOptimisationL
 
 	Make(
 		decl,
-		[](const bgfx::VertexLayout &decl, const MinMax &minmax, const std::vector<uint32_t> &idx_data, const std::vector<uint8_t> &vtx_data,
+		[](const bgfx::VertexLayout &decl, const MinMax &minmax, const std::vector<VtxIdxType> &idx_data, const std::vector<uint8_t> &vtx_data,
 			const std::vector<uint16_t> &bones_table, uint16_t mat, void *userdata) {
 			Model &model = *reinterpret_cast<Model *>(userdata);
 
+			// TODO [EJ] this is always 32 bit and very wasteful
 			const auto idx_hnd = bgfx::createIndexBuffer(bgfx::copy(idx_data.data(), uint32_t(idx_data.size() * sizeof(uint32_t))), BGFX_BUFFER_INDEX32);
 			const auto vtx_hnd = bgfx::createVertexBuffer(bgfx::copy(vtx_data.data(), uint32_t(vtx_data.size())), decl);
 

@@ -220,6 +220,11 @@ void OpenVRShutdown() {
 }
 
 //
+iVec2 OpenVRGetFrameBufferSize() { 
+	return iVec2(rt_width, rt_height);
+}
+
+//
 OpenVRState OpenVRGetState(const Mat4 &body, float znear, float zfar) {
 	vr::TrackedDevicePose_t m_rTrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
 	vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, nullptr, 0);
@@ -343,6 +348,8 @@ void OpenVRShutdown() {}
 
 OpenVREyeFrameBuffer OpenVRCreateEyeFrameBuffer(OpenVRAA aa) { return {}; }
 void OpenVRDestroyEyeFrameBuffer(OpenVREyeFrameBuffer &) {}
+
+iVec2 OpenVRGetFrameBufferSize() { return iVec2::Zero; }
 
 OpenVRState OpenVRGetState(const Mat4 &, float, float) { return {}; }
 void OpenVRStateToViewState(const OpenVRState &, ViewState &, ViewState &) {}

@@ -30,15 +30,16 @@ static std::mutex files_mutex;
 static FILE *_Open(const char *path, const char *mode, bool silent = false) {
 	FILE *file = nullptr;
 #if _WIN32
-	auto path_utf16 = utf8_to_utf16(path);
-	auto mode_utf16 = utf8_to_utf16(mode);
-	const auto err = _wfopen_s(&file, LPCWSTR(path_utf16.data()), LPCWSTR(mode_utf16.data()));
-	if (!silent)
-		if (err != 0) {
-			char errmsg[256];
-			strerror_s(errmsg, 255, err);
-			error(format("Failed to open file '%1' mode '%2', error code %3 (%4)").arg(path).arg(mode).arg(err).arg(errmsg));
-		}
+	auto wpath = utf8_to_wchar(path);
+	auto wmode = utf8_to_wchar(mode);
+
+	const auto err = _wfopen_s(&file, wpath.data(), wmode.data());
+
+	if (!silent && err != 0) {
+		char errmsg[256];
+		strerror_s(errmsg, 255, err);
+		error(format("Failed to open file '%1' mode '%2', error code %3 (%4)").arg(path).arg(mode).arg(err).arg(errmsg));
+	}
 #else
 	file = fopen(path, mode);
 #endif
@@ -207,8 +208,8 @@ void Rewind(File file) {
 FileInfo GetFileInfo(const char *path) {
 #if WIN32
 	struct _stat info;
-	const auto path_utf16 = utf8_to_utf16(path);
-	if (_wstat(LPCWSTR(path_utf16.c_str()), &info) != 0)
+	const auto wpath = utf8_to_wchar(path);
+	if (_wstat(wpath.c_str(), &info) != 0)
 		return {false, 0, 0, 0};
 #else
 	struct stat info;
@@ -222,8 +223,8 @@ FileInfo GetFileInfo(const char *path) {
 bool IsFile(const char *path) {
 #if WIN32
 	struct _stat info;
-	const auto path_utf16 = utf8_to_utf16(path);
-	if (_wstat(LPCWSTR(path_utf16.c_str()), &info) != 0)
+	const auto wpath = utf8_to_wchar(path);
+	if (_wstat(wpath.c_str(), &info) != 0)
 		return false;
 #else
 	struct stat info;
@@ -238,8 +239,8 @@ bool IsFile(const char *path) {
 
 bool Unlink(const char *path) {
 #if _WIN32
-	const auto path_utf16 = utf8_to_utf16(path);
-	return DeleteFileW(LPCWSTR(path_utf16.c_str())) == TRUE;
+	const auto wpath = utf8_to_wchar(path);
+	return DeleteFileW(wpath.c_str()) == TRUE;
 #else
 	return unlink(path) == 0;
 #endif
@@ -248,9 +249,9 @@ bool Unlink(const char *path) {
 //
 bool CopyFile(const char *src, const char *dst) {
 #if _WIN32
-	const auto src_utf16 = utf8_to_utf16(src);
-	const auto dst_utf16 = utf8_to_utf16(dst);
-	return ::CopyFileW((LPCWSTR)src_utf16.c_str(), (LPCWSTR)dst_utf16.c_str(), FALSE) ? true : false;
+	const auto wsrc = utf8_to_wchar(src);
+	const auto wdst = utf8_to_wchar(dst);
+	return ::CopyFileW(wsrc.c_str(), wdst.c_str(), FALSE) ? true : false;
 #else
 	ScopedFile in(Open(src));
 	if (!in)
@@ -272,9 +273,9 @@ bool CopyFile(const char *src, const char *dst) {
 }
 
 //
-Data FileToData(const char *path) {
+Data FileToData(const char *path, bool silent) {
 	Data data;
-	File file = Open(path);
+	File file = Open(path, silent);
 
 	if (IsValid(file)) {
 		data.Resize(GetSize(file));
@@ -286,8 +287,8 @@ Data FileToData(const char *path) {
 }
 
 //
-std::string FileToString(const char *path) {
-	ScopedFile in(Open(path));
+std::string FileToString(const char *path, bool silent) {
+	ScopedFile in(Open(path, silent));
 	const auto size = GetSize(in);
 
 	std::string str(size, 0);

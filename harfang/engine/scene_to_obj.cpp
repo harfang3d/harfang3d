@@ -6,6 +6,7 @@
 
 #include "foundation/format.h"
 #include "foundation/path_tools.h"
+#include "foundation/matrix3.h"
 
 namespace hg {
 
@@ -24,6 +25,8 @@ std::string ExportNodeToOBJ(const Node &node, const std::string &model_dir, cons
 
 	const auto world = trs.GetWorld();
 
+	Mat3 normal = Transpose(Mat3(InverseFast(world)));
+
 	//
 	auto mdl_ref = node.GetObject().GetModelRef();
 	if (!resources.models.IsValidRef(mdl_ref))
@@ -39,8 +42,8 @@ std::string ExportNodeToOBJ(const Node &node, const std::string &model_dir, cons
 
 	out += format("# %1 vertices\n").arg(geo.vtx.size()).str();
 	for (const auto &vtx : geo.vtx) {
-		const auto tv = vtx * world;
-		out += format("v %1 %2 %3\n").arg(tv.x).arg(tv.y).arg(tv.z).str();
+		const auto tv = world * vtx;
+		out += format("v %1 %2 %3\n").arg(-tv.x).arg(tv.y).arg(tv.z).str();
 	}
 	out += "\n";
 
@@ -50,8 +53,10 @@ std::string ExportNodeToOBJ(const Node &node, const std::string &model_dir, cons
 	out += "\n";
 
 	out += format("# %1 normals\n").arg(geo.normal.size()).str();
-	for (const auto &n : geo.normal)
-		out += format("vn %1 %2 %3\n").arg(n.x).arg(n.y).arg(n.z).str();
+	for (const auto &n : geo.normal) {
+		const auto tn = normal * n;
+		out += format("vn %1 %2 %3\n").arg(-tn.x).arg(tn.y).arg(tn.z).str();
+	}
 	out += "\n";
 
 	const auto pol_idx = ComputePolygonIndex(geo);

@@ -81,4 +81,18 @@ Vec2 TAAProjectionJitter16(int frame) {
 	return grid[frame & 15];
 }
 
+Vec2 TAAHaltonJitter8(int frame) {
+	static const Vec2 grid[8] = {Vec2(0.000000f, -0.333333f), Vec2(-0.500000f, 0.333333f), Vec2(0.500000f, -0.777778f), Vec2(-0.750000f, -0.111111f),
+		Vec2(0.250000f, 0.555556f), Vec2(-0.250000f, -0.555556f), Vec2(0.750000f, 0.111111f), Vec2(-0.875000f, 0.777778f)};
+	return grid[frame & 7];
+}
+
+Vec2 TAAHaltonJitter16(int frame) {
+	static const Vec2 grid[16] = {Vec2(0.000000f, -0.333333f), Vec2(-0.500000f, 0.333333f), Vec2(0.500000f, -0.777778f), Vec2(-0.750000f, -0.111111f),
+		Vec2(0.250000f, 0.555556f), Vec2(-0.250000f, -0.555556f), Vec2(0.750000f, 0.111111f), Vec2(-0.875000f, 0.777778f), Vec2(0.125000f, -0.925926f),
+		Vec2(-0.375000f, -0.259259f), Vec2(0.625000f, 0.407407f), Vec2(-0.625000f, -0.703704f), Vec2(0.375000f, -0.037037f), Vec2(-0.125000f, 0.629630f),
+		Vec2(0.875000f, -0.481481f), Vec2(-0.937500f, 0.185185f)};
+	return grid[frame & 15];
+}
+
 } // namespace hg

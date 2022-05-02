@@ -3,6 +3,8 @@
 #include "foundation/dir.h"
 #include "foundation/cext.h"
 #include "foundation/file.h"
+#include "foundation/format.h"
+#include "foundation/log.h"
 #include "foundation/path_tools.h"
 #include "foundation/rand.h"
 #include "foundation/string.h"
@@ -11,6 +13,7 @@
 #if _WIN32
 #include <direct.h>
 #define WIN32_LEAN_AND_MEAN
+#include "platform/win32/platform.h"
 #include <Windows.h>
 #include <shlwapi.h>
 #else /* POSIX */
@@ -29,13 +32,13 @@ std::vector<DirEntry> ListDir(const char *path, int mask) {
 #if _WIN32
 	WIN32_FIND_DATAW data;
 
-	auto find_path = utf8_to_utf16(PathJoin({path, "*.*"}));
-	auto hFind = FindFirstFileW(reinterpret_cast<LPCWSTR>(find_path.data()), &data);
+	auto wfind_path = utf8_to_wchar(PathJoin({path, "*.*"}));
+	auto hFind = FindFirstFileW(wfind_path.c_str(), &data);
 	if (hFind == INVALID_HANDLE_VALUE)
 		return entries;
 
 	do {
-		auto name = utf16_to_utf8(std::u16string(reinterpret_cast<std::u16string::value_type *>(data.cFileName)));
+		auto name = wchar_to_utf8(data.cFileName);
 		if (name == "." || name == "..")
 			continue;
 
@@ -80,12 +83,12 @@ std::vector<DirEntry> ListDirRecursive(const char *path, int mask) {
 	std::vector<DirEntry> entries = ListDir(path, mask);
 #if _WIN32
 	WIN32_FIND_DATAW data;
-	auto find_path = utf8_to_utf16(PathJoin({path, "*"}));
-	auto hFind = FindFirstFileW(reinterpret_cast<LPCWSTR>(find_path.data()), &data);
+	auto wfind_path = utf8_to_wchar(PathJoin({path, "*"}));
+	auto hFind = FindFirstFileW(wfind_path.c_str(), &data);
 	if (hFind == INVALID_HANDLE_VALUE)
 		return entries;
 	do {
-		auto name = utf16_to_utf8(std::u16string(reinterpret_cast<std::u16string::value_type *>(data.cFileName)));
+		auto name = wchar_to_utf8(data.cFileName);
 		if (name == "." || name == "..")
 			continue;
 		if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
@@ -117,67 +120,92 @@ std::vector<DirEntry> ListDirRecursive(const char *path, int mask) {
 }
 
 //
-bool MkDir(const char *path, int permissions) {
+size_t GetDirSize(const char *path) {
+	const auto entries = hg::ListDirRecursive(path);
+
+	size_t size = 0;
+	for (const auto &e : entries)
+		if (e.type == hg::DE_File) {
+			const auto fpath = hg::PathJoin({path, e.name});
+			const auto finfo = hg::GetFileInfo(fpath.c_str());
+			size += finfo.size;
+		}
+
+	return size;
+}
+
+//
+bool MkDir(const char *path, int permissions, bool verbose) {
 #if _WIN32
-	return CreateDirectoryW(reinterpret_cast<const wchar_t *>(utf8_to_utf16(path).data()), nullptr) == TRUE;
+	const auto res = CreateDirectoryW(utf8_to_wchar(path).c_str(), nullptr) != 0;
+	if (!verbose && !res)
+		error(format("MkDir(%1) failed with error: %2").arg(path).arg(GetLastError_Win32()));
+	return res;
 #else
 	return mkdir(path, permissions) == 0;
 #endif
 }
 
-bool RmDir(const char *path) {
+bool RmDir(const char *path, bool verbose) {
 #if _WIN32
-	return RemoveDirectoryW(reinterpret_cast<const wchar_t *>(utf8_to_utf16(path).data())) == TRUE;
+	const auto res = RemoveDirectoryW(utf8_to_wchar(path).c_str()) != 0;
+	if (verbose && !res)
+		error(format("RmDir(%1) failed with error: %2").arg(path).arg(GetLastError_Win32()));
+	return res;
 #else
 	return false;
 #endif
 }
 
-bool MkTree(const char *path, int permissions) {
+bool MkTree(const char *path, int permissions, bool verbose) {
 	const auto dirs = split(CleanPath(path), "/");
 
 	std::string p;
 	for (auto &dir : dirs) {
 		p += dir + "/";
 
+		if (ends_with(dir.c_str(), ":"))
+			continue; // skip c:
+
 		if (Exists(p.c_str()))
 			continue;
 
-		if (!MkDir(p.c_str(), permissions))
+		if (!MkDir(p.c_str(), permissions, verbose))
 			return false;
 	}
 
 	return true;
 }
 
-bool RmTree(const char *path) {
+bool RmTree(const char *path, bool verbose) {
 #if _WIN32
 	std::string _path(path);
 	if (!ends_with(_path, "/"))
 		_path += "/";
 
-	const std::wstring w_path = reinterpret_cast<const wchar_t *>(utf8_to_utf16(_path).data()), w_filter = w_path + L"*.*";
+	const std::wstring wpath = utf8_to_wchar(_path);
+	const std::wstring wfilter = wpath + L"*.*";
 
 	WIN32_FIND_DATAW FindFileData;
 	ZeroMemory(&FindFileData, sizeof(FindFileData));
-	HANDLE hFind = FindFirstFileW(w_filter.c_str(), &FindFileData);
+	HANDLE hFind = FindFirstFileW(wfilter.c_str(), &FindFileData);
 
 	if (hFind != nullptr && hFind != INVALID_HANDLE_VALUE) {
 		while (FindNextFileW(hFind, &FindFileData) != 0) {
 			if (wcscmp(FindFileData.cFileName, L".") != 0 && wcscmp(FindFileData.cFileName, L"..") != 0) {
 				if (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-					const std::u16string upath = reinterpret_cast<const char16_t *>((w_path + std::wstring(FindFileData.cFileName)).c_str());
-					RmTree(utf16_to_utf8(upath).c_str());
+					if (!RmTree(wchar_to_utf8(wpath + std::wstring(FindFileData.cFileName)).c_str(), verbose))
+						return false;
 				} else {
-					DeleteFileW((w_path + std::wstring(FindFileData.cFileName)).c_str());
+					if (!DeleteFileW((wpath + std::wstring(FindFileData.cFileName)).c_str()))
+						return false;
 				}
 			}
 		}
 		FindClose(hFind);
 	}
 
-	RemoveDirectoryW(w_path.c_str());
-	return true;
+	return RemoveDirectoryW(wpath.c_str());
 #else
 	return false;
 #endif
@@ -186,8 +214,7 @@ bool RmTree(const char *path) {
 bool IsDir(const char *path) {
 #if WIN32
 	struct _stat info;
-	const auto path_utf16 = utf8_to_utf16(path);
-	if (_wstat(LPCWSTR(path_utf16.c_str()), &info) != 0)
+	if (_wstat(utf8_to_wchar(path).c_str(), &info) != 0)
 		return false;
 #else
 	struct stat info;
@@ -279,8 +306,13 @@ bool CopyDirRecursive(const char *src, const char *dst) {
 }
 
 bool Exists(const char *path) {
+#if _WIN32
+	struct _stat info;
+	return _wstat(utf8_to_wchar(path).data(), &info) == 0;
+#else
 	struct stat info;
 	return stat(path, &info) == 0;
+#endif
 }
 
 } // namespace hg

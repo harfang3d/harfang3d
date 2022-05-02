@@ -9,16 +9,15 @@
 namespace hg {
 
 Picture RenderCubemap(bgfx::ViewId &view_id, const PipelineResources &resources, Scene &scene, const Mat4 &transform, CubemapLayout cube_layout,
-	uint16_t tex_size,
-	const ForwardPipelineAAAConfig *aaa_config, float znear, float zfar) {
+	uint16_t tex_size, bgfx::TextureFormat::Enum format, PictureFormat pic_format, const ForwardPipelineAAAConfig *aaa_config, float znear, float zfar) {
 	bgfx::TextureHandle cubemap[hg::CF_Max];
 	for (int i = 0; i < hg::CF_Max; i++) {
-		cubemap[i] = bgfx::createTexture2D(tex_size, tex_size, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+		cubemap[i] = bgfx::createTexture2D(tex_size, tex_size, false, 1, format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
 	}
 
-	RenderCubemap(view_id, resources, scene, transform, cubemap, tex_size, aaa_config, znear, zfar);
+	RenderCubemap(view_id, resources, scene, transform, cubemap, tex_size, format, aaa_config, znear, zfar);
 
-	auto pic = hg::CreatePictureFromCubemap(cubemap, hg::CL_CubeCross, tex_size);
+	auto pic = hg::CreatePictureFromCubemap(cubemap, hg::CL_CubeCross, tex_size, pic_format);
 
 	for (int i = 0; i < hg::CF_Max; i++) {
 		bgfx::destroy(cubemap[i]);
@@ -28,13 +27,12 @@ Picture RenderCubemap(bgfx::ViewId &view_id, const PipelineResources &resources,
 }
 
 void RenderCubemap(bgfx::ViewId &view_id, const PipelineResources &resources, Scene &scene, const Mat4 &transform, bgfx::TextureHandle tgt_textures[CF_Max],
-	uint16_t tex_size,
-	const ForwardPipelineAAAConfig *aaa_config, float znear, float zfar) {
+	uint16_t tex_size, bgfx::TextureFormat::Enum format, const ForwardPipelineAAAConfig *aaa_config, float znear, float zfar) {
 
 	ForwardPipeline pipeline = CreateForwardPipeline();
 
 	bgfx::TextureHandle texs[2] = {
-		bgfx::createTexture2D(tex_size, tex_size, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_RT_MSAA_X8),
+		bgfx::createTexture2D(tex_size, tex_size, false, 1, format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_RT_MSAA_X8),
 		bgfx::createTexture2D(tex_size, tex_size, false, 1, bgfx::TextureFormat::D32, BGFX_TEXTURE_RT_WRITE_ONLY | BGFX_TEXTURE_RT_MSAA_X8)};
 	const auto frame_buffer = bgfx::createFrameBuffer(2, texs, true);
 
@@ -62,8 +60,8 @@ void RenderCubemap(bgfx::ViewId &view_id, const PipelineResources &resources, Sc
 }
 
 void RenderCubemap(bgfx::ViewId &view_id, const bgfx::FrameBufferHandle frame_buffer, ForwardPipeline &pipeline, const PipelineResources &resources,
-	Scene &scene, const Mat4 &transform,
-	bgfx::TextureHandle tgt_textures[CF_Max], uint16_t tex_size, ForwardPipelineAAA *aaa, const ForwardPipelineAAAConfig *aaa_config,
+	Scene &scene, const Mat4 &transform, bgfx::TextureHandle tgt_textures[CF_Max], uint16_t tex_size, ForwardPipelineAAA *aaa,
+	const ForwardPipelineAAAConfig *aaa_config,
 	float znear, float zfar) {
 
 	const auto debug_name = std::string("cubemap");
@@ -136,10 +134,9 @@ void RenderCubemap(bgfx::ViewId &view_id, const bgfx::FrameBufferHandle frame_bu
 }
 
 
-Picture CreatePictureFromCubemap(bgfx::TextureHandle cubemap[CF_Max], CubemapLayout cube_layout, uint16_t tex_size) {
+Picture CreatePictureFromCubemap(bgfx::TextureHandle cubemap[CF_Max], CubemapLayout cube_layout, uint16_t tex_size, PictureFormat pic_format) {
 
-	const auto pic_format = PictureFormat::PF_RGBA32;
-	const size_t size_pixel = 4;
+	const size_t size_pixel = hg::size_of(pic_format);
 
 	const uint16_t pic_width = 4 * tex_size;
 	const uint16_t pic_height = 3 * tex_size;

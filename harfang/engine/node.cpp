@@ -252,6 +252,16 @@ void Node::RemoveScript(size_t slot_idx) {
 }
 
 //
+Mat4 Node::GetWorld() const { return scene_ref && scene_ref->scene ? scene_ref->scene->GetNodeWorldMatrix(ref) : Mat4::Identity; }
+
+void Node::SetWorld(const Mat4 &world) {
+	if (scene_ref && scene_ref->scene)
+		scene_ref->scene->SetNodeWorldMatrix(ref, world);
+}
+
+Mat4 Node::ComputeWorld() const { return scene_ref && scene_ref->scene ? scene_ref->scene->ComputeNodeWorldMatrix(ref) : Mat4::Identity; }
+
+//
 bool GetNodesMinMax(const std::vector<Node> &nodes, const PipelineResources &resources, MinMax &minmax) {
 	if (nodes.empty())
 		return false;

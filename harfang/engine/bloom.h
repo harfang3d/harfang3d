@@ -37,12 +37,10 @@ static Bloom CreateBloomFromAssets(const char *path, bgfx::BackbufferRatio::Enum
 	return CreateBloomFromAssets(path, RenderBufferResourceFactory::Backbuffer(), ratio);
 }
 
-
 void DestroyBloom(Bloom &bloom);
 
 void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, const hg::iVec2 &fb_size, bgfx::FrameBufferHandle output,
-	const Bloom &bloom, float threshold,
-	float smoothness, float intensity);
+	const Bloom &bloom, float threshold, float smoothness, float intensity);
 
 void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, bgfx::FrameBufferHandle output, const Bloom &bloom, float threshold,
 	float smoothness, float intensity);

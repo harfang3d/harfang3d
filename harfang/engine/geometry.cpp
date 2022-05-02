@@ -559,10 +559,12 @@ static void GeometryToModelBuilder(const Geometry &geo, ModelBuilder &builder) {
 
 		for (auto &pol : geo.pol) {
 			if (pol.material == i_mat) {
+#if 0 // [EJ] we're seeing very large meshes coming in lately so allow 32 bit indexes, we'll introduce a force 16 bit indice flag if required
 				if (builder.GetCurrentListIndexCount() + (pol.vtx_count - 2) * 3 > 65535) {
 					builder.EndList(i_mat);
 					bone_map.clear();
 				}
+#endif
 
 				bool bone_map_ready = false;
 
@@ -584,21 +586,22 @@ static void GeometryToModelBuilder(const Geometry &geo, ModelBuilder &builder) {
 
 							bool need_new_list = false;
 							for (int i = 0; i < 4; ++i) {
-								auto bone_idx = geo.skin[i_vtx].index[i];
+								const auto bone_idx = geo.skin[i_vtx].index[i];
+
 								if (bone_map.find(bone_idx) == bone_map.end()) {
 									auto redir_idx = uint16_t(bone_map.size());
+
 									if (redir_idx < max_skinned_model_matrix_count) {
 										bone_map[bone_idx] = redir_idx;
 										bone_indices_to_add.push_back(bone_idx);
 									} else {
-										need_new_list = true;
+										need_new_list = true; // too many bones, start a new list
 										break;
 									}
 								}
 							}
 
 							if (need_new_list) {
-								// too many bones, start a new list
 								builder.EndList(i_mat);
 								bone_map.clear();
 								bone_map_ready = false;
@@ -664,7 +667,7 @@ bool SaveGeometryModelToFile(const char *path, const Geometry &geo, ModelOptimis
 	ModelBuilder builder;
 	GeometryToModelBuilder(geo, builder);
 
-	auto on_end_list = [](const bgfx::VertexLayout &, const MinMax &minmax, const std::vector<uint32_t> &idx32, const std::vector<uint8_t> &vtx,
+	auto on_end_list = [](const bgfx::VertexLayout &, const MinMax &minmax, const std::vector<VtxIdxType> &idx32, const std::vector<uint8_t> &vtx,
 						   const std::vector<uint16_t> &bones_table, uint16_t mat, void *userdata) {
 		const auto &file = *reinterpret_cast<File *>(userdata);
 

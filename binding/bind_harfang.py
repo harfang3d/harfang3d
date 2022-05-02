@@ -475,7 +475,9 @@ static bgfx::FrameBufferHandle _OpenVREyeFrameBuffer_GetHandle(hg::OpenVREyeFram
 	gen.bind_function('hg::OpenVRGetColorTexture', 'hg::Texture', ['const hg::OpenVREyeFrameBuffer &eye'])
 	gen.bind_function('hg::OpenVRGetDepthTexture', 'hg::Texture', ['const hg::OpenVREyeFrameBuffer &eye'])
 
-	
+	gen.bind_function('hg::OpenVRGetFrameBufferSize', 'hg::tVec2<int>', [])
+
+
 def bind_sranipal(gen):
 	gen.add_include('engine/sranipal_api.h')
 
@@ -593,9 +595,16 @@ static bool _dtCrowd_requestMoveTarget(dtCrowd *dt_crowd, const int idx, const h
 def bind_platform(gen):
 	gen.add_include('platform/platform.h')
 	
+	# hg::FileFilter
+	file_filter = gen.begin_class('hg::FileFilter')
+	gen.bind_members(file_filter, ['std::string name', 'std::string pattern'])
+	gen.end_class(file_filter)
+
+	bind_std_vector(gen, file_filter)
+
 	gen.bind_function('hg::OpenFolderDialog', 'bool', ['const std::string &title', 'std::string &folder_name', '?const std::string &initial_dir'], {'arg_in_out': ['folder_name']})
-	gen.bind_function('hg::OpenFileDialog', 'bool', ['const std::string &title', 'const std::string &filter', 'std::string &file', '?const std::string &initial_dir'], {'arg_in_out': ['file']})
-	gen.bind_function('hg::SaveFileDialog', 'bool', ['const std::string &title', 'const std::string &filter', 'std::string &file', '?const std::string &initial_dir'], {'arg_in_out': ['file']})
+	gen.bind_function('hg::OpenFileDialog', 'bool', ['const std::string &title', 'const std::vector<hg::FileFilter> &filters', 'std::string &file', '?const std::string &initial_dir'], {'arg_in_out': ['file']})
+	gen.bind_function('hg::SaveFileDialog', 'bool', ['const std::string &title', 'const std::vector<hg::FileFilter> &filters', 'std::string &file', '?const std::string &initial_dir'], {'arg_in_out': ['file']})
 
 
 def bind_engine(gen):
@@ -1117,6 +1126,10 @@ def bind_scene(gen):
 	gen.bind_method(node, 'StartOnInstantiateAnim', 'void', [])
 	gen.bind_method(node, 'StopOnInstantiateAnim', 'void', [])
 
+	gen.bind_method(node, 'GetWorld', 'hg::Mat4', [])
+	gen.bind_method(node, 'SetWorld', 'void', ['const hg::Mat4 &world'])
+	gen.bind_method(node, 'ComputeWorld', 'hg::Mat4', [])
+
 	gen.end_class(node)
 
 	bind_std_vector(gen, node)
@@ -1495,6 +1508,10 @@ static std::vector<hg::ForwardPipelineLight> _GetSceneForwardPipelineLights(cons
 		'float exposure', 'float gamma'
 	])
 	gen.end_class(forward_pipeline_aaa_config)
+
+	gen.bind_function('hg::LoadForwardPipelineAAAConfigFromFile', 'bool', ['const char *path', 'hg::ForwardPipelineAAAConfig &config'])
+	gen.bind_function('hg::LoadForwardPipelineAAAConfigFromAssets', 'bool', ['const char *path', 'hg::ForwardPipelineAAAConfig &config'])
+	gen.bind_function('hg::SaveForwardPipelineAAAConfigToFile', 'bool', ['const char *path', 'const hg::ForwardPipelineAAAConfig &config'])
 
 	forward_pipeline_aaa = gen.begin_class('hg::ForwardPipelineAAA')
 	gen.bind_method(forward_pipeline_aaa, 'Flip', 'void', ['const hg::ViewState &view_state'])
@@ -2136,10 +2153,10 @@ static void _SetViewTransform(bgfx::ViewId view_id, const hg::Mat4 &view, const 
 	gen.insert_binding_code('static void _DestroyTexture(const hg::Texture &tex) { bgfx::destroy(tex.handle); }')
 	gen.bind_function('DestroyTexture', 'void', ['const hg::Texture &tex'], {'route': route_lambda('_DestroyTexture')})
 
-	gen.bind_function('hg::ProcessTextureLoadQueue', 'size_t', ['hg::PipelineResources &res', '?size_t limit'])
+	gen.bind_function('hg::ProcessTextureLoadQueue', 'size_t', ['hg::PipelineResources &res', '?hg::time_ns t_budget'])
 
-	gen.bind_function('hg::ProcessModelLoadQueue', 'size_t', ['hg::PipelineResources &res', '?size_t limit'])
-	gen.bind_function('hg::ProcessLoadQueues', 'size_t', ['hg::PipelineResources &res', '?size_t limit'])
+	gen.bind_function('hg::ProcessModelLoadQueue', 'size_t', ['hg::PipelineResources &res', '?hg::time_ns t_budget'])
+	gen.bind_function('hg::ProcessLoadQueues', 'size_t', ['hg::PipelineResources &res', '?hg::time_ns t_budget'])
 
 	# ModelRef/TextureRef/MaterialRef/PipelineProgramRef
 	model_ref = gen.begin_class('hg::ModelRef')
@@ -2553,10 +2570,10 @@ def bind_model_builder(gen):
 	# ModelBuilder
 	model_builder = gen.begin_class('hg::ModelBuilder')
 	gen.bind_constructor(model_builder, [])
-	gen.bind_method(model_builder, 'AddVertex', 'uint16_t', ['const hg::Vertex &vtx'])
-	gen.bind_method(model_builder, 'AddTriangle', 'void', ['uint16_t a', 'uint16_t b', 'uint16_t c'])
-	gen.bind_method(model_builder, 'AddQuad', 'void', ['uint16_t a', 'uint16_t b', 'uint16_t c', 'uint16_t d'])
-	gen.bind_method(model_builder, 'AddPolygon', 'void', ['const std::vector<uint16_t> &idxs'])
+	gen.bind_method(model_builder, 'AddVertex', 'uint32_t', ['const hg::Vertex &vtx'])
+	gen.bind_method(model_builder, 'AddTriangle', 'void', ['uint32_t a', 'uint32_t b', 'uint32_t c'])
+	gen.bind_method(model_builder, 'AddQuad', 'void', ['uint32_t a', 'uint32_t b', 'uint32_t c', 'uint32_t d'])
+	gen.bind_method(model_builder, 'AddPolygon', 'void', ['const std::vector<uint32_t> &idxs'])
 	gen.bind_method(model_builder, 'GetCurrentListIndexCount', 'size_t', [])
 	gen.bind_method(model_builder, 'EndList', 'void', ['uint16_t material'])
 	gen.bind_method(model_builder, 'Clear', 'void', [])

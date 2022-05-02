@@ -51,7 +51,7 @@ using AnimRef = gen_ref;
 extern const AnimRef InvalidAnimRef;
 
 enum NodeBoolAnimTarget { NBAT_Enable, NBAT_Count };
-enum NodeFloatAnimTarget { NFAT_LightDiffuseIntensity, NFAT_LightSpecularIntensity, NFAT_Count };
+enum NodeFloatAnimTarget { NFAT_LightDiffuseIntensity, NFAT_LightSpecularIntensity, NFAT_FogNear, NFAT_FogFar, NFAT_Count };
 enum NodeVec3AnimTarget { NV3AT_TransformPosition, NV3AT_TransformRotation, NV3AT_TransformScale, NV3AT_Count };
 enum NodeVec4AnimTarget { NV4AT_Count };
 enum NodeQuatAnimTarget { NQAT_TransformRotation, NQAT_Count };
@@ -87,8 +87,12 @@ struct BoundToNodeAnim {
 	mutable BoundToNodeInstanceAnim bound_to_node_instance_anim;
 };
 
+enum SceneFloatAnimTarget { SFAT_FogNear, SFAT_FogFar, SFAT_Count };
+enum SceneColorAnimTarget { SCAT_FogColor, SCAT_AmbientColor, SCAT_Count };
+
 struct BoundToSceneAnim {
-	std::array<int8_t, NV3AT_Count> vec3_track;
+	std::array<int8_t, SFAT_Count> float_track;
+	std::array<int8_t, SCAT_Count> color_track;
 
 	AnimRef anim; // 8B
 };
@@ -243,6 +247,11 @@ public:
 	void SetTransformParent(ComponentRef ref, const NodeRef &v);
 
 	void SetTransformLocalMatrix(ComponentRef ref, const Mat4 &local);
+	/*!
+		@short Set and decompose transform world matrix.
+		The provided matrix is decomposed over the position, rotation and scale members of the Transform.
+		@see SetNodeWorldMatrix to set a node world matrix in the scene graph without affecting the Transform component.
+	*/
 	void SetTransformWorldMatrix(ComponentRef ref, const Mat4 &world);
 
 	Transform CreateTransform(const Vec3 &pos, const Vec3 &rot = {0, 0, 0}, const Vec3 &scl = {1, 1, 1}, NodeRef parent = {});
@@ -259,10 +268,17 @@ public:
 
 	Mat4 GetNodeWorldMatrix(NodeRef ref) const;
 	/*!
-		Set a node world matrix and flag it as update so that it won't be computed by the next call to ComputeWorldMatrices().
-		Note: This function INTENTIONALLY does not decompose the provided matrix to the transfrom position/rotation/scale fields.
+		@short Set node world matrix.
+		Set a node world matrix and flag it as updated so that it won't be computed by the next call to ComputeWorldMatrices().
+		@note This function INTENTIONALLY does not decompose the provided matrix to the transfrom position/rotation/scale fields.
 	*/
 	void SetNodeWorldMatrix(NodeRef ref, const Mat4 &world);
+
+	/*!
+		@short Compute node world matrix from scratch on-the-fly.
+		This function is slow but useful when scene matrices are not yet up-to-date.
+	*/
+	Mat4 ComputeNodeWorldMatrix(NodeRef ref) const;
 
 	//
 	void StorePreviousWorldMatrices();
@@ -728,7 +744,7 @@ private:
 		float radius{0.f};
 		float inner_angle{Deg(30.f)}, outer_angle{Deg(45.f)};
 
-		Vec4 pssm_split{10.f, 50.f, 100.f, 500.f};
+		Vec4 pssm_split{10.f, 50.f, 100.f, 200.f};
 		float priority{0.f};
 
 		float shadow_bias{default_shadow_bias};
@@ -792,7 +808,7 @@ private:
 	friend void LoadComponent(Transform_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Camera_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Object_ *data_, const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip,
-		PipelineResources &resources, const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources);
+		PipelineResources &resources, const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources, bool silent);
 	friend void LoadComponent(Light_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(RigidBody_ *data_, const Reader &ir, const Handle &h);
 	friend void LoadComponent(Collision_ *data_, const Reader &ir, const Handle &h);
@@ -962,6 +978,8 @@ void DumpSceneMemoryFootprint();
 bool GetAnimableNodePropertyBool(const Scene &scene, NodeRef ref, const std::string &name);
 void SetAnimableNodePropertyBool(Scene &scene, NodeRef ref, const std::string &name, bool v);
 
+float GetAnimableScenePropertyFloat(const Scene &scene, const std::string &name);
+void SetAnimableScenePropertyFloat(Scene &scene, const std::string &name, float v);
 float GetAnimableNodePropertyFloat(const Scene &scene, NodeRef ref, const std::string &name);
 void SetAnimableNodePropertyFloat(Scene &scene, NodeRef ref, const std::string &name, float v);
 

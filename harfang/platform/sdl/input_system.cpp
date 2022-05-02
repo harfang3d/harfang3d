@@ -222,4 +222,7 @@ void RegisterInputDevices(InputSystem &system) {
 	system.RegisterDirectDevice("keyboard", std::make_shared<Keyboard>());
 }
 
+void InputInit() {}
+void InputShutdown() {}
+
 } // namespace hg

@@ -511,7 +511,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 					{"name", scene_anim.name},
 					{"t_start", scene_anim.t_start},
 					{"t_end", scene_anim.t_end},
-					{"anim", scene_anim.scene_anim},
+					{"anim", scene_anim.scene_anim.idx},
 					{"frame_duration", scene_anim.frame_duration},
 				};
 
@@ -842,10 +842,15 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 					js_scene_anim.at("name").get_to(scene_anim.name);
 					scene_anim.t_start = js_scene_anim.at("t_start");
 					scene_anim.t_end = js_scene_anim.at("t_end");
-					scene_anim.scene_anim = js_scene_anim.at("anim");
 					scene_anim.frame_duration = js_scene_anim.at("frame_duration");
 
-					const auto &i_scene_anim = anim_refs.find(scene_anim.scene_anim.idx);
+					uint32_t scene_anim_idx = invalid_gen_ref.idx;
+					const auto &i_anim = js_scene_anim.find("anim");
+					if (i_anim != std::end(js_scene_anim))
+						if (!i_anim->is_null()) // [EJ] legacy format field was broken
+							scene_anim_idx = i_anim->get<uint32_t>();
+
+					const auto &i_scene_anim = anim_refs.find(scene_anim_idx);
 					if (i_scene_anim != std::end(anim_refs))
 						scene_anim.scene_anim = i_scene_anim->second;
 

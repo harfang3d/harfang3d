@@ -1,0 +1,1 @@
+Print a profiler frame to the console. Print all sections in the frame, their duration and event count.

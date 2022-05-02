@@ -30,6 +30,24 @@ endfunction(install_cppsdk_external_target)
 
 # glfw
 if(HG_USE_GLFW)
+	# determine glfw backend (as we do not have access to glfw_config.h).
+	if(GLFW_USE_WAYLAND)
+		set(HG_GLFW_BACKEND "WAYLAND")
+	elseif (WIN32)
+		set(HG_GLFW_BACKEND "WIN32")
+	elseif (HG_APPLE)
+		set(HG_GLFW_BACKEND "COCOA")
+	elseif (UNIX)
+		set(HG_GLFW_BACKEND "X11")
+	else ()
+		message(ERROR "GLFW: unknown or unsupported backed")
+	endif()
+	set(HG_GLFW_BACKEND ${HG_GLFW_BACKEND} PARENT_SCOPE)
+
+	if(NOT DEFINED HG_REBUILD_GLFW)
+		set(HG_REBUILD_GLFW ON)
+	endif()
+
 	if(NOT HG_REBUILD_GLFW)
 		# use system package
 		find_package(glfw3 3.2)
@@ -39,6 +57,8 @@ if(HG_USE_GLFW)
 			get_target_property(glfw_target_type glfw TYPE)
 			if(glfw_target_type STREQUAL "SHARED_LIBRARY")
 				set_target_properties(glfw PROPERTIES IMPORTED_GLOBAL TRUE)
+				# we set the corresponding compile definition. This define will be exported in the CMake configuration files.
+				target_compile_definitions(glfw INTERFACE GLFW_${HG_GLFW_BACKEND}=1)
 			else()
 				message(WARNING "Only the dynamic library version of GLFW is allowed")
 				set(HG_REBUILD_GLFW ON)
@@ -53,6 +73,9 @@ if(HG_USE_GLFW)
 		# build it from sources
 		set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
 		set(GLFW_INSTALL OFF CACHE BOOL "")
+		set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "")
+		set(GLFW_BUILD_TESTS OFF CACHE BOOL "")
+		set(GLFW_BUILD_DOCS OFF CACHE BOOL "")
 		add_subdirectory(glfw EXCLUDE_FROM_ALL)
 		# here we completly hijack glfw shared library output name.
 		# on *nix we don't want all the so names with versions (libgflw.so.3 libglfw.so.3.x etc...)
@@ -68,7 +91,11 @@ if(HG_USE_GLFW)
 			INTERFACE_INCLUDE_DIRECTORIES
 				"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/glfw/include>"
 		)
+		# we set the corresponding compile definition. This define will be exported in the CMake configuration files.
+		target_compile_definitions(glfw PUBLIC GLFW_${HG_GLFW_BACKEND}=1)
 	endif()
+else()
+	set(HG_GLFW_BACKEND "NONE" PARENT_SCOPE)
 endif()
 
 # miniz
@@ -95,6 +122,10 @@ install_cppsdk_external_target(nvtt)
 install_cppsdk_external_target(pvrtc)
 
 # Lua
+if(UNIX AND NOT APPLE)
+	# lua links against libreadline but does not check for its availability.
+	find_package(readline REQUIRED)
+endif()
 add_subdirectory(lua EXCLUDE_FROM_ALL)
 set_property(TARGET lua luac liblua libluadll PROPERTY FOLDER "harfang/3rdparty/lua")
 if(HG_BUILD_CPP_SDK)
@@ -181,6 +212,11 @@ target_include_directories(OpenAL PUBLIC $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/
 target_compile_definitions(OpenAL PUBLIC ALSOFT_EMBED_HRTF_DATA=1 AL_LIBTYPE_STATIC=1) # make sure to correctly propagate this flag to consuming librairies
 set_target_properties(OpenAL PROPERTIES FOLDER "harfang/3rdparty")
 
+# ... try to fix include directories
+get_target_property(OpenAL_include_dirs OpenAL INTERFACE_INCLUDE_DIRECTORIES)
+list(REMOVE_ITEM OpenAL_include_dirs "$<INSTALL_INTERFACE:include>")
+set_property(TARGET OpenAL PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OpenAL_include_dirs})
+
 install_cppsdk_external_target(OpenAL)
 
 # json.hpp
@@ -229,13 +265,18 @@ if(HG_ENABLE_OPENVR_API)
 			set(OPENVR_DLL ${OPENVR_DLL} PARENT_SCOPE)
 			set_target_properties(OpenVR PROPERTIES
 				IMPORTED_IMPLIB ${OPENVR_LIBRARY}
+				IMPORTED_LOCATION ${OPENVR_DLL}
 				INTERFACE_INCLUDE_DIRECTORIES ${OPENVR_INCLUDE_PATH}
 			)
 			if(HG_BUILD_CPP_SDK)
 				install(FILES ${OPENVR_DLL} DESTINATION ${CppSdkRuntimeDestination} COMPONENT cppsdk)
 			endif()
+		else()
+			set_target_properties(OpenVR PROPERTIES 
+				IMPORTED_LOCATION ${OPENVR_LIBRARY}
+				INTERFACE_INCLUDE_DIRECTORIES ${OPENVR_INCLUDE_PATH}
+			)
 		endif()
-		set_target_properties(OpenVR PROPERTIES IMPORTED_LOCATION $<IF:$<PLATFORM_ID:Windows>,${OPENVR_DLL},${OPENVR_LIBRARY}>)
 
 		if(HG_BUILD_CPP_SDK)
 			install(FILES ${OPENVR_LIBRARY} DESTINATION ${CppSdkLibraryDestination} COMPONENT cppsdk)
@@ -249,22 +290,26 @@ endif()
 # SRanipal
 if(HG_ENABLE_SRANIPAL_API)
 	# [todo] linux
-	set(SRANIPAL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/sranipal/lib/SRanipal.lib")
+	find_library(SRANIPAL_LIBRARY name SRanipal PATHS ${CMAKE_CURRENT_SOURCE_DIR}/sranipal/lib NO_DEFAULT_PATH)
 	set(SRANIPAL_DLL 
-			"${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/libHTC_License.dll" 
-			"${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/nanomsg.dll"
-			"${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/SRanipal.dll"
-			"${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/SRWorks_Log.dll"
-			"${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/ViveSR_Client.dll" PARENT_SCOPE)
-			
-	add_library(SRanipal INTERFACE)
-	target_include_directories(SRanipal INTERFACE sranipal/include)
-	target_link_libraries(SRanipal INTERFACE ${SRANIPAL_LIBRARY})
+			${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/libHTC_License.dll 
+			${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/nanomsg.dll
+			${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/SRanipal.dll
+			${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/SRWorks_Log.dll
+			${CMAKE_CURRENT_SOURCE_DIR}/sranipal/bin/ViveSR_Client.dll)
+
+	set(SRANIPAL_DLL ${SRANIPAL_DLL} PARENT_SCOPE)
+
+	add_library(SRanipal SHARED IMPORTED GLOBAL)
+	set_target_properties(SRanipal PROPERTIES
+		IMPORTED_IMPLIB ${CMAKE_CURRENT_SOURCE_DIR}/sranipal/lib/SRanipal.lib
+		IMPORTED_LOCATION "${SRANIPAL_DLL}"
+		INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/sranipal/include
+	)
 
 	if(HG_BUILD_CPP_SDK)
 		install(FILES ${SRANIPAL_DLL} DESTINATION ${CppSdkRuntimeDestination} COMPONENT cppsdk)
 		install(FILES ${SRANIPAL_LIBRARY} DESTINATION ${CppSdkLibraryDestination} COMPONENT cppsdk)
-		# install(DIRECTORY sranipal/include/ DESTINATION cppsdk/include/extern/sranipal COMPONENT cppsdk)	
 	endif()
 endif()
 
@@ -300,7 +345,7 @@ if(UNIX)
 endif()
 
 # meshoptimizer
+set(CMAKE_INSTALL_INCLUDEDIR ${CppSdkHeadersDestination}/extern)
 add_subdirectory(meshoptimizer EXCLUDE_FROM_ALL)
 set_target_properties(meshoptimizer PROPERTIES FOLDER "harfang/3rdparty")
-
 install_cppsdk_external_target(meshoptimizer)

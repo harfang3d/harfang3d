@@ -7,10 +7,9 @@ set(HG_VERSION "@HG_VERSION@")
 set(HG_GRAPHIC_API "@HG_GRAPHIC_API@")
 set(HG_HOST_PREFIX "@HG_HOST_PREFIX@")
 set(HG_TARGET_PREFIX "@HG_TARGET_PREFIX@")
-set(HG_EMBEDDED @HG_EMBEDDED@)
 set(HG_USE_GLFW @HG_USE_GLFW@)
-set(HG_USE_GLFW_WAYLAND @HG_USE_GLFW_WAYLAND@)
-set(HG_USE_EGL @HG_USE_EGL@)
+set(HG_USE_GTK3 @HG_USE_GTK3@)
+set(HG_GLFW_BACKEND "@HG_GLFW_BACKEND@")
 set(HG_ENABLE_BULLET3_SCENE_PHYSICS @HG_ENABLE_BULLET3_SCENE_PHYSICS@)
 set(HG_ENABLE_OPENVR_API @HG_ENABLE_OPENVR_API@)
 set(HG_ENABLE_SRANIPAL_API @HG_ENABLE_SRANIPAL_API@)
@@ -32,16 +31,8 @@ if(HG_ENABLE_RECAST_DETOUR_API)
 	add_compile_definitions(HG_ENABLE_RECAST_DETOUR_API)
 endif()
 
-if(HG_USE_GLFW_WAYLAND)
-	add_compile_definitions(HG_USE_GLFW_WAYLAND)
-endif()
-
 if(HG_USE_GLFW)
 	add_compile_definitions(HG_USE_GLFW)
-endif()
-
-if(HG_EMBEDDED) 
-	add_compile_definitions(HG_EMBEDDED)
 endif()
 
 add_compile_definitions(HG_GRAPHIC_API="${HG_GRAPHIC_API}")
@@ -66,6 +57,7 @@ add_compile_definitions(HG_DEFAULT_RENDERER_TYPE=${HG_DEFAULT_RENDERER_TYPE})
 if(UNIX)
 	if(NOT @HG_REBUILD_GLFW@)
 		find_dependency(glfw3 3.2)
+		target_compile_definitions(glfw INTERFACE GLFW_@HG_GLFW_BACKEND@=1)
 	endif()
 
 	if(NOT APPLE AND NOT ANDROID AND NOT EMSCRIPTEN)
@@ -76,11 +68,11 @@ if(UNIX)
 		find_library(JACK_LIBRARY jack)
 		find_library(SNDIO_LIBRARY sndio)
 
-		if( NOT HG_USE_GLFW_WAYLAND )
+		if( HG_GLFW_BACKEND STREQUAL "X11" )
 			find_dependency( X11 )
 		endif()
 
-		if( (NOT X11_FOUND) OR HG_USE_GLFW_WAYLAND )
+		if( (NOT X11_FOUND) OR (HG_GLFW_BACKEND STREQUAL "WAYLAND") )
 			find_dependency(ECM REQUIRED NO_MODULE)
 			list(APPEND CMAKE_MODULE_PATH "${ECM_MODULE_PATH}")
 			find_dependency(Wayland REQUIRED)
@@ -94,7 +86,7 @@ if(UNIX)
 			endif()
 		endif()
 
-		if(NOT HG_EMBEDDED)
+		if(HG_USE_GTK3)
 			find_dependency(PkgConfig REQUIRED)
 			pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 		endif()
@@ -153,9 +145,58 @@ if(HG_ENABLE_OPENVR_API)
 	unset(_OPENVR_IMPORT_PREFIX)
 endif()
 
+# Recreate SRanipal target if needed
+if(HG_ENABLE_SRANIPAL_API AND (CMAKE_SYSTEM_NAME STREQUAL "Windows"))
+	get_filename_component(_SRANIPAL_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY )
+	get_filename_component(_SRANIPAL_IMPORT_PREFIX "${_SRANIPAL_IMPORT_PREFIX}" DIRECTORY)
+
+	find_library(SRANIPAL_LIBRARY_RELEASE name SRanipal PATHS "${_SRANIPAL_IMPORT_PREFIX}/lib/Release" NO_DEFAULT_PATH)
+	find_library(SRANIPAL_LIBRARY_DEBUG name SRanipal PATHS "${_SRANIPAL_IMPORT_PREFIX}/lib/Debug" NO_DEFAULT_PATH)
+		
+	if(NOT (SRANIPAL_LIBRARY_RELEASE OR SRANIPAL_LIBRARY_DEBUG))
+		message(FATAL_ERROR "SRanipal library not found")
+	endif()
+
+	add_library(SRanipal SHARED IMPORTED GLOBAL)
+	set(_SRANIPAL_IMPORTED_CONFIGS "")
+	if(SRANIPAL_LIBRARY_RELEASE)
+		list(APPEND _SRANIPAL_IMPORTED_CONFIGS RELEASE)
+		set(_SRANIPAL_DLLS "")
+		foreach(_dll libHTC_License nanomsg SRanipal SRWorks_Log ViveSR_Client)
+			find_file(${_dll}_RELEASE name "${_dll}${CMAKE_SHARED_LIBRARY_SUFFIX}" PATHS "${_SRANIPAL_IMPORT_PREFIX}/bin/Release" NO_DEFAULT_PATH)
+			list(APPEND _SRANIPAL_DLLS ${${_dll}_RELEASE})
+		endforeach(_dll)
+
+		set_target_properties(SRanipal PROPERTIES
+			IMPORTED_IMPLIB_RELEASE "${SRANIPAL_LIBRARY_RELEASE}"
+			IMPORTED_LOCATION_RELEASE "${_SRANIPAL_DLLS}"
+		)
+		unset(_SRANIPAL_DLLS)
+	endif()
+
+	if(SRANIPAL_LIBRARY_DEBUG)
+		list(APPEND _SRANIPAL_IMPORTED_CONFIGS DEBUG)
+		set(_SRANIPAL_DLLS "")
+		foreach(_dll libHTC_License nanomsg SRanipal SRWorks_Log ViveSR_Client)
+			find_file(${_dll}_DEBUG name "${_dll}${CMAKE_SHARED_LIBRARY_SUFFIX}" PATHS "${_SRANIPAL_IMPORT_PREFIX}/bin/Debug" NO_DEFAULT_PATH)		
+			list(APPEND _SRANIPAL_DLLS ${${_dll}_DEBUG})
+		endforeach(_dll)
+
+		set_target_properties(SRanipal PROPERTIES
+			IMPORTED_IMPLIB_DEBUG "${SRANIPAL_LIBRARY_DEBUG}"
+			IMPORTED_LOCATION_DEBUG "${_SRANIPAL_DLLS}"
+		)
+		unset(_SRANIPAL_DLLS)
+	endif()
+	set_property(TARGET SRanipal PROPERTY IMPORTED_CONFIGURATIONS ${_SRANIPAL_IMPORTED_CONFIGS})
+
+	unset(_SRANIPAL_IMPORTED_CONFIGS)
+	unset(_SRANIPAL_IMPORT_PREFIX)
+endif()
+
 check_required_components(cppsdk)
 
-# Helper function to deploy CPPSDK shared libraries
+# Helper function to deploy shared libraries of CPPSDK external dependencies.
 function(install_cppsdk_dependencies destination component)
 	foreach(_target @HG_SHARED_LIBRARY_TARGETS@)
 		if(TARGET ${_target})

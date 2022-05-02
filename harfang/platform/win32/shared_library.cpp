@@ -17,12 +17,12 @@
 
 namespace hg {
 
-bool SetSharedLibraryPath(const char *path) { return SetDllDirectoryW((LPCWSTR)utf8_to_utf16(path).c_str()) != 0; }
+bool SetSharedLibraryPath(const char *path) { return SetDllDirectoryW(utf8_to_wchar(path).c_str()) != 0; }
 
 SharedLib LoadSharedLibrary(const char *path) {
 	static_assert(sizeof(SharedLib) >= sizeof(HMODULE), "cannot fit HMODULE in SharedLib structure");
 
-	HMODULE mod = LoadLibraryW((LPCWSTR)utf8_to_utf16(path).c_str());
+	HMODULE mod = LoadLibraryW(utf8_to_wchar(path).c_str());
 	if (mod == 0)
 		error(format("LoadSharedLibrary('%1') failed, reason: %2").arg(path).arg(GetLastError_Win32()).c_str());
 

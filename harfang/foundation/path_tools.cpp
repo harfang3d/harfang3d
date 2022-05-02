@@ -219,13 +219,10 @@ std::string CleanFileName(const std::string &filename) {
 std::string GetCurrentWorkingDirectory() {
 	WCHAR path[1024];
 	GetCurrentDirectoryW(1024 - 1, path); // poorly worded documentation makes it unclear if nBufferLength should account for the terminator or not...
-	return utf16_to_utf8(std::u16string(reinterpret_cast<const std::u16string::value_type *>(path)));
+	return wchar_to_utf8(path);
 }
 
-bool SetCurrentWorkingDirectory(const std::string &path) {
-	auto utf16 = utf8_to_utf16(path);
-	return SetCurrentDirectoryW(reinterpret_cast<LPCWSTR>(utf16.data())) == TRUE;
-}
+bool SetCurrentWorkingDirectory(const std::string &path) { return SetCurrentDirectoryW(utf8_to_wchar(path).c_str()) == TRUE; }
 
 std::string GetUserFolder() {
 	HRESULT res;

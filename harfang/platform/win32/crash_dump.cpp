@@ -86,9 +86,9 @@ static std::string GetTempFilename(const char *prefix) {
 	GetTempPathW(MAX_PATH, temp_path);
 
 	WCHAR filename[MAX_PATH + 1];
-	GetTempFileNameW(temp_path, (LPCWSTR)utf8_to_utf16(prefix).c_str(), 0, filename);
+	GetTempFileNameW(temp_path, utf8_to_wchar(prefix).c_str(), 0, filename);
 
-	return utf16_to_utf8((std::u16string::value_type *)filename);
+	return wchar_to_utf8(filename);
 }
 
 LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
@@ -96,14 +96,14 @@ LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
 	std::string _minidump_filename = minidump_filename ? minidump_filename : GetTempFilename("hfg_dump");
 
 	if (write_crash_minidump)
-		WriteMiniDump(pExceptionInfo, (LPCWSTR)utf8_to_utf16(_minidump_filename).c_str());
+		WriteMiniDump(pExceptionInfo, utf8_to_wchar(_minidump_filename).c_str());
 
 	// output report
 	std::string _report_filename = report_filename ? report_filename : GetTempFilename("hfg_crash_report");
 
 	if (write_crash_report) {
 #if WIN32
-		std::ofstream f((wchar_t *)utf8_to_utf16(_report_filename).c_str(), std::ios::out | std::ios::trunc);
+		std::ofstream f(utf8_to_wchar(_report_filename).c_str(), std::ios::out | std::ios::trunc);
 #else
 		std::ofstream f(_report_filename.c_str(), std::ios::out | std::ios::trunc);
 #endif
@@ -259,7 +259,7 @@ LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
 		if (write_crash_minidump)
 			msg += "* Dump: " + _minidump_filename + "\n";
 	}
-	MessageBoxW(nullptr, (LPCWSTR)utf8_to_utf16(msg).c_str(), L"Fatal error", MB_ICONSTOP);
+	MessageBoxW(nullptr, utf8_to_wchar(msg).c_str(), L"Fatal error", MB_ICONSTOP);
 
 	return EXCEPTION_CONTINUE_SEARCH;
 }

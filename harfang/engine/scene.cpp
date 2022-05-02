@@ -204,9 +204,7 @@ size_t Scene::GarbageCollectPass() {
 	}
 
 	// cleanup anims
-	{
-		removed_count += GarbageCollectAnims();
-	}
+	{ removed_count += GarbageCollectAnims(); }
 
 	return removed_count;
 }
@@ -751,6 +749,24 @@ void Scene::SetNodeWorldMatrix(NodeRef ref, const Mat4 &world) {
 }
 
 //
+Mat4 Scene::ComputeNodeWorldMatrix(NodeRef ref) const {
+	if (auto node_ = this->GetNode_(ref)) {
+		const auto trs_ref = node_->components[NCI_Transform];
+
+		if (transforms.is_valid(trs_ref)) {
+			const auto &trs = transforms[trs_ref.idx];
+
+			auto mtx = TransformationMat4(trs.TRS.pos, trs.TRS.rot, trs.TRS.scl);
+			if (trs.parent != InvalidNodeRef)
+				mtx = ComputeNodeWorldMatrix(trs.parent) * mtx;
+
+			return mtx;
+		}
+	}
+	return Mat4::Identity;
+}
+
+//
 ComponentRef Scene::GetNodeCameraRef(NodeRef ref) const { return GetNodeComponentRef_<NCI_Camera>(ref); }
 
 void Scene::SetNodeCamera(NodeRef ref, ComponentRef cref) {
@@ -1114,12 +1130,14 @@ bool Scene::NodeSetupInstance(
 	if (i == std::end(node_instance))
 		return false;
 
+	const auto host_is_enabled = IsNodeEnabled(ref);
+
 	if (instances.is_valid(i->second)) {
 		LoadSceneContext ctx = {recursion_level};
 
 		{
 			const auto &i_ = instances[i->second.idx];
-			if (!LoadScene(ir, ScopedReadHandle(ip, i_.name.c_str()), i_.name.c_str(), *this, ir, ip, resources, pipeline, ctx, flags))
+			if (!LoadScene(ir, ScopedReadHandle(ip, i_.name.c_str(), flags & LSSF_Silent), i_.name.c_str(), *this, ir, ip, resources, pipeline, ctx, flags))
 				return false;
 		}
 
@@ -1129,6 +1147,9 @@ bool Scene::NodeSetupInstance(
 			auto &n = nodes[node.idx];
 
 			n.flags |= NF_Instantiated; // flag as instantiated
+
+			if (!host_is_enabled)
+				n.flags |= NF_InstanceDisabled; // flag as disabled through host
 
 			if (auto trs = GetComponent_(transforms, n.components[NCI_Transform]))
 				if (trs->parent == InvalidNodeRef)
@@ -1608,23 +1629,21 @@ bool LoadSceneBinaryFromData(const Data &data, const char *name, Scene &scene, c
 static bool LoadScene(const Reader &ir, const Handle &h, const char *name, Scene &scene, const Reader &deps_ir, const ReadProvider &deps_ip,
 	PipelineResources &resources, const PipelineInfo &pipeline, LoadSceneContext &ctx, uint32_t flags) {
 
-	if (!ir.is_valid(h)) {
-		error(format("Cannot load scene '%1', invalid read handle").arg(name));
+	if (!ir.is_valid(h))
 		return false;
-	}
 
 	return IsBinaryScene(ir, h) ? scene.Load_binary(ir, h, name, deps_ir, deps_ip, resources, pipeline, ctx, flags)
 								: LoadSceneJson(ir, h, name, scene, deps_ir, deps_ip, resources, pipeline, ctx, flags);
 }
 
 bool LoadSceneFromFile(const char *path, Scene &scene, PipelineResources &resources, const PipelineInfo &pipeline, LoadSceneContext &ctx, uint32_t flags) {
-	return LoadScene(
-		g_file_reader, ScopedReadHandle(g_file_read_provider, path), path, scene, g_file_reader, g_file_read_provider, resources, pipeline, ctx, flags);
+	return LoadScene(g_file_reader, ScopedReadHandle(g_file_read_provider, path, flags & LSSF_Silent), path, scene, g_file_reader, g_file_read_provider,
+		resources, pipeline, ctx, flags);
 }
 
 bool LoadSceneFromAssets(const char *name, Scene &scene, PipelineResources &resources, const PipelineInfo &pipeline, LoadSceneContext &ctx, uint32_t flags) {
-	return LoadScene(
-		g_assets_reader, ScopedReadHandle(g_assets_read_provider, name), name, scene, g_assets_reader, g_assets_read_provider, resources, pipeline, ctx, flags);
+	return LoadScene(g_assets_reader, ScopedReadHandle(g_assets_read_provider, name, flags & LSSF_Silent), name, scene, g_assets_reader, g_assets_read_provider,
+		resources, pipeline, ctx, flags);
 }
 
 //
@@ -1784,11 +1803,51 @@ BoundToSceneAnim Scene::BindSceneAnim(AnimRef anim_ref) const {
 	if (!anims.is_valid(anim_ref))
 		return {};
 
-	return {}; // TODO
+	const auto &anim = anims[anim_ref.idx];
+
+	BoundToSceneAnim bound_anim;
+
+	bound_anim.anim = anim_ref;
+
+	std::fill(std::begin(bound_anim.float_track), std::end(bound_anim.float_track), -1);
+	for (size_t i = 0; i < anim.float_tracks.size(); ++i) {
+		__ASSERT__(i < 128);
+		const auto &t = anim.float_tracks[i];
+		if (t.target == "FogNear")
+			bound_anim.float_track[SFAT_FogNear] = int8_t(i);
+		else if (t.target == "FogFar")
+			bound_anim.float_track[SFAT_FogFar] = int8_t(i);
+	}
+
+	std::fill(std::begin(bound_anim.color_track), std::end(bound_anim.color_track), -1);
+	for (size_t i = 0; i < anim.color_tracks.size(); ++i) {
+		__ASSERT__(i < 128);
+		const auto &t = anim.color_tracks[i];
+		if (t.target == "AmbientColor")
+			bound_anim.color_track[SCAT_AmbientColor] = int8_t(i);
+		else if (t.target == "FogColor")
+			bound_anim.color_track[SCAT_FogColor] = int8_t(i);
+	}
+
+	return bound_anim;
 }
 
 void Scene::EvaluateBoundAnim(const BoundToSceneAnim &bound_anim, time_ns t) {
-	// TODO
+	if (anims.is_valid(bound_anim.anim)) {
+		const auto &anim = anims[bound_anim.anim.idx];
+
+		if (bound_anim.float_track[SFAT_FogNear] != -1)
+			Evaluate(anim.float_tracks[bound_anim.float_track[SFAT_FogNear]], t, environment.fog_near);
+
+		if (bound_anim.float_track[SFAT_FogFar] != -1)
+			Evaluate(anim.float_tracks[bound_anim.float_track[SFAT_FogFar]], t, environment.fog_far);
+
+		if (bound_anim.color_track[SCAT_FogColor] != -1)
+			Evaluate(anim.color_tracks[bound_anim.color_track[SCAT_FogColor]], t, environment.fog_color);
+
+		if (bound_anim.color_track[SCAT_AmbientColor] != -1)
+			Evaluate(anim.color_tracks[bound_anim.color_track[SCAT_AmbientColor]], t, environment.ambient);
+	}
 }
 
 static bool SplitMaterialPropertyName(const std::string &name, size_t &slot_idx, std::string &value) {
@@ -2053,7 +2112,7 @@ SceneAnimRef Scene::GetSceneAnim(const char *name) const {
 SceneBoundAnim Scene::BindAnim(const SceneAnim &scene_anim) const {
 	SceneBoundAnim bound_anim;
 
-	if (scene_anims.is_valid(scene_anim.scene_anim))
+	if (anims.is_valid(scene_anim.scene_anim))
 		bound_anim.bound_scene_anim = BindSceneAnim(scene_anim.scene_anim);
 
 	for (const auto &i : scene_anim.node_anims)
@@ -2213,10 +2272,6 @@ std::string Scene::GetValue(const std::string &key) const {
 void Scene::SetValue(const std::string &key, const std::string &value) { key_values[key] = value; }
 
 //
-Vec3 GetAnimableScenePropertyVec3(const Scene &scene, const std::string &name) { return {}; }
-void SetAnimableScenePropertyVec3(Scene &scene, const std::string &name, const Vec3 &v) {}
-
-//
 bool GetAnimableNodePropertyBool(const Scene &scene, NodeRef ref, const std::string &name) {
 	if (const auto node = scene.GetNode(ref)) {
 		if (name == "Enable")
@@ -2233,6 +2288,21 @@ void SetAnimableNodePropertyBool(Scene &scene, NodeRef ref, const std::string &n
 }
 
 //
+float GetAnimableScenePropertyFloat(const Scene &scene, const std::string &name) {
+	if (name == "FogNear")
+		return scene.environment.fog_near;
+	if (name == "FogFar")
+		return scene.environment.fog_far;
+	return 1.f;
+}
+
+void SetAnimableScenePropertyFloat(Scene &scene, const std::string &name, float v) {
+	if (name == "FogNear")
+		scene.environment.fog_near = v;
+	else if (name == "FogFar")
+		scene.environment.fog_far = v;
+}
+
 float GetAnimableNodePropertyFloat(const Scene &scene, NodeRef ref, const std::string &name) {
 	if (const auto node = scene.GetNode(ref)) {
 		if (name == "Light.DiffuseIntensity")
@@ -2315,8 +2385,20 @@ void SetAnimableNodePropertyVec4(Scene &scene, NodeRef ref, const std::string &n
 }
 
 //
-Color GetAnimableScenePropertyColor(const Scene &scene, const std::string &name) { return {}; }
-void SetAnimableScenePropertyColor(Scene &scene, const std::string &name, const Color &v) {}
+Color GetAnimableScenePropertyColor(const Scene &scene, const std::string &name) {
+	if (name == "FogColor")
+		return scene.environment.fog_color;
+	if (name == "AmbientColor")
+		return scene.environment.ambient;
+	return {};
+}
+
+void SetAnimableScenePropertyColor(Scene &scene, const std::string &name, const Color &v) {
+	if (name == "FogColor")
+		scene.environment.fog_color = v;
+	else if (name == "AmbientColor")
+		scene.environment.ambient = v;
+}
 
 Color GetAnimableNodePropertyColor(const Scene &scene, NodeRef ref, const std::string &name) {
 	if (const auto node = scene.GetNode(ref)) {

@@ -44,7 +44,7 @@ install(FILES __init__.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bdist_wheel/ha
 
 install(
 	TARGETS
-		hg_python libluadll
+		hg_python
 	RUNTIME DESTINATION
 		${CMAKE_CURRENT_BINARY_DIR}/bdist_wheel/harfang
 	LIBRARY DESTINATION
@@ -52,17 +52,7 @@ install(
 	COMPONENT
 		python)
 
-if(HG_USE_GLFW)
-	install(FILES $<TARGET_FILE:glfw> DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bdist_wheel/harfang COMPONENT python)
-endif()
-
-if(HG_ENABLE_OPENVR_API)
-	install(FILES ${OPENVR_DLL} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bdist_wheel/harfang COMPONENT python)
-endif()
-
-if(HG_ENABLE_SRANIPAL_API)
-	install(FILES ${SRANIPAL_DLL} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bdist_wheel/harfang COMPONENT python)
-endif()
+install_cppsdk_dependencies(${CMAKE_CURRENT_BINARY_DIR}/bdist_wheel/harfang python)
 
 if(WIN32)
 	set(BDIST_WHEEL_LIMITED_API_FLAGS "") # broken feature on Windows

@@ -14,7 +14,7 @@ Model CreateCubeModel(const bgfx::VertexLayout &decl, float x, float y, float z)
 	y /= 2.f;
 	z /= 2.f;
 
-	uint16_t a, b, c, d;
+	VtxIdxType a, b, c, d;
 
 	a = builder.AddVertex({{-x, -y, -z}, {0.f, 0.f, -1.f}, {}, {}, {0, 0}}); // -Z
 	b = builder.AddVertex({{-x, y, -z}, {0.f, 0.f, -1.f}, {}, {}, {0, 1}});
@@ -140,7 +140,7 @@ Model CreateCylinderModel(const bgfx::VertexLayout &decl, float radius, float he
 		subdiv_x = 3;
 	}
 
-	std::vector<uint16_t> ref(subdiv_x * 2);
+	std::vector<VtxIdxType> ref(subdiv_x * 2);
 	const float z = height / 2.f;
 	for (int i = 0; i < subdiv_x; i++) {
 		float t = 2.f * Pi * i / static_cast<float>(subdiv_x);
@@ -151,17 +151,17 @@ Model CreateCylinderModel(const bgfx::VertexLayout &decl, float radius, float he
 		ref[2 * i + 1] = builder.AddVertex({{x, -z, y}, {cs, 0.f, sn}});
 	}
 
-	uint16_t a = ref[2 * subdiv_x - 2];
-	uint16_t b = ref[2 * subdiv_x - 1];
+	VtxIdxType a = ref[2 * subdiv_x - 2];
+	VtxIdxType b = ref[2 * subdiv_x - 1];
 	for (int i = 0; i < subdiv_x; i++) {
-		uint16_t c = ref[2 * i + 1];
-		uint16_t d = ref[2 * i];
+		const auto c = ref[2 * i + 1];
+		const auto d = ref[2 * i];
 		builder.AddPolygon({a, b, c, d});
 		a = d;
 		b = c;
 	}
 
-	std::vector<uint16_t> cap(subdiv_x + 2);
+	std::vector<VtxIdxType> cap(subdiv_x + 2);
 	cap[0] = builder.AddVertex({{0, z, 0}, {0, 1, 0}});
 	for (int i = 0; i < subdiv_x; i++) {
 		cap[i + 1] = ref[2 * i];
@@ -188,7 +188,7 @@ Model CreateConeModel(const bgfx::VertexLayout &decl, float radius, float height
 		subdiv_x = 3;
 	}
 
-	std::vector<uint16_t> ref(subdiv_x + 2);
+	std::vector<VtxIdxType> ref(subdiv_x + 2);
 	for (int i = 0; i < subdiv_x; i++) {
 		float t = 2.f * Pi * i / static_cast<float>(subdiv_x);
 		float cs = Cos(t);
@@ -223,7 +223,7 @@ Model CreateCapsuleModel(const bgfx::VertexLayout &decl, float radius, float hei
 	ModelBuilder builder;
 
 	// cylinder
-	std::vector<uint16_t> ref(subdiv_x * 2);
+	std::vector<VtxIdxType> ref(subdiv_x * 2);
 	const float z = height / 2.f - radius;
 	for (int i = 0; i < subdiv_x; i++) {
 		float t = 2.f * Pi * i / static_cast<float>(subdiv_x);
@@ -234,21 +234,21 @@ Model CreateCapsuleModel(const bgfx::VertexLayout &decl, float radius, float hei
 		ref[2 * i + 1] = builder.AddVertex({{x, -z, y}, {cs, 0.f, sn}});
 	}
 
-	uint16_t a0, b0, a1, b1;
+	VtxIdxType a0, b0, a1, b1;
 	a0 = ref[2 * subdiv_x - 2];
 	b0 = ref[2 * subdiv_x - 1];
 	for (int i = 0; i < subdiv_x; i++) {
-		uint16_t c0 = ref[2 * i + 1];
-		uint16_t d0 = ref[2 * i];
+		VtxIdxType c0 = ref[2 * i + 1];
+		VtxIdxType d0 = ref[2 * i];
 		builder.AddPolygon({a0, b0, c0, d0});
 		a0 = d0;
 		b0 = c0;
 	}
 
-	uint16_t top = builder.AddVertex({{0.f, height / 2.f, 0.f}, {0.f, 1.f, 0.f}});
-	uint16_t bottom = builder.AddVertex({{0.f, -height / 2.f, 0.f}, {0.f, -1.f, 0.f}});
+	VtxIdxType top = builder.AddVertex({{0.f, height / 2.f, 0.f}, {0.f, 1.f, 0.f}});
+	VtxIdxType bottom = builder.AddVertex({{0.f, -height / 2.f, 0.f}, {0.f, -1.f, 0.f}});
 
-	std::vector<uint16_t> fan(2 + subdiv_x);
+	std::vector<VtxIdxType> fan(2 + subdiv_x);
 
 	if (subdiv_y == 1) {
 		// top cap
@@ -271,7 +271,7 @@ Model CreateCapsuleModel(const bgfx::VertexLayout &decl, float radius, float hei
 	}
 
 	// hemispherical caps
-	std::vector<uint16_t> cap(subdiv_x * 2 * (subdiv_y - 1));
+	std::vector<VtxIdxType> cap(subdiv_x * 2 * (subdiv_y - 1));
 	for (int i = 0, k = 0; i < subdiv_x; i++) {
 		float t0 = 2.f * Pi * i / static_cast<float>(subdiv_x);
 		float c0 = radius * Cos(t0);
@@ -312,14 +312,14 @@ Model CreateCapsuleModel(const bgfx::VertexLayout &decl, float radius, float hei
 		b1 = cap[k + 1];
 		for (int i = 0; i < subdiv_x; i++) {
 			k = 2 * ((subdiv_y - 1) * i + j);
-			uint16_t c0 = cap[k + 2];
-			uint16_t d0 = cap[k];
+			VtxIdxType c0 = cap[k + 2];
+			VtxIdxType d0 = cap[k];
 			builder.AddPolygon({a0, b0, c0, d0});
 			a0 = d0;
 			b0 = c0;
 
-			uint16_t c1 = cap[k + 1];
-			uint16_t d1 = cap[k + 3];
+			VtxIdxType c1 = cap[k + 1];
+			VtxIdxType d1 = cap[k + 3];
 			builder.AddPolygon({a1, b1, c1, d1});
 			a1 = d1;
 			b1 = c1;
@@ -335,11 +335,11 @@ Model CreateCapsuleModel(const bgfx::VertexLayout &decl, float radius, float hei
 	a1 = ref[offset + 1];
 	for (int i = 0; i < subdiv_x; i++) {
 		offset = 2 * i;
-		uint16_t c0 = ref[offset];
-		uint16_t d1 = ref[offset + 1];
+		VtxIdxType c0 = ref[offset];
+		VtxIdxType d1 = ref[offset + 1];
 		offset = 2 * ((subdiv_y - 1) * (i + 1) - 1);
-		uint16_t d0 = cap[offset];
-		uint16_t c1 = cap[offset + 1];
+		VtxIdxType d0 = cap[offset];
+		VtxIdxType c1 = cap[offset + 1];
 		builder.AddPolygon({a0, b0, c0, d0});
 		builder.AddPolygon({a1, b1, c1, d1});
 		a0 = d0;

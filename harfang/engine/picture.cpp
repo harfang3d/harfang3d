@@ -10,6 +10,9 @@
 
 #include "engine/stb_image.h"
 #include "engine/stb_image_write.h"
+#include "bimg/encode.h"
+#include "bx/allocator.h"
+#include <bx/file.h>
 
 namespace hg {
 
@@ -240,6 +243,64 @@ bool SaveBMP(const Picture &pic, const char *path) {
 
 	return stbi_write_bmp_to_func(STB_write, &file, pic.GetWidth(), pic.GetHeight(), size_of(pic.GetFormat()), pic.GetData()) != 0;
 }
+
+class AlignedAllocator : public bx::AllocatorI {
+public:
+	AlignedAllocator(bx::AllocatorI *_allocator, size_t _minAlignment) : m_allocator(_allocator), m_minAlignment(_minAlignment) {}
+
+	virtual void *realloc(void *_ptr, size_t _size, size_t _align, const char *_file, uint32_t _line) {
+		return m_allocator->realloc(_ptr, _size, bx::max(_align, m_minAlignment), _file, _line);
+	}
+
+	bx::AllocatorI *m_allocator;
+	size_t m_minAlignment;
+};
+
+static bool SaveBimg(const Picture& pic, const char* path, bool fast, bimg::TextureFormat::Enum format) {
+	if (!pic.GetHeight() || !pic.GetWidth())
+		return false;
+
+	bx::DefaultAllocator defaultAllocator;
+	AlignedAllocator allocator(&defaultAllocator, 16);
+
+	auto input_format = bimg::TextureFormat::RGBA8;
+	switch (pic.GetFormat()) {
+		case PF_RGB24:
+			input_format = bimg::TextureFormat::RGB8;
+			break;
+		case PF_RGBA32:
+			input_format = bimg::TextureFormat::RGBA8;
+			break;
+		case PF_RGBA32F:
+			input_format = bimg::TextureFormat::RGBA32F;
+			break;
+		default:
+			assert(false);
+			return false;
+	}
+
+	uint16_t depth = 1; // not sure what it is
+	auto input = bimg::imageAlloc(
+		&allocator, input_format, pic.GetWidth(), pic.GetHeight(), depth, 1 /*_numLayers*/, false /*_cubeMap*/, false /*_hasMips*/, pic.GetData());
+
+	auto output = bimg::imageEncode(&allocator, format, fast ? bimg::Quality::Fastest : bimg::Quality::Highest, *input);
+
+	bimg::imageFree(input);
+
+	bx::FileWriter writer;
+	bx::Error err;
+	if (bx::open(&writer, path, false, &err)) {
+		bimg::imageWriteDds(&writer, *output, output->m_data, output->m_size, &err);
+	}
+
+	bimg::imageFree(output);
+
+	return true;
+}
+
+bool SaveBC6H(const Picture &pic, const char *path, bool fast) { return SaveBimg(pic, path, fast, bimg::TextureFormat::BC6H); }
+
+bool SaveBC7(const Picture& pic, const char* path, bool fast) { return SaveBimg(pic, path, fast, bimg::TextureFormat::BC7); }
 
 bool SaveTGA(const Picture &pic, const char *path) {
 	ProfilerPerfSection section("SaveTGA", path);

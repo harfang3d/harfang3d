@@ -37,7 +37,7 @@ bool SRanipalInit() {
 
 	if (err == ViveSR::Error::WORK) {
 		eye_tracking_enabled = true;
-		info("Eye tracking API successfully initialized");
+		log("Eye tracking API successfully initialized");
 		return true;
 	} else if (err == ViveSR::Error::RUNTIME_NOT_FOUND) {
 		error("SRanipal runtime not found, please follow the SDK guide on how to install it");

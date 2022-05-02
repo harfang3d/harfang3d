@@ -1191,7 +1191,7 @@ static void ExportObject(const Model &model, const Node &gltf_node, hg::Node &no
 	if (gltf_node.mesh >= 0) {
 		auto gltf_mesh = model.meshes[gltf_node.mesh];
 		if(!gltf_mesh.name.empty())
-			path = hg::CutFileExtension(gltf_mesh.name);
+			path = hg::CleanFileName(hg::CutFileExtension(gltf_mesh.name));
 		for (auto meshPrimitive : gltf_mesh.primitives)
 			// add id index to be sure to have this one particular geo
 			ids += std::to_string(meshPrimitive.indices) + "_";

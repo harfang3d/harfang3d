@@ -68,7 +68,7 @@ struct Config {
 	float anim_simplify_color_tolerance = 0.001f;
 
 	bool fix_geo_orientation{false}; // FBX fix
-	float max_smoothing_angle{0.7f};
+	float max_smoothing_angle{45.f};
 	bool recalculate_normal{false}, recalculate_tangent{false};
 	bool calculate_normal_if_missing{false}, calculate_tangent_if_missing{false};
 	bool detect_geometry_instances{false};
@@ -1010,8 +1010,10 @@ hg::ModelRef DoExportGeometry(FbxMesh *fbx_mesh, FbxNode *pNode, hg::Object &obj
 	if (use_skin)
 		ExportGeometrySkin(fbx_skin, geo);
 
+	float max_smoothing_angle = hg::Deg(config.max_smoothing_angle);
+
 	const auto vtx_to_pol = hg::ComputeVertexToPolygon(geo);
-	const auto vtx_normal = hg::ComputeVertexNormal(geo, vtx_to_pol, hg::Deg(45.f));
+	const auto vtx_normal = hg::ComputeVertexNormal(geo, vtx_to_pol, max_smoothing_angle);
 
 	// recalculate normals
 	bool recalculate_normal = config.recalculate_normal;
@@ -1031,7 +1033,7 @@ hg::ModelRef DoExportGeometry(FbxMesh *fbx_mesh, FbxNode *pNode, hg::Object &obj
 	if (recalculate_tangent) {
 		hg::debug("    - Recalculate tangent frames (MikkT)");
 		if (!geo.uv[0].empty())
-			geo.tangent = hg::ComputeVertexTangent(geo, vtx_normal, 0, hg::Deg(45.f));
+			geo.tangent = hg::ComputeVertexTangent(geo, vtx_normal, 0, max_smoothing_angle);
 	}
 
 	// materials
@@ -1671,7 +1673,7 @@ int main(int argc, const char **argv) {
 	config.calculate_normal_if_missing = hg::GetCmdLineFlagValue(cmd_content, "-calculate-normal-if-missing");
 	config.calculate_tangent_if_missing = hg::GetCmdLineFlagValue(cmd_content, "-calculate-tangent-if-missing");
 
-	config.max_smoothing_angle = hg::GetCmdLineSingleValue(cmd_content, "-max-smoothing-angle", 0.7f);
+	config.max_smoothing_angle = hg::GetCmdLineSingleValue(cmd_content, "-max-smoothing-angle", config.max_smoothing_angle);
 
 	config.calculate_tangent_if_missing = hg::GetCmdLineFlagValue(cmd_content, "-calculate-tangent-if-missing");
 	config.detect_geometry_instances = hg::GetCmdLineFlagValue(cmd_content, "-detect-geometry-instances");

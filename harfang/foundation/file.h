@@ -65,10 +65,10 @@ template <typename T> bool Write(File file, const T &v) { return Write(file, &v,
 
 bool CopyFile(const char *src, const char *dst);
 
-std::string FileToString(const char *path);
+std::string FileToString(const char *path, bool silent = false);
 bool StringToFile(const char *path, const char *str);
 
-Data FileToData(const char *path);
+Data FileToData(const char *path, bool silent = false);
 
 //
 struct ScopedFile {

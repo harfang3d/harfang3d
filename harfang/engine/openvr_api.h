@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "foundation/vector2.h"
 #include "foundation/matrix4.h"
 #include "foundation/matrix44.h"
 
@@ -29,6 +30,7 @@ struct OpenVREyeFrameBuffer {
 	uintptr_t native{0};
 };
 
+iVec2 OpenVRGetFrameBufferSize();
 OpenVREyeFrameBuffer OpenVRCreateEyeFrameBuffer(OpenVRAA aa = OVRAA_None);
 void OpenVRDestroyEyeFrameBuffer(OpenVREyeFrameBuffer &eye_fb);
 

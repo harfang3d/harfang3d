@@ -1,5 +1,8 @@
 // HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
+#include <cstring>
+#include <vector>
+
 #include "ogg_audio_stream.h"
 
 #include "foundation/cext.h"
@@ -13,9 +16,6 @@
 
 #include <stb_vorbis/stb_vorbis.c>
 
-#include <cstring>
-#include <vector>
-
 namespace hg {
 
 struct OGGStream {
@@ -24,7 +24,7 @@ struct OGGStream {
 	Handle handle;
 
 	AudioFrameFormat fmt{AFF_Unsupported};
-	
+
 	stb_vorbis *vorbis{NULL};
 	AudioStreamRef *ref{NULL};
 
@@ -53,7 +53,7 @@ static void ogg_io_close(void *user) {
 	stream.provider->close(stream.handle);
 }
 
-static int ogg_io_read(void* user, char* data, int size) {
+static int ogg_io_read(void *user, char *data, int size) {
 	AudioStreamRef *ref = reinterpret_cast<AudioStreamRef *>(user);
 	if (!(ref && IsValid(*ref))) {
 		return 0;
@@ -83,7 +83,7 @@ static int ogg_io_seek(void *user, int offset, enum STBVorbisIOSeekMode mode) {
 	return stream.reader->seek(stream.handle, offset, whence) ? 0 : 1;
 }
 
-static int ogg_io_tell(void* user) {
+static int ogg_io_tell(void *user) {
 	AudioStreamRef *ref = reinterpret_cast<AudioStreamRef *>(user);
 	if (!(ref && IsValid(*ref))) {
 		return 0;
@@ -92,7 +92,7 @@ static int ogg_io_tell(void* user) {
 	return stream.reader->tell(stream.handle);
 }
 
-static int ogg_io_eof(void* user) {
+static int ogg_io_eof(void *user) {
 	AudioStreamRef *ref = reinterpret_cast<AudioStreamRef *>(user);
 	if (!(ref && IsValid(*ref))) {
 		return 1;
@@ -104,7 +104,7 @@ static int ogg_io_eof(void* user) {
 static int OGGAudioStreamStartup() { return 1; }
 
 static void OGGAudioStreamShutdown() {
-	for (auto &stream: g_streams) {
+	for (auto &stream : g_streams) {
 		stb_vorbis_close(stream.vorbis);
 		if (stream.ref) {
 			delete stream.ref;
@@ -120,13 +120,7 @@ static bool OpenOGG(OGGStream &stream) {
 	if (!reader.is_valid(handle))
 		return false;
 
-	stbv_io_callbacks callbacks = {
-		ogg_io_close,
-		ogg_io_read,
-		ogg_io_seek,
-		ogg_io_tell,
-		ogg_io_eof
-	};
+	stbv_io_callbacks callbacks = {ogg_io_close, ogg_io_read, ogg_io_seek, ogg_io_tell, ogg_io_eof};
 
 	int error = VORBIS__no_error;
 	stream.vorbis = stb_vorbis_open_from_callbacks(&callbacks, stream.ref, &error, NULL);
@@ -237,7 +231,7 @@ static int OGGAudioStreamGetFrame(AudioStreamRef ref, uintptr_t *data, int *size
 
 	auto &stream = g_streams[ref];
 	stb_vorbis_info info = stb_vorbis_get_info(stream.vorbis);
-	int n = stb_vorbis_get_frame_short_interleaved(stream.vorbis, info.channels, (short*)&stream.buffer[0], stream.buffer.size());
+	int n = stb_vorbis_get_frame_short_interleaved(stream.vorbis, info.channels, (short *)&stream.buffer[0], stream.buffer.size());
 	int error = stb_vorbis_get_error(stream.vorbis);
 	if (n == 0) {
 		return 0;

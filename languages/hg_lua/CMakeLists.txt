@@ -28,16 +28,6 @@ elseif(UNIX)
 	target_compile_definitions(hg_lua PUBLIC LUA_USE_LINUX)
 endif()
 
-install(TARGETS hg_lua lua libluadll RUNTIME DESTINATION hg_lua LIBRARY DESTINATION hg_lua COMPONENT lua)
+install(TARGETS hg_lua lua RUNTIME DESTINATION hg_lua LIBRARY DESTINATION hg_lua COMPONENT lua)
 
-if(HG_USE_GLFW)
-	install(FILES $<TARGET_FILE:glfw> DESTINATION hg_lua COMPONENT lua)
-endif()
-
-if(HG_ENABLE_OPENVR_API)
-	install(FILES ${OPENVR_DLL} DESTINATION hg_lua COMPONENT lua)
-endif()
-
-if(HG_ENABLE_SRANIPAL_API)
-	install(FILES ${SRANIPAL_DLL} DESTINATION hg_lua COMPONENT lua)
-endif()
+install_cppsdk_dependencies(hg_lua lua)

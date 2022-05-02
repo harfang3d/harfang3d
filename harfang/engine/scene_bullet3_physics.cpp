@@ -270,7 +270,7 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 	auto trs = node.GetTransform();
 	btTransform bt_trs = btTransform::getIdentity();
 	if (trs)
-		bt_trs = to_btTransform(TransformationMat4(trs.GetPos(), trs.GetRot(), Vec3::One)); // most up to date transform
+		bt_trs = to_btTransform(Normalize(node.ComputeWorld())); // require most up-to-date world matrix
 
 	if (!shapes.empty()) {
 		btCollisionShape *root_shape;
@@ -413,8 +413,14 @@ void SceneBullet3Physics::SyncTransformsFromScene(const Scene &scene) {
 		const auto flags = body->getCollisionFlags();
 
 		if (flags == btRigidBody::CF_KINEMATIC_OBJECT) {
-			const auto world = scene.GetNodeWorldMatrix(i.first);
-			const auto world_no_scale = TransformationMat4(GetT(world), GetR(world), Vec3::One);
+			/*
+				[EJ] ComputeNodeWorldMatrix is wasteful and only required so that the first frame
+				synchronization is correct as the scene matrices have not been computed yet.
+
+				We count on the fact that kinematic objects are a minority in the scene graph for
+				this change to not impact performances too much.
+			*/
+			const auto world_no_scale = Normalize(scene.ComputeNodeWorldMatrix(i.first));
 			body->setWorldTransform(to_btTransform(world_no_scale));
 		}
 	}
