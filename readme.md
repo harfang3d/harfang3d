@@ -2,6 +2,7 @@
 
 # HARFANG® 3D engine
 
+[![PyPI](https://img.shields.io/pypi/v/harfang)](https://pypi.org/project/harfang)
 [![Downloads](https://pepy.tech/badge/harfang)](https://pepy.tech/project/harfang)
 [![Downloads](https://pepy.tech/badge/harfang/month)](https://pepy.tech/project/harfang)
 
