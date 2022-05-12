@@ -231,7 +231,7 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
 # License
 
 Harfang is licensed under the GPLv3, LGPLv3 and a commercial license:<br>
-https://www.harfang3d.com/licenses/
+https://www.harfang3d.com/license
 
 # More screenshots...
 
