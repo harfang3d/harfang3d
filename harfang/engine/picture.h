@@ -77,5 +77,6 @@ bool SaveTGA(const Picture &pic, const char *path);
 bool SaveBMP(const Picture &pic, const char *path);
 bool SaveBC6H(const Picture &pic, const char *path, bool fast);
 bool SaveBC7(const Picture &pic, const char *path, bool fast);
+bool SaveHDR(const Picture &pic, const char *path);
 
 } // namespace hg

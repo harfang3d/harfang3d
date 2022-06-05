@@ -208,7 +208,7 @@ void AddGeometryToNavMeshInput(NavMeshInput &input, const Geometry &geo, const M
 
 	input.vtx.reserve(input.vtx.size() + geo.vtx.size());
 	for (auto &vtx : geo.vtx)
-		input.vtx.push_back(vtx * world);
+		input.vtx.push_back(world * vtx);
 
 	//
 	const auto tri_count = ComputeTriangleCount(geo);
@@ -306,7 +306,7 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 	std::unique_ptr<rcHeightfield> solid(rcAllocHeightfield());
 
 	if (!rcCreateHeightfield(&ctx, *solid, cfg.width, cfg.height, cfg.bmin, cfg.bmax, cfg.cs, cfg.ch)) {
-		error("Navigation: Could not create solid height field.");
+		warn("Navigation: Could not create solid height field.");
 		return nullptr;
 	}
 
@@ -345,7 +345,7 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 	std::unique_ptr<rcCompactHeightfield> chf(rcAllocCompactHeightfield());
 
 	if (!rcBuildCompactHeightfield(&ctx, cfg.walkableHeight, cfg.walkableClimb, *solid, *chf)) {
-		error("buildNavigation: Could not build compact data.");
+		warn("buildNavigation: Could not build compact data.");
 		return nullptr;
 	}
 
@@ -353,7 +353,7 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 
 	// Erode the walkable area by agent radius.
 	if (!rcErodeWalkableArea(&ctx, cfg.walkableRadius, *chf)) {
-		error("buildNavigation: Could not erode.");
+		warn("buildNavigation: Could not erode.");
 		return nullptr;
 	}
 
@@ -386,26 +386,26 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 	if (partitionType == SAMPLE_PARTITION_WATERSHED) {
 		// Prepare for region partitioning, by calculating distance field along the walkable surface.
 		if (!rcBuildDistanceField(&ctx, *chf)) {
-			error("buildNavigation: Could not build distance field.");
+			warn("buildNavigation: Could not build distance field.");
 			return nullptr;
 		}
 
 		// Partition the walkable surface into simple regions without holes.
 		if (!rcBuildRegions(&ctx, *chf, 0, cfg.minRegionArea, cfg.mergeRegionArea)) {
-			error("buildNavigation: Could not build watershed regions.");
+			warn("buildNavigation: Could not build watershed regions.");
 			return nullptr;
 		}
 	} else if (partitionType == SAMPLE_PARTITION_MONOTONE) {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distance field.
 		if (!rcBuildRegionsMonotone(&ctx, *chf, 0, cfg.minRegionArea, cfg.mergeRegionArea)) {
-			error("buildNavigation: Could not build monotone regions.");
+			warn("buildNavigation: Could not build monotone regions.");
 			return nullptr;
 		}
 	} else { // SAMPLE_PARTITION_LAYERS
 			 // Partition the walkable surface into simple regions without holes.
 		if (!rcBuildLayerRegions(&ctx, *chf, 0, cfg.minRegionArea)) {
-			error("buildNavigation: Could not build layer regions.");
+			warn("buildNavigation: Could not build layer regions.");
 			return nullptr;
 		}
 	}
@@ -418,7 +418,7 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 	std::unique_ptr<rcContourSet> cset(rcAllocContourSet());
 
 	if (!rcBuildContours(&ctx, *chf, cfg.maxSimplificationError, cfg.maxEdgeLen, *cset)) {
-		error("buildNavigation: Could not create contours.");
+		warn("buildNavigation: Could not create contours.");
 		return nullptr;
 	}
 
@@ -430,7 +430,7 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 	std::unique_ptr<rcPolyMesh> pmesh(rcAllocPolyMesh());
 
 	if (!rcBuildPolyMesh(&ctx, *cset, cfg.maxVertsPerPoly, *pmesh)) {
-		error("buildNavigation: Could not triangulate contours.");
+		warn("buildNavigation: Could not triangulate contours.");
 		return nullptr;
 	}
 
@@ -441,7 +441,7 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 	std::unique_ptr<rcPolyMeshDetail> dmesh(rcAllocPolyMeshDetail());
 
 	if (!rcBuildPolyMeshDetail(&ctx, *pmesh, *chf, cfg.detailSampleDist, cfg.detailSampleMaxError, *dmesh)) {
-		error("buildNavigation: Could not build detail mesh.");
+		warn("buildNavigation: Could not build detail mesh.");
 		return nullptr;
 	}
 
@@ -514,14 +514,14 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 		params.buildBvTree = true;
 
 		if (!dtCreateNavMeshData(&params, &navData, &navDataSize)) {
-			error("Could not build Detour navmesh.");
+			warn("Could not build Detour navmesh.");
 			return nullptr;
 		}
 
 		navMesh = dtAllocNavMesh();
 		if (!navMesh) {
 			dtFree(navData);
-			error("Could not create Detour navmesh");
+			warn("Could not create Detour navmesh");
 			return nullptr;
 		}
 
@@ -530,7 +530,7 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 		status = navMesh->init(navData, navDataSize, DT_TILE_FREE_DATA);
 		if (dtStatusFailed(status)) {
 			dtFree(navData);
-			error("Could not init Detour navmesh");
+			warn("Could not init Detour navmesh");
 			return nullptr;
 		}
 

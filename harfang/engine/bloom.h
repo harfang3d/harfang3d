@@ -11,6 +11,8 @@
 
 namespace hg {
 
+/// Bloom post-process object holding internal states and resources.
+/// Create with CreateBloomFromAssets() or CreateBloomFromFile(), use with ApplyBloom(), finally call DestroyBloom() to dispose of resources when done.
 struct Bloom {
 	mutable bgfx::FrameBufferHandle in_fb = BGFX_INVALID_HANDLE;
 	mutable bgfx::FrameBufferHandle out_fb = BGFX_INVALID_HANDLE;
@@ -37,8 +39,11 @@ static Bloom CreateBloomFromAssets(const char *path, bgfx::BackbufferRatio::Enum
 	return CreateBloomFromAssets(path, RenderBufferResourceFactory::Backbuffer(), ratio);
 }
 
+/// Destroy a bloom post process object and all associated resources.
 void DestroyBloom(Bloom &bloom);
 
+/// Process `input` texture and generate a bloom overlay on top of `output`, input and output must be of the same size.
+/// Use CreateBloomFromFile() or CreateBloomFromAssets() to create a Bloom object and DestroyBloom() to destroy its internal resources after usage.
 void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, const hg::iVec2 &fb_size, bgfx::FrameBufferHandle output,
 	const Bloom &bloom, float threshold, float smoothness, float intensity);
 

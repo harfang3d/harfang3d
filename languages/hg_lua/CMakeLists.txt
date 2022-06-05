@@ -31,3 +31,12 @@ endif()
 install(TARGETS hg_lua lua RUNTIME DESTINATION hg_lua LIBRARY DESTINATION hg_lua COMPONENT lua)
 
 install_cppsdk_dependencies(hg_lua lua)
+
+foreach(_target assetc fbx_converter assimp_converter gltf_importer gltf_exporter)
+	if(TARGET ${_target})
+		install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/hg_lua/harfang -DBUILD_TYPE=$<CONFIG> -P $<TARGET_PROPERTY:${_target},BINARY_DIR>/cmake_install.cmake)"
+			COMPONENT lua)
+	endif()
+endforeach()
+
+install(FILES bin.lua DESTINATION hg_lua/harfang COMPONENT lua)

@@ -50,7 +50,7 @@ IVideoStreamer MakeVideoStreamer(const SharedLib &h) {
 	for (int i = 0; i<VS_BF_Count; i++) {
 		base_function_handles[i] = GetFunctionPointer(h, base_function_names[i]);
 		if (!base_function_handles[i]) {
-			error(format("failed to load %1 video stream function").arg(base_function_names[i]));
+			warn(format("failed to load %1 video stream function").arg(base_function_names[i]));
 			return streamer;
 		}
 	}
@@ -145,13 +145,13 @@ bool UpdateTexture(IVideoStreamer &streamer, VideoStreamHandle &handle, hg::Text
 
 	int id = streamer.GetFrame(handle, &data, &width, &height, &pitch, &video_fmt);
 	if (id == 0) {
-		error("unable to get video frame");
+		warn("Unable to get video frame");
 		return false;
 	}
 
 	bgfx::TextureFormat::Enum fmt = VideoFrameTextureFormat(video_fmt);
 	if (fmt == bgfx::TextureFormat::Unknown) {
-		error(format("unsupported video frame format (%1)").arg(video_fmt));
+		warn(format("Unsupported video frame format (%1)").arg(video_fmt));
 		streamer.FreeFrame(handle, id);
 		return false;
 	}

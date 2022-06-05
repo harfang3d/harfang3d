@@ -1,3 +1,3 @@
 Convert minutes to time.
 
-See [man.UnitSystem].
+See [man.CoordinateAndUnitSystem].

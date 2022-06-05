@@ -108,7 +108,7 @@ static bool GetOutputPath(
 		return false;
 
 	const auto filename = name.empty() ? prefix : (prefix.empty() ? name : prefix + "-" + name);
-	path = hg::CleanPath(base + "/" + filename + "." + ext);
+	path = hg::CleanPath(base + "/" + hg::CleanFileName(filename) + "." + ext);
 
 	switch (import_policy) {
 		default:
@@ -683,8 +683,12 @@ static hg::Material ExportMaterial(FbxSurfaceMaterial *fbx_material, FbxMesh *fb
 	if (config.profile == "pbr_default") {
 		shader = "core/shader/pbr.hps";
 
+		const auto occlusion = 1.f;
+		const auto roughness = 0.5f;
+		const auto metalness = 0.25f;
+
 		mat.values["uBaseOpacityColor"] = {bgfx::UniformType::Vec4, {diffuse.r, diffuse.g, diffuse.b, diffuse.a}};
-		mat.values["uOcclusionRoughnessMetalnessColor"] = {bgfx::UniformType::Vec4, {specular.r, specular.g, specular.b, glossiness}};
+		mat.values["uOcclusionRoughnessMetalnessColor"] = {bgfx::UniformType::Vec4, {occlusion, roughness, metalness, 0.f}};
 		mat.values["uSelfColor"] = {bgfx::UniformType::Vec4, {emissive.r, emissive.g, emissive.b, -1.f}};
 
 		if (has_diffuse_map) {
@@ -726,17 +730,16 @@ static hg::Material ExportMaterial(FbxSurfaceMaterial *fbx_material, FbxMesh *fb
 		}
 
 		// set occlusion to 1
-		specular.r = 1.f;
+		const auto occlusion = 1.f;
 
 		const auto roughness_prop = FindObjectProperty(fbx_material, "roughness");
-		if (roughness_prop.IsValid())
-			specular.g = float(roughness_prop.Get<FbxDouble>());
+		const auto roughness = roughness_prop.IsValid() ? float(roughness_prop.Get<FbxDouble>()) : 0.5f;
+
 		const auto metalness_prop = FindObjectProperty(fbx_material, "metalness");
-		if (metalness_prop.IsValid())
-			specular.b = float(metalness_prop.Get<FbxDouble>());
+		const auto metalness = metalness_prop.IsValid() ? float(metalness_prop.Get<FbxDouble>()) : 0.25f;
 
 		mat.values["uBaseOpacityColor"] = {bgfx::UniformType::Vec4, {diffuse.r, diffuse.g, diffuse.b, diffuse.a}};
-		mat.values["uOcclusionRoughnessMetalnessColor"] = {bgfx::UniformType::Vec4, {specular.r, specular.g, specular.b, glossiness}};
+		mat.values["uOcclusionRoughnessMetalnessColor"] = {bgfx::UniformType::Vec4, {occlusion, roughness, metalness, 0.f}};
 		mat.values["uSelfColor"] = {bgfx::UniformType::Vec4, {emissive.r, emissive.g, emissive.b, -1.f}};
 
 		if (has_diffuse_map) {
@@ -1530,8 +1533,9 @@ static bool ImportFbxScene(const std::string &path, const Config &config) {
 
 	// add default pbr map
 	scene.environment.brdf_map = resources.textures.Add("core/pbr/brdf.dds", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
-	scene.environment.irradiance_map = resources.textures.Add("core/pbr/probe.hdr.irradiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
-	scene.environment.radiance_map = resources.textures.Add("core/pbr/probe.hdr.radiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
+	scene.environment.probe = {};
+	scene.environment.probe.irradiance_map = resources.textures.Add("core/pbr/probe.hdr.irradiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
+	scene.environment.probe.radiance_map = resources.textures.Add("core/pbr/probe.hdr.radiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
 
 	std::string out_path;
 	if (GetOutputPath(out_path, config.base_output_path, config.name.empty() ? hg::GetFileName(path) : config.name, {}, "scn", config.import_policy_scene))

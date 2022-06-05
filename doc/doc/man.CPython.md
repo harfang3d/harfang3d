@@ -13,7 +13,7 @@ Start the python interpreter and type `import harfang`, you should get an output
 
 ```text
 Harfang 2.0.0 for CPython 3.2+ on windows-x64 (build ba08463ee9e6c0c93960230fb880c1d9b230610d Sep 30 2020 16:08:22)
-See http://harfang3d.com/license for licensing terms
+See https://www.harfang3d.com/license for licensing terms
 ```
 
 ### Troubleshooting

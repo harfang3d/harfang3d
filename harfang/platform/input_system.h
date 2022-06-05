@@ -5,6 +5,7 @@
 #include "foundation/matrix4.h"
 #include "foundation/time.h"
 #include "foundation/vector2.h"
+#include "foundation/signal.h"
 
 #include <array>
 #include <bitset>
@@ -328,7 +329,7 @@ private:
 };
 
 // called whenever text is received from the system
-extern std::function<void(const char *text_utf8)> on_text_input;
+extern Signal<void(const char *)> on_text_input;
 
 //
 enum VRControllerButton {

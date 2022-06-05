@@ -1,0 +1,19 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+	"wheel",
+	"setuptools>=45",
+	"setuptools_scm[toml]>=6.0",
+	"ninja",
+	"cmake>=3.18.2",
+	"cmake-build-extension",
+	"pypeg2",
+	"pygit2"
+]
+
+[tool.setuptools_scm]
+root = "../../.."
+local_scheme = "dirty-tag"
+
+#[tool.cibuildwheel]
+#build-frontend = "build"

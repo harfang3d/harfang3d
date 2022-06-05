@@ -45,8 +45,12 @@ std::vector<DirEntry> ListDir(const char *path, int mask) {
 		const auto type = (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? DE_Dir : DE_File;
 		const auto last_modified = time_to_ns(((uint64_t(data.ftLastWriteTime.dwHighDateTime) << 32) + data.ftLastWriteTime.dwLowDateTime) * 100);
 
+		LARGE_INTEGER size;
+		size.HighPart = data.nFileSizeHigh;
+		size.LowPart = data.nFileSizeLow;
+
 		if (mask & type)
-			entries.push_back({type, std::move(name), last_modified});
+			entries.push_back({type, std::move(name), last_modified, numeric_cast<size_t>(size.QuadPart)});
 	} while (FindNextFileW(hFind, &data));
 
 	FindClose(hFind);
@@ -70,6 +74,7 @@ std::vector<DirEntry> ListDir(const char *path, int mask) {
 		else if (ent->d_type == DT_LNK)
 			type = DE_Link;
 
+		// TODO: stat() missing infos
 		if (mask & type)
 			entries.push_back({type, ent->d_name});
 	}
@@ -139,7 +144,7 @@ bool MkDir(const char *path, int permissions, bool verbose) {
 #if _WIN32
 	const auto res = CreateDirectoryW(utf8_to_wchar(path).c_str(), nullptr) != 0;
 	if (!verbose && !res)
-		error(format("MkDir(%1) failed with error: %2").arg(path).arg(GetLastError_Win32()));
+		warn(format("MkDir(%1) failed with error: %2").arg(path).arg(GetLastError_Win32()));
 	return res;
 #else
 	return mkdir(path, permissions) == 0;
@@ -150,7 +155,7 @@ bool RmDir(const char *path, bool verbose) {
 #if _WIN32
 	const auto res = RemoveDirectoryW(utf8_to_wchar(path).c_str()) != 0;
 	if (verbose && !res)
-		error(format("RmDir(%1) failed with error: %2").arg(path).arg(GetLastError_Win32()));
+		warn(format("RmDir(%1) failed with error: %2").arg(path).arg(GetLastError_Win32()));
 	return res;
 #else
 	return false;

@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <deque>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -30,8 +31,9 @@ template <typename T> struct AnimKeyT {
 };
 
 template <typename T> struct AnimTrackT {
+	using Key = AnimKeyT<T>;
 	std::string target;
-	std::deque<AnimKeyT<T>> keys;
+	std::deque<Key> keys;
 };
 
 //
@@ -42,15 +44,20 @@ template <typename T> struct AnimKeyHermiteT {
 };
 
 template <typename T> struct AnimTrackHermiteT {
+	using Key = AnimKeyHermiteT<T>;
 	std::string target;
-	std::deque<AnimKeyHermiteT<T>> keys;
+	std::deque<Key> keys;
 };
+
+static const int InvalidKeyIdx = -1;
 
 // AnimTrackT is expected to be sorted
 template <typename AnimTrack> int GetKey(const AnimTrack &track, time_ns t) {
 	const auto key_count = track.keys.size();
 	if (key_count == 0)
-		return -1;
+		return InvalidKeyIdx;
+
+	// FIXME below a certain number of keys a linear search might be faster
 
 	int lo = 0, hi = numeric_cast<int>(key_count) - 1;
 
@@ -71,13 +78,13 @@ template <typename AnimTrack> int GetKey(const AnimTrack &track, time_ns t) {
 		else
 			lo = mid;
 	}
-	return -1;
+	return InvalidKeyIdx;
 }
 
 template <typename AnimTrack, typename T> void SetKey(AnimTrack &track, time_ns t, T v) {
 	const int idx = GetKey(track, t);
 
-	if (idx != -1) {
+	if (idx != InvalidKeyIdx) {
 		track.keys[idx].v = std::move(v);
 	} else {
 		auto i = std::begin(track.keys), e = std::end(track.keys);
@@ -87,6 +94,13 @@ template <typename AnimTrack, typename T> void SetKey(AnimTrack &track, time_ns 
 
 		track.keys.insert(i, {t, std::move(v)});
 	}
+}
+
+template <typename AnimTrack> void DeleteKey(AnimTrack &track, time_ns t) {
+	const int idx = GetKey(track, t);
+
+	if (idx != InvalidKeyIdx)
+		track.keys.erase(std::begin(track.keys) + idx);
 }
 
 //
@@ -155,6 +169,9 @@ template <typename T> bool EvaluateHermite(const AnimTrackHermiteT<T> &track, ti
 //
 template <typename Track> void SortAnimTrackKeys(Track &track) {
 	std::sort(std::begin(track.keys), std::end(track.keys), [](decltype(*std::cbegin(track.keys)) &a, decltype(a) &b) { return a.t < b.t; });
+	track.keys.erase(
+		std::unique(std::begin(track.keys), std::end(track.keys), [](const typename Track::Key &a, const typename Track::Key &b) { return a.t == b.t; }),
+		std::end(track.keys));
 }
 
 template <typename Track> void ConformAnimTrackKeys(Track &track) {}
@@ -223,6 +240,7 @@ template <typename Track> void ResampleAnimTrack(Track &track, time_ns old_start
 
 void ResampleAnim(Anim &anim, time_ns old_start, time_ns old_end, time_ns new_start, time_ns new_end, time_ns frame_duration);
 void ReverseAnim(Anim &anim, time_ns t_start, time_ns t_end);
+void QuantizeAnim(Anim &anim, time_ns t_step);
 
 static bool CompareKeyValue(const Vec3 &v_a, const Vec3 &v_b, float epsilon) { return Len(v_a - v_b) <= epsilon; }
 
@@ -268,6 +286,10 @@ template <typename AnimTrack, typename T> size_t SimplifyAnimTrackT(AnimTrack &t
 }
 
 //
-void MigrateLegacyAnimationTracks(Anim &anim);
+void MigrateLegacyAnimTracks(Anim &anim);
+
+//
+bool AnimHasKeys(const Anim &anim);
+void DeleteEmptyAnimTracks(Anim &anim);
 
 } // namespace hg

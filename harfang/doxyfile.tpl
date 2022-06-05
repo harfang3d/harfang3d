@@ -28,6 +28,7 @@ LOOKUP_CACHE_SIZE      = 0
 
 # Build related configuration options
 
+JAVADOC_AUTOBRIEF      = YES
 EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = NO
 EXTRACT_PACKAGE        = NO

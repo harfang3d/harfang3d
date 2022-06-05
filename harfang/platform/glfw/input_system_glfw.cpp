@@ -276,11 +276,9 @@ static void ScrollCallback(GLFWwindow *w, double xoffset, double yoffset) {
 }
 
 static void CharCallback(GLFWwindow *w, unsigned int codepoint) {
-	if (on_text_input) {
-		utf8_cp utf8[16]{};
-		utf32_to_utf8(codepoint, utf8);
-		on_text_input(reinterpret_cast<const char *>(utf8));
-	}
+	utf8_cp utf8[16]{};
+	utf32_to_utf8(codepoint, utf8);
+	on_text_input.Emit(reinterpret_cast<const char *>(utf8));
 }
 
 static void OnNewWindow(const Window *win) {

@@ -23,7 +23,7 @@ static bool LoadShaders(Bloom &bloom, const Reader &ir, const ReadProvider &ip, 
 	bloom.u_params = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
 	bloom.u_source_rect = bgfx::createUniform("u_source_rect", bgfx::UniformType::Vec4);
 	if (!(bgfx::isValid(bloom.u_source) && bgfx::isValid(bloom.u_input) && bgfx::isValid(bloom.u_params) && bgfx::isValid(bloom.u_source_rect))) {
-		error("failed to create bloom uniforms.");
+		warn("failed to create bloom uniforms.");
 		return false;
 	}
 
@@ -34,7 +34,7 @@ static bool LoadShaders(Bloom &bloom, const Reader &ir, const ReadProvider &ip, 
 	bloom.prg_combine = LoadProgram(ir, ip, format("%1/bloom_combine").arg(path));
 
 	if (!(bgfx::isValid(bloom.prg_threshold) && bgfx::isValid(bloom.prg_downsample) && bgfx::isValid(bloom.prg_upsample) && bgfx::isValid(bloom.prg_combine))) {
-		error("failed to load bloom programs.");
+		warn("failed to load bloom programs.");
 		return false;
 	}
 
@@ -91,8 +91,8 @@ void DestroyBloom(Bloom &bloom) {
 	bgfx_Destroy(bloom.prg_combine);
 }
 
-void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, bgfx::FrameBufferHandle output,
-	const Bloom &bloom, float threshold, float smoothness, float intensity) {
+void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, bgfx::FrameBufferHandle output, const Bloom &bloom, float threshold,
+	float smoothness, float intensity) {
 	auto stats = bgfx::getStats();
 
 	const int width = stats->width;
@@ -101,8 +101,7 @@ void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &inp
 }
 
 void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, const hg::iVec2 &fb_size, bgfx::FrameBufferHandle output,
-	const Bloom &bloom, float threshold,
-	float smoothness, float intensity) {
+	const Bloom &bloom, float threshold, float smoothness, float intensity) {
 	__ASSERT__(IsValid(bloom));
 
 	const bgfx::Caps *caps = bgfx::getCaps();

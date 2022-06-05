@@ -151,7 +151,7 @@ void LoadAnimFromJson(const json &js, Anim &anim) {
 			anim.flags |= AF_UseQuaternionForRotation;
 	}
 
-	MigrateLegacyAnimationTracks(anim);
+	MigrateLegacyAnimTracks(anim);
 }
 
 } // namespace hg

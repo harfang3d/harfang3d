@@ -93,8 +93,8 @@ uint32_t ComputeSortKey(float view_depth) {
 	return uint32_t(view_depth * 1000.f); // 1mm precision
 }
 
-uint32_t ComputeSortKeyFromWorld(const Vec3 &T, const Mat4 &view) { return ComputeSortKey((T * view).z); }
-uint32_t ComputeSortKeyFromWorld(const Vec3 &T, const Mat4 &view, const Mat4 &model) { return ComputeSortKey((T * (view * model)).z); }
+uint32_t ComputeSortKeyFromWorld(const Vec3 &T, const Mat4 &view) { return ComputeSortKey((view * T).z); }
+uint32_t ComputeSortKeyFromWorld(const Vec3 &T, const Mat4 &view, const Mat4 &model) { return ComputeSortKey(((view * model) * T).z); }
 
 //
 UniformSetValue::UniformSetValue(const UniformSetValue &v) { *this = v; }
@@ -574,13 +574,13 @@ bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const 
 
 	if (!ir.is_valid(vs_h)) {
 		if (!silent)
-			error(format("Vertex shader '%1' not found").arg(vs_name));
+			warn(format("Vertex shader '%1' not found").arg(vs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
 	if (!ir.is_valid(fs_h)) {
 		if (!silent)
-			error(format("Fragment shader '%1' not found").arg(fs_name));
+			warn(format("Fragment shader '%1' not found").arg(fs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -588,7 +588,7 @@ bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const 
 
 	if (!bgfx::isValid(vs)) {
 		if (!silent)
-			error(format("Failed to load vertex shader '%1'").arg(vs_name));
+			warn(format("Failed to load vertex shader '%1'").arg(vs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -596,7 +596,7 @@ bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const 
 
 	if (!bgfx::isValid(fs)) {
 		if (!silent)
-			error(format("Failed to load fragment shader '%1'").arg(vs_name));
+			warn(format("Failed to load fragment shader '%1'").arg(vs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -604,7 +604,7 @@ bgfx::ProgramHandle LoadProgram(const Reader &ir, const ReadProvider &ip, const 
 
 	if (!bgfx::isValid(prg_h)) {
 		if (!silent)
-			error(format("Failed to create program from shader '%1' and '%2'").arg(vs_name).arg(fs_name));
+			warn(format("Failed to create program from shader '%1' and '%2'").arg(vs_name).arg(fs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -625,7 +625,7 @@ bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip,
 
 	if (!ir.is_valid(cs_h)) {
 		if (!silent)
-			error(format("Compute shader '%1' not found").arg(cs_name));
+			warn(format("Compute shader '%1' not found").arg(cs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -633,7 +633,7 @@ bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip,
 
 	if (!bgfx::isValid(cs)) {
 		if (!silent)
-			error(format("Failed to load compute shader '%1'").arg(cs_name));
+			warn(format("Failed to load compute shader '%1'").arg(cs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -641,7 +641,7 @@ bgfx::ProgramHandle LoadComputeProgram(const Reader &ir, const ReadProvider &ip,
 
 	if (!bgfx::isValid(prg_h)) {
 		if (!silent)
-			error(format("Failed to create program from shader '%1'").arg(cs_name));
+			warn(format("Failed to create program from shader '%1'").arg(cs_name));
 		return BGFX_INVALID_HANDLE;
 	}
 
@@ -798,7 +798,7 @@ bool LoadPipelineProgramUniforms(const Reader &ir, const ReadProvider &ip, const
 
 				texs.push_back(u);
 			} else {
-				error(format("Ignoring invalid uniform '%1' sampler definition in '%2': no channel specified").arg(uname).arg(name));
+				warn(format("Ignoring invalid uniform '%1' sampler definition in '%2': no channel specified").arg(uname).arg(name));
 			}
 		}
 	}
@@ -825,12 +825,12 @@ PipelineProgram LoadPipelineProgram(
 	prg.features = LoadPipelineProgramFeatures(ir, ip, name, success, silent);
 
 	if (!success)
-		error(format("Failed to load pipeline program features '%1'").arg(name));
+		warn(format("Failed to load pipeline program features '%1'").arg(name));
 	else
 		prg.programs.resize(GetPipelineProgramVariantCount(prg.features) * pipeline.configs.size());
 
 	if (!LoadPipelineProgramUniforms(ir, ip, name, prg.texture_uniforms, prg.vec4_uniforms, resources, silent))
-		error(format("Failed to load pipeline program uniforms '%1'").arg(name));
+		warn(format("Failed to load pipeline program uniforms '%1'").arg(name));
 
 	prg.name = CutFileExtension(name);
 	prg.pipeline = pipeline;
@@ -1021,13 +1021,13 @@ void UpdateMaterialPipelineProgramVariant(Material &mat, const PipelineResources
 static bx::DefaultAllocator g_allocator;
 
 //
-json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent) {
+json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::string &name) {
 	const auto meta_path = name + ".meta";
-	return LoadJson(ir, ScopedReadHandle(ip, meta_path.c_str(), silent));
+	return LoadJson(ir, ScopedReadHandle(ip, meta_path.c_str(), true));
 }
 
-json LoadResourceMetaFromFile(const std::string &path, bool silent) { return LoadResourceMeta(g_file_reader, g_file_read_provider, path, silent); }
-json LoadResourceMetaFromAssets(const std::string &name, bool silent) { return LoadResourceMeta(g_assets_reader, g_assets_read_provider, name, silent); }
+json LoadResourceMetaFromFile(const std::string &path) { return LoadResourceMeta(g_file_reader, g_file_read_provider, path); }
+json LoadResourceMetaFromAssets(const std::string &name) { return LoadResourceMeta(g_assets_reader, g_assets_read_provider, name); }
 
 bool SaveResourceMetaToFile(const std::string &path, const json &meta) { return SaveJsonToFile(meta, (path + ".meta").c_str()); }
 
@@ -1035,7 +1035,7 @@ bool SaveResourceMetaToFile(const std::string &path, const json &meta) { return 
 TextureMeta LoadTextureMeta(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent) {
 	ProfilerPerfSection section("LoadTextureMeta", name);
 
-	const auto js = LoadResourceMeta(ir, ip, name, silent);
+	const auto js = LoadResourceMeta(ir, ip, name);
 
 	TextureMeta meta;
 
@@ -1117,7 +1117,7 @@ Texture CreateTexture(int width, int height, const char *name, uint64_t flags, b
 	if (bgfx::isValid(handle))
 		bgfx::setName(handle, name);
 	else
-		error(format("Failed to create texture '%1', format:%2 flags:%3").arg(name).arg(texture_format).arg(flags).c_str());
+		warn(format("Failed to create texture '%1', format:%2 flags:%3").arg(name).arg(texture_format).arg(flags).c_str());
 
 	return MakeTexture(handle, flags);
 }
@@ -1137,7 +1137,7 @@ Texture CreateTextureFromPicture(const Picture &pic, const char *name, uint64_t 
 	if (bgfx::isValid(handle))
 		bgfx::setName(handle, name);
 	else
-		error(format("Failed to create texture '%1', format:%2 flags:%3").arg(name).arg(texture_format).arg(flags).c_str());
+		warn(format("Failed to create texture '%1', format:%2 flags:%3").arg(name).arg(texture_format).arg(flags).c_str());
 
 	return MakeTexture(handle, flags);
 }
@@ -1183,7 +1183,7 @@ Texture LoadTexture(
 
 		if (!bgfx::isValid(handle)) {
 			if (!silent)
-				error(format("Failed to load texture '%1', unsupported format").arg(name).c_str());
+				warn(format("Failed to load texture '%1', unsupported format").arg(name).c_str());
 
 			static const uint32_t dummy = 0xff00ffff;
 			handle = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::RGBA8, BGFX_SAMPLER_NONE, bgfx::copy(&dummy, 4));
@@ -1193,7 +1193,7 @@ Texture LoadTexture(
 			bgfx::setName(handle, name);
 	} else {
 		if (!silent)
-			error(format("Failed to load texture '%1', could not load data").arg(name).c_str());
+			warn(format("Failed to load texture '%1', could not load data").arg(name).c_str());
 	}
 
 	return MakeTexture(handle, flags);
@@ -1687,19 +1687,19 @@ Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *
 
 	if (!ir.is_valid(h)) {
 		if (!silent)
-			error(format("Cannot load model '%1', invalid file handle").arg(name));
+			warn(format("Cannot load model '%1', invalid file handle").arg(name));
 		return {};
 	}
 
 	if (Read<uint32_t>(ir, h) != HarfangMagic) {
 		if (!silent)
-			error(format("Cannot load model '%1', invalid magic marker").arg(name));
+			warn(format("Cannot load model '%1', invalid magic marker").arg(name));
 		return {};
 	}
 
 	if (Read<uint8_t>(ir, h) != ModelMarker) {
 		if (!silent)
-			error(format("Cannot load model '%1', invalid file marker").arg(name));
+			warn(format("Cannot load model '%1', invalid file marker").arg(name));
 		return {};
 	}
 
@@ -1707,7 +1707,7 @@ Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *
 
 	if (version > 2) {
 		if (!silent)
-			error(format("Cannot load model '%1', unsupported version %2").arg(name).arg(version));
+			warn(format("Cannot load model '%1', unsupported version %2").arg(name).arg(version));
 		return {};
 	}
 
@@ -1742,7 +1742,7 @@ Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *
 
 		const auto idx_hnd = bgfx::createIndexBuffer(idx_mem, idx_type_size == 4 ? BGFX_BUFFER_INDEX32 : BGFX_BUFFER_NONE);
 		if (!bgfx::isValid(idx_hnd)) {
-			error(format("%1: failed to create index buffer").arg(name));
+			warn(format("%1: failed to create index buffer").arg(name));
 			break;
 		}
 
@@ -1755,7 +1755,7 @@ Model LoadModel(const Reader &ir, const Handle &h, const char *name, ModelInfo *
 
 		const auto vtx_hnd = bgfx::createVertexBuffer(vtx_mem, vs_decl);
 		if (!bgfx::isValid(vtx_hnd)) {
-			error(format("%1: failed to create vertex buffer").arg(name));
+			warn(format("%1: failed to create vertex buffer").arg(name));
 			bgfx::destroy(idx_hnd);
 			break;
 		}
@@ -2345,7 +2345,7 @@ Vertices::Vertices(const bgfx::VertexLayout &decl_, size_t count) : decl(decl_) 
 Vertices &Vertices::Begin(size_t i) {
 	if (i >= GetCount()) {
 		if (i >= GetCapacity()) {
-			Reserve(i + 64);
+			Reserve(i + 1024);
 			debug(format("Vertices Begin() called with index %1, resizing buffer to accommodate request").arg(i));
 		}
 		Resize(i + 1);

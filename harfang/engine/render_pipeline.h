@@ -111,9 +111,9 @@ bgfx::ProgramHandle LoadComputeProgramFromAssets(const char *cs_name, bool silen
 std::vector<bgfx::ShaderHandle> GetProgramShaders(bgfx::ProgramHandle prg_h);
 
 //
-json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::string &name, bool silent = false);
-json LoadResourceMetaFromFile(const std::string &path, bool silent = false);
-json LoadResourceMetaFromAssets(const std::string &name, bool silent = false);
+json LoadResourceMeta(const Reader &ir, const ReadProvider &ip, const std::string &name);
+json LoadResourceMetaFromFile(const std::string &path);
+json LoadResourceMetaFromAssets(const std::string &name);
 
 bool SaveResourceMetaToFile(const std::string &path, const json &meta);
 
@@ -223,8 +223,11 @@ struct DisplayList { // 4B
 	std::vector<uint16_t> bones_table;
 };
 
-//
+/// Create an empty texture.
+/// @see CreateTextureFromPicture and UpdateTextureFromPicture.
 Texture CreateTexture(int width, int height, const char *name, uint64_t flags, bgfx::TextureFormat::Enum format = bgfx::TextureFormat::RGBA8);
+/// Create a texture from a picture.
+/// @see Picture, CreateTexture and UpdateTextureFromPicture.
 Texture CreateTextureFromPicture(const Picture &pic, const char *name, uint64_t flags, bgfx::TextureFormat::Enum format = bgfx::TextureFormat::RGBA8);
 
 void UpdateTextureFromPicture(Texture &tex, const Picture &pic);
@@ -370,6 +373,7 @@ enum DepthTest { DT_Less, DT_LessEqual, DT_Equal, DT_GreaterEqual, DT_Greater, D
 DepthTest GetMaterialDepthTest(const Material &mat);
 void SetMaterialDepthTest(Material &mat, DepthTest test);
 
+/// Control the compositing mode used to draw primitives.
 enum BlendMode { BM_Additive, BM_Alpha, BM_Darken, BM_Lighten, BM_Multiply, BM_Opaque, BM_Screen, BM_LinearBurn, BM_Undefined };
 
 BlendMode GetMaterialBlendMode(const Material &mat);
@@ -396,7 +400,8 @@ void SetMaterialSkinning(Material &m, bool enable);
 bool GetMaterialAlphaCut(const Material &m);
 void SetMaterialAlphaCut(Material &m, bool enable);
 
-//
+/// Compute a render state to control subsequent render calls culling mode, blending mode, Z mask, etc... The same render state can be used by different render calls.
+/// @see DrawLines, DrawTriangles and DrawModel.
 RenderState ComputeRenderState(BlendMode blend, bool write_z, bool write_r = true, bool write_g = true, bool write_b = true, bool write_a = true);
 RenderState ComputeRenderState(BlendMode blend, DepthTest test = DT_Less, FaceCulling culling = FC_Clockwise, bool write_z = true, bool write_r = true,
 	bool write_g = true, bool write_b = true, bool write_a = true);
@@ -519,6 +524,9 @@ TextureRef LoadTexture(const Reader &ir, const ReadProvider &ip, const char *pat
 TextureRef LoadTextureFromFile(const char *path, uint64_t flags, PipelineResources &resources, bool silent = false);
 TextureRef LoadTextureFromAssets(const char *path, uint64_t flags, PipelineResources &resources, bool silent = false);
 
+/// Capture a texture content to a Picture. Return the frame counter at which the capture will be complete.
+/// A Picture object can be accessed by the CPU.
+/// This function is asynchronous and its result will not be available until the returned frame counter is equal or greater to the frame counter returned by Frame.
 uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t, Picture &pic);
 
 MaterialRef LoadMaterialRef(const Reader &ir, const Handle &h, const char *path, const Reader &deps_ir, const ReadProvider &deps_ip,
@@ -547,9 +555,10 @@ void CreateMissingMaterialProgramValues(Material &mat, PipelineResources &resour
 void CreateMissingMaterialProgramValuesFromFile(Material &mat, PipelineResources &resources);
 void CreateMissingMaterialProgramValuesFromAssets(Material &mat, PipelineResources &resources);
 
-//
+/// Compute a sorting key to control the rendering order of a display list, `view_depth` is expected in view space.
 uint32_t ComputeSortKey(float view_depth);
 
+/// Compute a sorting key to control the rendering order of a display list.
 uint32_t ComputeSortKeyFromWorld(const Vec3 &T, const Mat4 &view);
 uint32_t ComputeSortKeyFromWorld(const Vec3 &T, const Mat4 &view, const Mat4 &model);
 
@@ -557,7 +566,8 @@ uint32_t ComputeSortKeyFromWorld(const Vec3 &T, const Mat4 &view, const Mat4 &mo
 void DrawDisplayList(bgfx::ViewId view_id, bgfx::IndexBufferHandle idx, bgfx::VertexBufferHandle vtx, bgfx::ProgramHandle prg,
 	const std::vector<UniformSetValue> &values = {}, const std::vector<UniformSetTexture> &textures = {}, RenderState state = {}, uint32_t depth = 0);
 
-//
+/// Draw a model to the specified view.
+/// @see UniformSetValueList and UniformSetTextureList to pass uniform values to the shader program.
 void DrawModel(bgfx::ViewId view_id, const Model &mdl, bgfx::ProgramHandle prg, const std::vector<UniformSetValue> &values,
 	const std::vector<UniformSetTexture> &textures, const Mat4 *mtxs, size_t mtx_count = 1, RenderState state = {}, uint32_t depth = 0);
 
@@ -649,14 +659,23 @@ private:
 void SetTransform(const Mat4 &world);
 void SetUniforms(const std::vector<UniformSetValue> &values, const std::vector<UniformSetTexture> &textures);
 
+/// Draw a list of lines to the specified view.
+/// @see UniformSetValueList and UniformSetTextureList to pass uniform values to the shader program.
 void DrawLines(bgfx::ViewId view_id, const Vertices &vtx, bgfx::ProgramHandle prg, RenderState = {}, uint32_t depth = 0);
 void DrawLines(bgfx::ViewId view_id, const Vertices &vtx, bgfx::ProgramHandle prg, const std::vector<UniformSetValue> &values,
 	const std::vector<UniformSetTexture> &textures, RenderState = {}, uint32_t depth = 0);
 void DrawLines(bgfx::ViewId view_id, const Indices &idx, const Vertices &vtx, bgfx::ProgramHandle prg, const std::vector<UniformSetValue> &values,
 	const std::vector<UniformSetTexture> &textures, RenderState = {}, uint32_t depth = 0);
+/*!
+	Draw a list of sprites to the specified view.
+	@see UniformSetValueList and UniformSetTextureList to pass uniform values to the shader program.
+	@note This function prepares the sprite on the CPU before submitting them all to the GPU as a single draw call.
+*/
 void DrawSprites(bgfx::ViewId view_id, const Mat3 &inv_view_R, bgfx::VertexLayout &decl, const std::vector<Vec3> &pos, const Vec2 &size,
 	bgfx::ProgramHandle prg, RenderState state = {}, uint32_t depth = 0);
 
+/// Draw a list of triangles to the specified view.
+/// @see UniformSetValueList and UniformSetTextureList to pass uniform values to the shader program.
 void DrawTriangles(bgfx::ViewId view_id, const Vertices &vtx, bgfx::ProgramHandle prg, RenderState = {}, uint32_t depth = 0);
 void DrawTriangles(bgfx::ViewId view_id, const Vertices &vtx, bgfx::ProgramHandle prg, const std::vector<UniformSetValue> &values,
 	const std::vector<UniformSetTexture> &textures, RenderState = {}, uint32_t depth = 0);
@@ -693,6 +712,7 @@ FrameBuffer CreateFrameBuffer(int width, int height, bgfx::TextureFormat::Enum c
 Texture GetColorTexture(FrameBuffer &frameBuffer);
 Texture GetDepthTexture(FrameBuffer &frameBuffer);
 
+/// Destroy a frame buffer and its resources.
 void DestroyFrameBuffer(FrameBuffer &frameBuffer);
 
 bool CreateFullscreenQuad(bgfx::TransientIndexBuffer &idx, bgfx::TransientVertexBuffer &vtx);

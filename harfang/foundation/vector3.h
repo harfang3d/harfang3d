@@ -95,9 +95,6 @@ inline Vec3 operator*(const float v, const Vec3 &a) { return a * v; }
 inline Vec3 operator/(const Vec3 &a, const Vec3 &b) { return {a.x / b.x, a.y / b.y, a.z / b.z}; }
 inline Vec3 operator/(const Vec3 &a, const float v) { return {a.x / v, a.y / v, a.z / v}; }
 
-Vec3 operator*(const Vec3 &a, const Mat3 &m);
-Vec3 operator*(const Vec3 &a, const Mat4 &m);
-
 /// Return a random vector.
 Vec3 RandomVec3(float min = -1.f, float max = 1.f);
 Vec3 RandomVec3(const Vec3 &min, const Vec3 &max);
@@ -129,14 +126,14 @@ Vec3 Min(const Vec3 &a, const Vec3 &b);
 /// Maximum of two vectors.
 Vec3 Max(const Vec3 &a, const Vec3 &b);
 
-/// Dot product.
+/// Returns the dot product of two vectors.
 inline float Dot(const Vec3 &a, const Vec3 &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-/// Cross product.
+/// Returns the cross product of two vectors.
 inline Vec3 Cross(const Vec3 &a, const Vec3 &b) { return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x}; }
 
-/// Reverse a vector.
+/// Returns the provided vector pointing in the opposite direction.
 inline Vec3 Reverse(const Vec3 &v) { return {-v.x, -v.y, -v.z}; }
-/// Inverse a vector.
+/// Returns the inverse of a vector.
 inline Vec3 Inverse(const Vec3 &v) { return {1.f / v.x, 1.f / v.y, 1.f / v.z}; }
 
 /// Normalize a vector.
@@ -159,7 +156,9 @@ Vec3 Reflect(const Vec3 &v, const Vec3 &n);
 /// Return a unit vector refracted around a normal vector.S
 Vec3 Refract(const Vec3 &v, const Vec3 &n, float k_in = 1.f, float k_out = 1.f);
 
+/// Returns a vector whose elements are equal to the nearest integer less than or equal to the vector elements.
 Vec3 Floor(const Vec3 &v);
+/// Returns a vector whose elements are equal to the nearest integer greater than or equal to the vector elements.
 Vec3 Ceil(const Vec3 &v);
 
 /**

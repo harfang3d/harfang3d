@@ -38,7 +38,7 @@ static FILE *_Open(const char *path, const char *mode, bool silent = false) {
 	if (!silent && err != 0) {
 		char errmsg[256];
 		strerror_s(errmsg, 255, err);
-		error(format("Failed to open file '%1' mode '%2', error code %3 (%4)").arg(path).arg(mode).arg(err).arg(errmsg));
+		warn(format("Failed to open file '%1' mode '%2', error code %3 (%4)").arg(path).arg(mode).arg(err).arg(errmsg));
 	}
 #else
 	file = fopen(path, mode);

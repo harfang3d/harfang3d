@@ -111,8 +111,6 @@ inline Vec4 operator*(const float v, const Vec4 &a) { return a * v; }
 inline Vec4 operator/(const Vec4 &a, const Vec4 &b) { return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w}; }
 inline Vec4 operator/(const Vec4 &v, const float k) { return {v.x / k, v.y / k, v.z / k, v.w / k}; }
 
-Vec4 operator*(const Vec4 &v, const Mat4 &);
-
 Vec4 Abs(const Vec4 &v);
 
 Vec4 Normalize(const Vec4 &v);

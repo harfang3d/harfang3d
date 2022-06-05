@@ -13,6 +13,7 @@
 
 namespace hg {
 
+/// Font object for realtime rendering.
 struct Font {
 	struct PackedChar {
 		iRect box;
@@ -39,7 +40,7 @@ Font LoadFontFromAssets(const char *name, float size = 16.f, uint16_t resolution
 enum DrawTextHAlign { DTHA_Left, DTHA_Center, DTHA_Right };
 enum DrawTextVAlign { DTVA_Top, DTVA_Center, DTVA_Bottom };
 
-//
+/// Write text to the specified view using the provided shader program and uniform values.
 void DrawText(bgfx::ViewId view_id, const Font &font, const char *text, bgfx::ProgramHandle program, const char *page_uniform, uint8_t page_stage,
 	const Mat4 *mtxs, size_t mtx_count, Vec3 pos = {}, DrawTextHAlign halign = DTHA_Left, DrawTextVAlign valign = DTVA_Top,
 	const std::vector<UniformSetValue> &values = {}, const std::vector<UniformSetTexture> &textures = {}, RenderState state = {}, uint32_t depth = 0);
@@ -51,7 +52,9 @@ void DrawText(bgfx::ViewId view_id, const Font &font, const char *text, bgfx::Pr
 //
 float GetKerning(const Font &font, uint32_t cp0, uint32_t cp1);
 
+/// Compute the width and height of a text string.
 fRect ComputeTextRect(const Font &font, const char *text, float xpos = 0.f, float ypos = 0.f);
+/// Compute the height of a text string.
 float ComputeTextHeight(const Font &font, const char *text);
 
 } // namespace hg

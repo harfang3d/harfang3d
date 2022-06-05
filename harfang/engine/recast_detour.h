@@ -28,9 +28,11 @@ dtNavMesh *LoadNavMesh(const char *path, const Reader &ir, const ReadProvider &i
 dtNavMesh *LoadNavMeshFromFile(const char *path);
 dtNavMesh *LoadNavMeshFromAssets(const char *path);
 
+/// Destroy a navigation mesh object.
 void DestroyNavMesh(dtNavMesh *mesh);
 
-//
+/// Draw a navigation mesh to the specified view. This is function is for debugging purpose.
+/// @see UniformSetValueList and UniformSetTextureList to pass uniform values to the shader program.
 void DrawNavMesh(const dtNavMesh *mesh, bgfx::ViewId view_id, const bgfx::VertexLayout &vtx_layout, bgfx::ProgramHandle program,
 	const std::vector<UniformSetValue> &values, const std::vector<UniformSetTexture> &textures, RenderState state);
 
@@ -45,9 +47,11 @@ dtNavMesh *CreateNavMesh(const NavMeshInput &input, float radius, float height, 
 
 //
 dtNavMeshQuery *CreateNavMeshQuery(const dtNavMesh *mesh);
+/// Destroy a navigation mesh query object.
 void DestroyNavMeshQuery(dtNavMeshQuery *query);
 
-/// Perform a path query.
+/// Return the navigation path between `from` and `to` as a list of [Vec3] world positions.
+/// @see CreateNavMeshQuery.
 std::vector<Vec3> FindNavigationPathTo(const dtNavMeshQuery *query, const Vec3 &from, const Vec3 &to);
 
 } // namespace hg

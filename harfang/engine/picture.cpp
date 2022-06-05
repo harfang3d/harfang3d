@@ -1,18 +1,20 @@
 // HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include "engine/picture.h"
+
+#include <assert.h>
+
 #include "foundation/cext.h"
 #include "foundation/file.h"
 #include "foundation/math.h"
 #include "foundation/profiler.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-
-#include "engine/stb_image.h"
-#include "engine/stb_image_write.h"
 #include "bimg/encode.h"
 #include "bx/allocator.h"
-#include <bx/file.h>
+#include "bx/file.h"
+
+#include "stb_image.h"
+#include "stb_image_write.h"
 
 namespace hg {
 
@@ -33,7 +35,10 @@ Picture::Picture(uint16_t width, uint16_t height, PictureFormat format)
 Picture::Picture(void *data, uint16_t width, uint16_t height, PictureFormat format) : w(width), h(height), f(format), d(reinterpret_cast<uint8_t *>(data)) {}
 
 Picture::Picture(const Picture &pic)
-	: w(pic.w), h(pic.h), f(pic.f), has_ownership(pic.has_ownership), d(pic.has_ownership ? new uint8_t[w * h * size_of(f)] : pic.d) {}
+	: w(pic.w), h(pic.h), f(pic.f), has_ownership(pic.has_ownership), d(pic.has_ownership ? new uint8_t[w * h * size_of(f)] : pic.d) {
+	if (pic.has_ownership)
+		std::copy(pic.d, pic.d + w * h * size_of(f), d);
+}
 
 Picture::Picture(Picture &&pic) noexcept : w(pic.w), h(pic.h), f(pic.f), has_ownership(pic.has_ownership), d(pic.d) {
 	pic.w = 0;
@@ -256,7 +261,9 @@ public:
 	size_t m_minAlignment;
 };
 
-static bool SaveBimg(const Picture& pic, const char* path, bool fast, bimg::TextureFormat::Enum format) {
+static bool SaveBimg(const Picture &pic, const char *path, bool fast, bimg::TextureFormat::Enum format) {
+	ProfilerPerfSection section("SaveBimg", path);
+
 	if (!pic.GetHeight() || !pic.GetWidth())
 		return false;
 
@@ -300,7 +307,7 @@ static bool SaveBimg(const Picture& pic, const char* path, bool fast, bimg::Text
 
 bool SaveBC6H(const Picture &pic, const char *path, bool fast) { return SaveBimg(pic, path, fast, bimg::TextureFormat::BC6H); }
 
-bool SaveBC7(const Picture& pic, const char* path, bool fast) { return SaveBimg(pic, path, fast, bimg::TextureFormat::BC7); }
+bool SaveBC7(const Picture &pic, const char *path, bool fast) { return SaveBimg(pic, path, fast, bimg::TextureFormat::BC7); }
 
 bool SaveTGA(const Picture &pic, const char *path) {
 	ProfilerPerfSection section("SaveTGA", path);
@@ -313,6 +320,24 @@ bool SaveTGA(const Picture &pic, const char *path) {
 		return false;
 
 	return stbi_write_tga_to_func(STB_write, &file, pic.GetWidth(), pic.GetHeight(), size_of(pic.GetFormat()), pic.GetData()) != 0;
+}
+
+bool SaveHDR(const Picture &pic, const char *path) {
+	ProfilerPerfSection section("SaveHDR", path);
+
+	if (!pic.GetHeight() || !pic.GetWidth())
+		return false;
+
+	ScopedFile file(OpenWrite(path));
+	if (!file)
+		return false;
+
+	int comp = 4;
+	assert(pic.GetFormat() == PF_RGBA32F);
+	if (pic.GetFormat() != PF_RGBA32F)
+		return false;
+
+	return stbi_write_hdr_to_func(STB_write, &file, pic.GetWidth(), pic.GetHeight(), comp, (const float *)pic.GetData()) != 0;
 }
 
 } // namespace hg

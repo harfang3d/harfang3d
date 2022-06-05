@@ -76,6 +76,35 @@ void ReverseAnim(Anim &anim, time_ns t_start, time_ns t_end) {
 	ReverseAnimTrack(anim.instance_anim_track, t_start, t_end);
 }
 
+template <typename Track> void QuantizeAnimTrack(Track &track, time_ns t_step) {
+	for (auto &key : track.keys)
+		key.t = (key.t / t_step) * t_step;
+	SortAnimTrackKeys(track);
+}
+
+void QuantizeAnim(Anim &anim, time_ns t_step) {
+	for (auto &track : anim.bool_tracks)
+		QuantizeAnimTrack(track, t_step);
+	for (auto &track : anim.int_tracks)
+		QuantizeAnimTrack(track, t_step);
+	for (auto &track : anim.float_tracks)
+		QuantizeAnimTrack(track, t_step);
+	for (auto &track : anim.vec2_tracks)
+		QuantizeAnimTrack(track, t_step);
+	for (auto &track : anim.vec3_tracks)
+		QuantizeAnimTrack(track, t_step);
+	for (auto &track : anim.vec4_tracks)
+		QuantizeAnimTrack(track, t_step);
+	for (auto &track : anim.quat_tracks)
+		QuantizeAnimTrack(track, t_step);
+	for (auto &track : anim.color_tracks)
+		QuantizeAnimTrack(track, t_step);
+	for (auto &track : anim.string_tracks)
+		QuantizeAnimTrack(track, t_step);
+
+	QuantizeAnimTrack(anim.instance_anim_track, t_step);
+}
+
 void ConformAnimTrackKeys(AnimTrackT<Quaternion> &track) {
 	// make sure adjacent quaternions use the shortest path when interpolated
 	for (size_t i = 1; i < track.keys.size(); i++) {
@@ -90,7 +119,7 @@ void ConformAnimTrackKeys(AnimTrackT<Quaternion> &track) {
 }
 
 //
-void MigrateLegacyAnimationTracks(Anim &anim) {
+void MigrateLegacyAnimTracks(Anim &anim) {
 	for (auto i = std::begin(anim.string_tracks); i != std::end(anim.string_tracks);) {
 		const auto &track = *i;
 
@@ -107,6 +136,55 @@ void MigrateLegacyAnimationTracks(Anim &anim) {
 			++i;
 		}
 	}
+}
+
+//
+template <typename AnimTrack> bool AnimTracksHaveKeys(const std::vector<AnimTrack> &tracks) {
+	for (auto &track : tracks)
+		if (!track.keys.empty())
+			return true;
+	return false;
+}
+
+bool AnimHasKeys(const Anim &anim) {
+	if (AnimTracksHaveKeys(anim.vec3_tracks))
+		return true;
+	if (AnimTracksHaveKeys(anim.vec4_tracks))
+		return true;
+	if (AnimTracksHaveKeys(anim.quat_tracks))
+		return true;
+	if (AnimTracksHaveKeys(anim.color_tracks))
+		return true;
+	if (AnimTracksHaveKeys(anim.float_tracks))
+		return true;
+	if (AnimTracksHaveKeys(anim.bool_tracks))
+		return true;
+	if (AnimTracksHaveKeys(anim.int_tracks))
+		return true;
+	if (AnimTracksHaveKeys(anim.vec2_tracks))
+		return true;
+	if (AnimTracksHaveKeys(anim.string_tracks))
+		return true;
+	if (!anim.instance_anim_track.keys.empty())
+		return true;
+	return false;
+}
+
+//
+template <typename AnimTrack> void DeleteEmptyAnimTracks_(std::vector<AnimTrack> &tracks) {
+	tracks.erase(std::remove_if(std::begin(tracks), std::end(tracks), [](const AnimTrack &track) { return track.keys.empty(); }), std::end(tracks));
+}
+
+void DeleteEmptyAnimTracks(Anim &anim) {
+	DeleteEmptyAnimTracks_(anim.vec3_tracks);
+	DeleteEmptyAnimTracks_(anim.vec4_tracks);
+	DeleteEmptyAnimTracks_(anim.quat_tracks);
+	DeleteEmptyAnimTracks_(anim.color_tracks);
+	DeleteEmptyAnimTracks_(anim.float_tracks);
+	DeleteEmptyAnimTracks_(anim.bool_tracks);
+	DeleteEmptyAnimTracks_(anim.int_tracks);
+	DeleteEmptyAnimTracks_(anim.vec2_tracks);
+	DeleteEmptyAnimTracks_(anim.string_tracks);
 }
 
 } // namespace hg

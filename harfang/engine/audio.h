@@ -10,7 +10,9 @@
 
 namespace hg {
 
+/// Initialize the audio system.
 bool AudioInit();
+/// Shutdown the audio system.
 void AudioShutdown();
 bool IsAudioUp();
 

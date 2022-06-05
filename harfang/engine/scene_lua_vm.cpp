@@ -84,7 +84,8 @@ bool SceneLuaVM::CreateScriptFromSource(Scene &scene, ComponentRef ref, const st
 			for (auto i : scene.GetScriptParams(ref))
 				SetScriptValue(ref, i.first, LuaObjectFromScriptParam(L, i.second));
 	} else {
-		error(format("Failed to load Lua file '%1'").arg(path));
+		warn(format("Failed to load Lua file '%1'").arg(path));
+		return false;
 	}
 
 	return true;

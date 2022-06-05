@@ -12,7 +12,7 @@ class KeyValueStore {
 public:
 	bool Open(const Reader &ir, const Handle &h);
 
-	bool Open(const char *path);
+	bool Open(const char *path, bool silent = false);
 	bool Save(const char *path);
 
 	bool Get(const std::string &key, std::string &value) const;

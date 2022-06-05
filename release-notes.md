@@ -1,3 +1,77 @@
+# [3.2.2] - 2022-06-03
+
+This minor release brings several fixes, a better implementation of the AAA rendering pipeline including probe reprojection and a more stable screen space raytracer.<br>
+Improvements were made in the usability area, for Python development, as HARFANG will now output warnings as much as possible when users are calling for invalid API operations.<br>
+The Python build script was worked out to make the wheel available on Pypi for Linux OSes.<br>
+
+### Framework integration and source code maintenance
+
+- Improved the Python source package creation, to allow a `pip install` from the source package and address [this issue](https://github.com/harfang3d/harfang3d/issues/5).
+  - The following development packages are necessary to rebuild Harfang:
+    - ubuntu: `uuid-dev`, `libreadline-dev`, `libxml2-dev`, `libgtk-3-dev`
+    - centos/fedora: `uuid-devel`, `readline-devel`, `libxml2-devel`, `gtk3-devel`
+  - See `languages/hg_python/pip/setup.py`.
+- Allowed the tools to be called from a Python script.
+- Allowed the tools to be called from a Lua script.
+- External libraries update.
+- Moved _mikktspace_ and _stb_image_ to extern.
+- Fixed the License URL, removed a useless URL indirection.
+- Removed the external libraries samples and tests from source package.
+- Removed `AssetsSource` from _assets.h_.
+
+### Toolchain
+
+- Fixed **Assetc** to prevent it from processing invalid geometries.
+- **GLTF importer**:
+  - Better management of geometry instances
+  - Improved material translation.
+- Sanitized the filenames when outputting files from the **FBX** and **GLTF** converters.
+- **FBX converter** now exports materials as PBR by default.
+- **Assimp converter** now exports materials as PBR by default.
+- **GLTF exporter**:
+  - Added a `filter_disabled_node` options to avoid exporting node.
+  - Fixed several bugs. 
+
+### Engine
+
+- :warning: Multiplication and maths API fixes:
+  - Removed **vec * mat** multiplications.
+  - Swapped row/column in the API to match the correct mathematical order.
+  - Removed mixed `Vec4`/`Vec3` operations as the result was ambiguous.
+- Added a binding for `Vec3` on `CubicInterpolate`.
+- :beginner: Introduced a defensive programming approach in HARFANG Python, assuming the programmer is learning the API by trial and error:
+  - This is done using the debug log method so it can be completely deactivated when working on C++ projects.
+  - Demote most errors to warning. Errors are now strictly reserved for conditions from which a program written using HG cannot recover by itself/is not aware of.
+- Fixed the `AddQuad` method in the model builder. Added an helper method to quickly build common vertex configurations, see `MakeVertex`.
+- Animations support:
+  - Code cleanup to support the animation editor cleanup.
+  - Remove duplicate keys from animation track when calling `SortAnimTrackKeys`.
+  - Added a function to quantize scene animation.
+  - Additional scene animation APIs.
+  - Added the support of camera fov animations.
+- Text input callback is now a signal, see `TextInputSignal`.
+- Added a size field to `ListDir` output.
+
+### Rendering
+
+- Added a sharpen post-process.
+- Added functions for orthographic projection to clip and screen space. See `ProjectOrthoToClipSpace`, `ProjectOrthoToScreenSpace`.
+- Added functions for orthographic unprojection. See `UnprojectOrthoFromClipSpace`, `UnprojectOrthoFromScreenSpace`.
+- Implemented a light probe reprojection in the **Forward** and **AAA** pipelines.
+- Fixed the orientation of the cubemap in the probe generation.
+
+### Physics
+
+- Load/save scene collision components.
+- Added a missing cone collision component creation.
+- Setup physics for instantiated nodes.
+- Fixed a bug with local transformation for single collision shape nodes.
+
+### Documentation
+
+- Documented the coordinates system.
+- Doxygen documentation update
+
 # [3.2.1] - 2022-04-10
 
 This minor release brings both code and submodules maintenance, several fixes in the toolchain, in the scenegraph and physics interchange and in the rendering pipeline.

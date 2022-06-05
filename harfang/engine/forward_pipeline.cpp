@@ -45,9 +45,13 @@ enum ForwardPipelineUniformValue {
 	UV_PreviousViewProjection,
 	UV_ViewProjUnjittered, // for TAA
 	UV_AAAParams, // [0].x: ssgi ratio, [0].y: ssr ratio, [0].z: temporal AA weight, [0].w: motion blur strength
-				  // [1].x: exposure,   [1].y: 1/gamma,   [1].z: sample count,       [1].w max distance
+				  // [1].x: exposure,   [1].y: 1/gamma,   [1].z: sample count,       [1].w: screen-space ray max len
+				  // [2].x: spec weight [2].y: sharpen
 
 	UV_MainInvView,
+	UV_ProbeMatrix,
+	UV_InvProbeMatrix,
+	UV_ProbeData, // x: type (0: sphere 1: cube) y: parallax
 
 	UV_Count
 };
@@ -55,6 +59,8 @@ enum ForwardPipelineUniformValue {
 enum ForwardPipelineUniformTexture {
 	UT_IrradianceMap,
 	UT_RadianceMap,
+	UT_SSIrradianceMap,
+	UT_SSRadianceMap,
 	UT_BrdfMap,
 	UT_NoiseMap,
 
@@ -158,10 +164,15 @@ void UpdateForwardPipeline(ForwardPipeline &pipeline, const ForwardPipelineShado
 	pipeline.uniform_values[UV_Resolution].value = {float(fb_size.x), float(fb_size.y), -1, -1};
 }
 
-void UpdateForwardPipelinePBRProbe(ForwardPipeline &pipeline, Texture irradiance, Texture radiance, Texture brdf) {
+void UpdateForwardPipelineProbe(
+	ForwardPipeline &pipeline, Texture irradiance, Texture radiance, Texture brdf, ProbeType type, const Mat4 &world, float parallax) {
 	pipeline.uniform_textures[UT_IrradianceMap].texture = irradiance;
 	pipeline.uniform_textures[UT_RadianceMap].texture = radiance;
 	pipeline.uniform_textures[UT_BrdfMap].texture = brdf;
+
+	memcpy(pipeline.uniform_values[UV_ProbeMatrix].value.data(), to_bgfx(world).data(), sizeof(float) * 16);
+	memcpy(pipeline.uniform_values[UV_InvProbeMatrix].value.data(), to_bgfx(InverseFast(world)).data(), sizeof(float) * 16);
+	pipeline.uniform_values[UV_ProbeData].value = {float(type), parallax, -1, -1};
 }
 
 void UpdateForwardPipelineNoise(ForwardPipeline &pipeline, Texture noise) { pipeline.uniform_textures[UT_NoiseMap].texture = noise; }
@@ -171,9 +182,8 @@ void UpdateForwardPipelineAO(ForwardPipeline &pipeline, Texture ao) { pipeline.u
 static float backbuffer_ratio[bgfx::BackbufferRatio::Count] = {1.f, 2.f, 4.f, 8.f, 16.f, 0.5f};
 
 void UpdateForwardPipelineAAA(ForwardPipeline &pipeline, const iRect &rect, const Mat4 &view, const Mat44 &proj, const Mat4 &prv_view, const Mat44 &prv_proj,
-	const Vec2 &jitter, bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio, float temporal_aa_weight,
-	float motion_blur_strength,
-	float exposure, float gamma, int sample_count, float max_distance) {
+	const Vec2 &jitter, bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio, float temporal_aa_weight, float motion_blur_strength,
+	float exposure, float gamma, int sample_count, float max_distance, float specular_weight, float sharpen) {
 	pipeline.uniform_values[UV_Projection].value = {1.f / proj.m[0][0], 1.f / proj.m[1][1], proj.m[2][2], proj.m[2][3]};
 
 	memcpy(pipeline.uniform_values[UV_ViewProjUnjittered].value.data(), to_bgfx(proj * view).data(), sizeof(float) * 16);
@@ -183,9 +193,14 @@ void UpdateForwardPipelineAAA(ForwardPipeline &pipeline, const iRect &rect, cons
 	memcpy(pipeline.uniform_values[UV_MainInvProjection].value.data(), to_bgfx(Inverse(proj)).data(), sizeof(float) * 16);
 
 	pipeline.uniform_values[UV_AAAParams].value = {backbuffer_ratio[ssgi_ratio], backbuffer_ratio[ssr_ratio], temporal_aa_weight, motion_blur_strength,
-		exposure, 1.f / gamma, float(sample_count), max_distance};
+		exposure, 1.f / gamma, float(sample_count), max_distance, specular_weight, sharpen};
 
 	memcpy(pipeline.uniform_values[UV_MainInvView].value.data(), to_bgfx(InverseFast(view)).data(), sizeof(float) * 16);
+}
+
+void UpdateForwardPipelineAAA(ForwardPipeline &pipeline, Texture ssgi, Texture ssr) {
+	pipeline.uniform_textures[UT_SSIrradianceMap].texture = ssgi;
+	pipeline.uniform_textures[UT_SSRadianceMap].texture = ssr;
 }
 
 //
@@ -330,10 +345,12 @@ void GenerateLinearShadowMapForForwardPipeline(bgfx::ViewId &view_id, const View
 				std::vector<ModelDisplayList> culled_display_lists = display_lists;
 				CullModelDisplayLists(frustum, culled_display_lists, mtxs, res);
 
-				DrawModelDisplayLists(view_id, culled_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
+				DrawModelDisplayLists(
+					view_id, culled_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
 
 				// FIXME cull skinned models!
-				DrawSkinnedModelDisplayLists(view_id, skinned_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
+				DrawSkinnedModelDisplayLists(
+					view_id, skinned_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
 
 				views[FPSP_Slot0LinearSplit0 + i] = view_id++;
 			}
@@ -377,10 +394,12 @@ void GenerateSpotShadowMapForForwardPipeline(bgfx::ViewId &view_id, const std::v
 		std::vector<ModelDisplayList> culled_display_lists = display_lists;
 		CullModelDisplayLists(frustum, culled_display_lists, mtxs, res);
 
-		DrawModelDisplayLists(view_id, culled_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
+		DrawModelDisplayLists(
+			view_id, culled_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
 
 		// FIXME cull skinned models!
-		DrawSkinnedModelDisplayLists(view_id, skinned_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
+		DrawSkinnedModelDisplayLists(
+			view_id, skinned_display_lists, 9, pipeline.uniform_values, pipeline.uniform_textures, mtxs, res); // config idx is 9 for FPS_DepthOnly
 
 		views[FPSP_Slot1Spot] = view_id++;
 	}
@@ -464,19 +483,23 @@ ForwardPipeline CreateForwardPipeline(int shadow_map_resolution, bool spot_16bit
 
 		MakeUniformSetValue("uPreviousViewProjection", Mat4{}),
 		MakeUniformSetValue("uViewProjUnjittered", Mat4{}),
-		MakeUniformSetValue("uAAAParams", Vec4{}, 2), // [2]
+		MakeUniformSetValue("uAAAParams", Vec4{}, 3), // [3]
 
 		MakeUniformSetValue("uMainInvView", Mat4{}),
+		MakeUniformSetValue("uProbeMatrix", Mat4{}),
+		MakeUniformSetValue("uInvProbeMatrix", Mat4{}),
+		MakeUniformSetValue("uProbeData", Vec4{}),
 	};
 
 	__ASSERT__(pipeline.uniform_values.size() == UV_Count);
 
 	pipeline.uniform_textures = {
-		MakeUniformSetTexture("uIrradianceMap", {}, 8),
-		MakeUniformSetTexture("uRadianceMap", {}, 9),
-		MakeUniformSetTexture("uBrdfMap", {}, 10),
-		MakeUniformSetTexture("uNoiseMap", {}, 11),
-
+		MakeUniformSetTexture("uIrradianceMap", {}, 7),
+		MakeUniformSetTexture("uRadianceMap", {}, 8),
+		MakeUniformSetTexture("uSSIrradianceMap", {}, 9),
+		MakeUniformSetTexture("uSSRadianceMap", {}, 10),
+		MakeUniformSetTexture("uBrdfMap", {}, 11),
+		MakeUniformSetTexture("uNoiseMap", {}, 12),
 		MakeUniformSetTexture("uAmbientOcclusion", {}, 13),
 		MakeUniformSetTexture("uLinearShadowMap", {BGFX_TEXTURE_RT | BGFX_SAMPLER_COMPARE_LEQUAL, pipeline.textures["linear_shadow_map"]}, 14),
 		MakeUniformSetTexture("uSpotShadowMap", {BGFX_TEXTURE_RT | BGFX_SAMPLER_COMPARE_LEQUAL, pipeline.textures["spot_shadow_map"]}, 15),

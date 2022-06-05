@@ -281,6 +281,9 @@ static bool _KeyboardState_Key(hg::KeyboardState *s, hg::Key key) { return s->ke
 
 	gen.end_class(keyboard)
 
+	bind_signal_T(gen, 'TextInputSignal', 'void', ['const char*'], 'TextInputCallback')
+	gen.bind_variable('const hg::Signal<void(const char *)> hg::on_text_input', bound_name='OnTextInput')
+
 	# gamepad
 	gen.bind_named_enum('hg::GamepadAxes', ['GA_LeftX', 'GA_LeftY', 'GA_RightX', 'GA_RightY', 'GA_LeftTrigger', 'GA_RightTrigger', 'GA_Count'])
 	gen.bind_named_enum('hg::GamepadButton', [
@@ -641,13 +644,17 @@ def bind_projection(gen):
 	gen.bind_function('hg::ExtractZRangeFromProjectionMatrix', 'void', ['const hg::Mat44 &m', 'float &znear', 'float &zfar'], {'arg_out': ['znear', 'zfar']})
 
 	gen.bind_function('hg::ProjectToClipSpace', 'bool', ['const hg::Mat44 &proj', 'const hg::Vec3 &view', 'hg::Vec3 &clip'], {'arg_out': ['clip']})
+	gen.bind_function('hg::ProjectOrthoToClipSpace', 'bool', ['const hg::Mat44 &proj', 'const hg::Vec3 &view', 'hg::Vec3 &clip'], {'arg_out': ['clip']})
 	gen.bind_function('hg::UnprojectFromClipSpace', 'bool', ['const hg::Mat44 &inv_proj', 'const hg::Vec3 &clip', 'hg::Vec3 &view'], {'arg_out': ['view']})
+	gen.bind_function('hg::UnprojectOrthoFromClipSpace', 'bool', ['const hg::Mat44 &inv_proj', 'const hg::Vec3 &clip', 'hg::Vec3 &view'], {'arg_out': ['view']})
 
 	gen.bind_function('hg::ClipSpaceToScreenSpace', 'hg::Vec3', ['const hg::Vec3 &clip', 'const hg::tVec2<float> &resolution'])
 	gen.bind_function('hg::ScreenSpaceToClipSpace', 'hg::Vec3', ['const hg::Vec3 &screen', 'const hg::tVec2<float> &resolution'])
 
 	gen.bind_function('hg::ProjectToScreenSpace', 'bool', ['const hg::Mat44 &proj', 'const hg::Vec3 &view', 'const hg::tVec2<float> &resolution', 'hg::Vec3 &screen'], {'arg_out': ['screen']})
+	gen.bind_function('hg::ProjectOrthoToScreenSpace', 'bool', ['const hg::Mat44 &proj', 'const hg::Vec3 &view', 'const hg::tVec2<float> &resolution', 'hg::Vec3 &screen'], {'arg_out': ['screen']})
 	gen.bind_function('hg::UnprojectFromScreenSpace', 'bool', ['const hg::Mat44 &inv_proj', 'const hg::Vec3 &screen', 'const hg::tVec2<float> &resolution', 'hg::Vec3 &view'], {'arg_out': ['view']})
+	gen.bind_function('hg::UnprojectOrthoFromScreenSpace', 'bool', ['const hg::Mat44 &inv_proj', 'const hg::Vec3 &screen', 'const hg::tVec2<float> &resolution', 'hg::Vec3 &view'], {'arg_out': ['view']})
 
 	gen.bind_function('hg::ProjectZToClipSpace', 'float', ['float z', 'const hg::Mat44 &proj'])
 
@@ -1288,7 +1295,7 @@ def bind_scene(gen):
 
 	#
 	environment = gen.begin_class('hg::Scene::Environment')
-	gen.bind_members(environment, ['hg::Color ambient', 'hg::Color fog_color', 'float fog_near', 'float fog_far', 'hg::TextureRef irradiance_map', 'hg::TextureRef radiance_map', 'hg::TextureRef brdf_map'])
+	gen.bind_members(environment, ['hg::Color ambient', 'hg::Color fog_color', 'float fog_near', 'float fog_far', 'hg::TextureRef brdf_map'])
 	gen.end_class(environment)
 
 	gen.bind_member(scene, 'hg::Scene::Environment environment')
@@ -2542,6 +2549,8 @@ def bind_vertex(gen):
 		'hg::Color color0', 'hg::Color color1', 'hg::Color color2', 'hg::Color color3'])
 	gen.end_class(vertex)
 
+	gen.bind_function('hg::MakeVertex', 'hg::Vertex', ['const hg::Vec3 &pos', '?const hg::Vec3 &nrm', '?const hg::tVec2<float> &uv0', '?const hg::Color &color0'])
+
 
 def bind_geometry_builder(gen):
 	gen.add_include('engine/geometry_builder.h')
@@ -2914,7 +2923,14 @@ def bind_math(gen):
 
 	gen.bind_function('hg::LinearInterpolate<float>', 'float', ['float y0', 'float y1', 'float t'], bound_name='LinearInterpolate')
 	gen.bind_function('hg::CosineInterpolate<float>', 'float', ['float y0', 'float y1', 'float t'], bound_name='CosineInterpolate')
-	gen.bind_function('hg::CubicInterpolate<float>', 'float', ['float y0', 'float y1', 'float y2', 'float y3', 'float t'], bound_name='CubicInterpolate')
+	gen.insert_binding_code('''
+static const float _CubicInterpolateImpl(float y0, float y1, float y2, float y3, float t) { return hg::CubicInterpolate<float>(y0, y1, y2, y3, t); }
+static const hg::Vec3 _CubicInterpolateImpl(const hg::Vec3& v0, const hg::Vec3& v1, const hg::Vec3& v2, const hg::Vec3& v3, float t) { return hg::CubicInterpolate<hg::Vec3>(v0, v1, v2, v3, t); }	
+''')
+	gen.bind_function_overloads('_CubicInterpolateImpl', [
+		('float', ['float y0', 'float y1', 'float y2', 'float y3', 'float t'], []),
+        ('hg::Vec3', ['const hg::Vec3& v0', 'const hg::Vec3& v1', 'const hg::Vec3& v2', 'const hg::Vec3& v3', 'float t'], [])
+	], bound_name='CubicInterpolate')
 	gen.bind_function('hg::HermiteInterpolate<float>', 'float', ['float y0', 'float y1', 'float y2', 'float y3', 'float t', 'float tension', 'float bias'], bound_name='HermiteInterpolate')
 
 	gen.bind_function('hg::ReverseRotationOrder', 'hg::RotationOrder', ['hg::RotationOrder rotation_order'])
@@ -3040,8 +3056,7 @@ def bind_math(gen):
 	])
 	gen.bind_arithmetic_ops_overloads(vector4, ['*'], [
 		('hg::Vec4', ['hg::Vec4 &v'], []),
-		('hg::Vec4', ['float k'], []),
-		('hg::Vec4', ['const hg::Mat4 &m'], [])
+		('hg::Vec4', ['float k'], [])
 	])
 
 	gen.bind_inplace_arithmetic_ops_overloads(vector4, ['+=', '-=', '*=', '/='], [
@@ -3238,10 +3253,10 @@ def bind_math(gen):
 
 	gen.end_class(matrix4)
 
-	gen.bind_function('hg::GetRow', 'hg::Vec3', ['const hg::Mat4 &m', 'unsigned int n'])
-	gen.bind_function('hg::GetColumn', 'hg::Vec4', ['const hg::Mat4 &m', 'unsigned int n'])
-	gen.bind_function('hg::SetRow', 'void', ['const hg::Mat4 &m', 'unsigned int n', 'const hg::Vec3 &v'])
-	gen.bind_function('hg::SetColumn', 'void', ['const hg::Mat4 &m', 'unsigned int n', 'const hg::Vec4 &v'])
+	gen.bind_function('hg::GetRow', 'hg::Vec4', ['const hg::Mat4 &m', 'unsigned int n'])
+	gen.bind_function('hg::GetColumn', 'hg::Vec3', ['const hg::Mat4 &m', 'unsigned int n'])
+	gen.bind_function('hg::SetRow', 'void', ['const hg::Mat4 &m', 'unsigned int n', 'const hg::Vec4 &v'])
+	gen.bind_function('hg::SetColumn', 'void', ['const hg::Mat4 &m', 'unsigned int n', 'const hg::Vec3 &v'])
 
 	gen.bind_function('hg::GetX', 'hg::Vec3', ['const hg::Mat4 &m'])
 	gen.bind_function('hg::GetY', 'hg::Vec3', ['const hg::Mat4 &m'])
@@ -3348,9 +3363,7 @@ def bind_math(gen):
 	gen.bind_arithmetic_ops_overloads(vector3, ['+', '-', '/'], [('hg::Vec3', ['hg::Vec3 &v'], []), ('hg::Vec3', ['float k'], [])])
 	gen.bind_arithmetic_ops_overloads(vector3, ['*'], [
 		('hg::Vec3', ['const hg::Vec3 &v'], []),
-		('hg::Vec3', ['float k'], []),
-		('hg::Vec3', ['const hg::Mat3 &m'], []),
-		('hg::Vec3', ['const hg::Mat4 &m'], [])
+		('hg::Vec3', ['float k'], [])
 	])
 
 	gen.bind_inplace_arithmetic_ops_overloads(vector3, ['+=', '-=', '*=', '/='], [
@@ -4324,56 +4337,23 @@ def bind_profiler(gen):
 def insert_non_embedded_setup_free_code(gen):
 	if gen.get_language() == 'CPython':
 		gen.insert_binding_code('''
-// Add the Python interpreter module search paths to the engine default plugins search path
-void InitializePluginsDefaultSearchPath() {
-	if (PyObject *sys_path = PySys_GetObject("path")) {
-		if (PyList_Check(sys_path)) {
-			Py_ssize_t n = PyList_Size(sys_path);
-			for (Py_ssize_t i = 0; i < n; ++i)
-				if (PyObject *path = PyList_GetItem(sys_path, i))
-					if (PyObject *tmp = PyUnicode_AsUTF8String(path)) {
-						std::string path(PyBytes_AsString(tmp));
-//						hg::g_plugin_system.get().default_search_paths.push_back(path + "/harfang");
-					}
-		}
-	}
+#include "foundation/log.h"
+#include <iostream>
+
+static void OnHarfangLog(const char *msg, int mask, const char *details, void *user) {
+	if (mask & hg::LL_Error)
+		PyErr_SetString(PyExc_RuntimeError, msg);
+	else if (mask & hg::LL_Warning)
+		PyErr_WarnEx(PyExc_Warning, msg, 1);
+	else
+		std::cout << msg << std::endl;
 }
-\n''')
+
+static void InstallLogHook() { hg::set_log_hook(OnHarfangLog, nullptr); }
+''')
 	elif gen.get_language() == 'Lua':
 		gen.insert_binding_code('''
-#include "foundation/string.h"
-
-// Add the Lua interpreter package.cpath to the engine default plugins search path
-static void InitializePluginsDefaultSearchPath(lua_State *L) {
-	lua_getglobal(L, "package");
-	lua_getfield(L, -1, "cpath");
-	std::string package_cpath = lua_tostring(L, -1);
-	lua_pop(L, 2);
-
-	std::vector<std::string> paths = hg::split(package_cpath, ";"), out;
-
-	for (size_t i = 0; i < paths.size(); ++i) {
-		std::string path = paths[i];
-		std::replace(path.begin(), path.end(), '\\\\', '/');
-
-		std::vector<std::string> elms = hg::split(path, "/");
-		path = "";
-		for (auto &elm : elms)
-			if (elm.find('?') == std::string::npos)
-				path += elm + "/";
-
-		if (path == "./")
-			continue;
-		if (hg::ends_with(path, "loadall.dll/"))
-			continue;
-
-		out.push_back(path);
-	}
-
-//	for (auto &path : out)
-//		hg::g_plugin_system.get().default_search_paths.push_back(path);
-}
-\n''')
+''')
 
 	gen.insert_binding_code('''
 #include "foundation/build_info.h"
@@ -4384,14 +4364,17 @@ static void OutputLicensingTerms(const char *lang) {
 		.arg(hg::get_version_string()).arg(lang).arg(hg::get_target_string())
 		.arg(hg::get_build_sha()).arg(__DATE__).arg(__TIME__)
 	);
-	hg::log("See http://harfang3d.com/license for licensing terms");
+	hg::log("See https://www.harfang3d.com/license for licensing terms");
 }
 ''')
 
 	if gen.get_language() == 'Lua':
 		gen.add_custom_init_code('OutputLicensingTerms("Lua 5.3");\n')
 	elif gen.get_language() == 'CPython':
-		gen.add_custom_init_code('OutputLicensingTerms("CPython 3.2+");\n')
+		gen.add_custom_init_code('''
+InstallLogHook();
+OutputLicensingTerms("CPython 3.2+");
+''')
 
 	gen.add_custom_free_code('\n')
 

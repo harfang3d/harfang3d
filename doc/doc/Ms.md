@@ -1,3 +1,3 @@
 Convert a value in milliseconds to the Harfang internal unit system.
 
-See [man.UnitSystem].
+See [man.CoordinateAndUnitSystem].

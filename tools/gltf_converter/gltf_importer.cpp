@@ -1,6 +1,5 @@
 // HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
-#include <engine/stb_image.h>
-
+#include <engine/animation.h>
 #include <engine/geometry.h>
 #include <engine/model_builder.h>
 #include <engine/node.h>
@@ -26,6 +25,7 @@
 #include <foundation/vector3.h>
 
 #include "json.hpp"
+#include "stb_image.h"
 #include "tiny_gltf.h"
 
 #include <fstream>
@@ -43,11 +43,8 @@ using nlohmann::json;
 std::map<int, hg::NodeRef> idNode_to_NodeRef;
 std::vector<std::string> already_saved_picture;
 
-struct AlreadySavedGeo{
-	hg::Object object;
-	std::vector<std::string> ids;
-};
-std::map<std::string, AlreadySavedGeo> already_saved_geo_with_primitives_ids;
+std::map<std::string, std::string> primitiveIdsToGeoPath;
+std::map<std::string, int> geoPathOcurrence;
 
 static std::string Indent(const int indent) {
 	std::string s;
@@ -104,7 +101,7 @@ struct floatArrayBase {
 	virtual size_t size() const = 0;
 };
 
-/// An array that loads interger types, returns them as int
+/// An array that loads interger types, returns them as byte
 template <class T> struct byteArray : public byteArrayBase {
 	arrayAdapter<T> adapter;
 
@@ -173,7 +170,7 @@ struct Config {
 
 	std::string input_path;
 	std::string name; // output name (may be empty)
-	std::string base_output_path{ "./" };
+	std::string base_output_path{"./"};
 	std::string prj_path;
 	std::string prefix;
 	std::string shader;
@@ -483,13 +480,13 @@ static void ExportSkins(const Model &model, const Scene &gltf_scene, hg::Scene &
 	// all skins
 	hg::debug(hg::format("skin(items=%1)").arg(model.skins.size()).c_str());
 	for (size_t gltf_id_node = 0; gltf_id_node < model.nodes.size(); ++gltf_id_node) {
-		const auto& gltf_node = model.nodes[gltf_id_node];
-		if(gltf_node.skin >= 0){
-			const auto& skin = model.skins[gltf_node.skin];
+		const auto &gltf_node = model.nodes[gltf_id_node];
+		if (gltf_node.skin >= 0) {
+			const auto &skin = model.skins[gltf_node.skin];
 			auto node = scene.GetNode(idNode_to_NodeRef[gltf_id_node]);
 			if (auto object = node.GetObject()) {
 				object.SetBoneCount(skin.joints.size());
-				for (size_t j = 0; j < skin.joints.size(); j++) 
+				for (size_t j = 0; j < skin.joints.size(); j++)
 					object.SetBone(j, idNode_to_NodeRef[skin.joints[j]]);
 			}
 		}
@@ -503,9 +500,9 @@ static void GetTextureData(const Model &model, const int textureIndex, hg::Pictu
 	auto texture = model.textures[textureIndex];
 	auto image = model.images[texture.source];
 
-	if (image.uri.empty()) { // copy the buffer into pic
-		std::string mimeType = image.mimeType.replace(image.mimeType.find("image/", 0), std::string("image/").size(), ""); 
-		std::string name = image.name.empty() ? hg::format("%1").arg(textureIndex): image.name;
+	if (image.uri.empty()) {
+		std::string mimeType = image.mimeType.replace(image.mimeType.find("image/", 0), std::string("image/").size(), "");
+		std::string name = image.name.empty() ? hg::format("%1").arg(textureIndex) : image.name;
 
 		std::string dst_path;
 		GetOutputPath(dst_path, config.base_output_path, name, {}, mimeType, config.import_policy_texture);
@@ -528,7 +525,8 @@ static void GetTextureData(const Model &model, const int textureIndex, hg::Pictu
 	}
 }
 
-static hg::TextureRef ExportTexture(const Model &model, const int &textureIndex, const std::string &dst_path, const Config &config, hg::PipelineResources &resources) {
+static hg::TextureRef ExportTexture(
+	const Model &model, const int &textureIndex, const std::string &dst_path, const Config &config, hg::PipelineResources &resources) {
 
 	auto texture = model.textures[textureIndex];
 	uint32_t flags = BGFX_SAMPLER_NONE;
@@ -556,7 +554,7 @@ static hg::TextureRef ExportTexture(const Model &model, const int &textureIndex,
 	return resources.textures.Add(dst_rel_path.c_str(), {flags, BGFX_INVALID_HANDLE});
 }
 
-static std::string GetTextureMime(const Model &model, const int &textureIndex){	
+static std::string GetTextureMime(const Model &model, const int &textureIndex) {
 	if (textureIndex < 0)
 		return "png"; // set default to png
 
@@ -564,8 +562,8 @@ static std::string GetTextureMime(const Model &model, const int &textureIndex){
 	const auto &image = model.images[texture.source];
 
 	std::string mimeType = image.mimeType;
-	if(const auto indexFind = mimeType.find("image/", 0) != std::string::npos)
-		mimeType = mimeType.replace(indexFind, std::string("image/").size(), ""); 
+	if (const auto indexFind = mimeType.find("image/", 0) != std::string::npos)
+		mimeType = mimeType.replace(indexFind, std::string("image/").size(), "");
 	return mimeType;
 }
 //
@@ -578,12 +576,12 @@ static hg::TextureRef ExportTexture(const Model &model, const int &textureIndex,
 
 	std::string dst_path;
 
-	if (image.uri.empty()) { // copy the buffer into image
+	if (image.uri.empty()) {
 		std::string mimeType = GetTextureMime(model, textureIndex);
-		std::string name = image.name.empty() ? hg::format("%1").arg(textureIndex): image.name;
+		std::string name = image.name.empty() ? hg::format("%1").arg(textureIndex) : image.name;
 
 		GetOutputPath(dst_path, config.base_output_path, name, {}, mimeType, config.import_policy_texture);
-				} else {
+	} else {
 		// copy the image
 		std::string src_path = image.uri;
 		if (!hg::Exists(src_path.c_str())) {
@@ -602,7 +600,7 @@ static hg::TextureRef ExportTexture(const Model &model, const int &textureIndex,
 		}
 
 		GetOutputPath(dst_path, config.base_output_path, hg::GetFileName(src_path), {}, hg::GetFileExtension(src_path), config.import_policy_texture);
-				}
+	}
 	return ExportTexture(model, textureIndex, dst_path, config, resources);
 }
 
@@ -618,7 +616,7 @@ static hg::Material ExportMaterial(const Model &model, const Material &gltf_mat,
 
 	hg::debug(hg::format("Exporting material '%1'").arg(gltf_mat.name));
 #if 0
-	// CWE 563: Variable is assigned a value that is never used
+
 	static const std::string meta_RAW_text("{\"profiles\": {\"default\": {\"compression\": \"RAW\"}}}");
 	static const std::string meta_BC1_text("{\"profiles\": {\"default\": {\"compression\": \"BC1\"}}}");
 	static const std::string meta_BC3_text("{\"profiles\": {\"default\": {\"compression\": \"BC3\"}}}");
@@ -635,7 +633,7 @@ static hg::Material ExportMaterial(const Model &model, const Material &gltf_mat,
 	std::string shader("core/shader/pbr.hps");
 
 	// export the texture
-	auto baseColorTexture =	ExportTexture(model, gltf_mat.pbrMetallicRoughness.baseColorTexture.index, config, resources);
+	auto baseColorTexture = ExportTexture(model, gltf_mat.pbrMetallicRoughness.baseColorTexture.index, config, resources);
 	if (baseColorTexture != hg::InvalidTextureRef) {
 		hg::debug(hg::format("    - uBaseOpacityMap: %1").arg(resources.textures.GetName(baseColorTexture)));
 
@@ -660,57 +658,27 @@ static hg::Material ExportMaterial(const Model &model, const Material &gltf_mat,
 
 			// if the occlusion texture use the same uv, merge into the same map as roughness metal
 			if (gltf_mat.occlusionTexture.texCoord == gltf_mat.pbrMetallicRoughness.metallicRoughnessTexture.texCoord) {
-				json meta_occlusionTexture_json = {
-					{"profiles", {{"default", {
-						{"compression", "BC7"},
-						{"preprocess", {{
-							{"construct", {
-											resources.textures.GetName(OcclusionTexture),
-											"G",
-											"B"
-											}
-							}
-						}}}
-				}}}}};
+				json meta_occlusionTexture_json = {{"profiles",
+					{{"default", {{"compression", "BC7"}, {"preprocess", {{"construct", {resources.textures.GetName(OcclusionTexture), "G", "B"}}}}}}}}};
 				meta_occlusionTexture = meta_occlusionTexture_json.dump();
 			}
 		} else if (gltf_mat.occlusionTexture.index < 0) { // no occlusion texture, use the var
-			json meta_occlusionTexture_json = {
-				{"profiles", {{"default", {
-					{"compression", "BC7"},
-					{"preprocess", {
-						{"construct", {
-							255,
-							"G",
-							"B"
-						}}
-					}}
-				}}}}
-			};
+			json meta_occlusionTexture_json = {{"profiles", {{"default", {{"compression", "BC7"}, {"preprocess", {{"construct", {255, "G", "B"}}}}}}}}};
 			meta_occlusionTexture = meta_occlusionTexture_json.dump();
 		}
 	} else if (gltf_mat.occlusionTexture.index >= 0) {
 		// no orm map but an occlusion map is here
 		metallicRoughnessTexture = ExportTexture(model, gltf_mat.occlusionTexture.index, config, resources);
-		json meta_occlusionTexture_json = {
-			{"profiles", {{"default", {
-				{"compression", "BC7"},
-				{"preprocess", {
-					{"construct", {
-						"R",
-						(int)gltf_mat.pbrMetallicRoughness.roughnessFactor*255,
-						(int)gltf_mat.pbrMetallicRoughness.metallicFactor*255
-					}}
-				}}
-			}}}}
-		};
+		json meta_occlusionTexture_json = {{"profiles",
+			{{"default", {{"compression", "BC7"}, {"preprocess", {{"construct", {"R", (int)gltf_mat.pbrMetallicRoughness.roughnessFactor * 255,
+																					(int)gltf_mat.pbrMetallicRoughness.metallicFactor * 255}}}}}}}}};
 		meta_occlusionTexture = meta_occlusionTexture_json.dump();
 	}
 
 	if (metallicRoughnessTexture != hg::InvalidTextureRef) {
 		hg::debug(hg::format("    - uOcclusionRoughnessMetalnessMap: %1").arg(resources.textures.GetName(metallicRoughnessTexture)));
 
-		if (GetOutputPath(dst_path, config.prj_path, resources.textures.GetName(metallicRoughnessTexture), {}, "meta",	config.import_policy_texture)) {
+		if (GetOutputPath(dst_path, config.prj_path, resources.textures.GetName(metallicRoughnessTexture), {}, "meta", config.import_policy_texture)) {
 			if (std::FILE *f = std::fopen(dst_path.c_str(), "w")) {
 				std::fwrite(meta_occlusionTexture.data(), sizeof meta_occlusionTexture[0], meta_occlusionTexture.size(), f);
 				std::fclose(f);
@@ -774,11 +742,9 @@ static hg::Material ExportMaterial(const Model &model, const Material &gltf_mat,
 #define __PolIndex (pol_index[p] + v)
 #define __PolRemapIndex (pol_index[p] + (geo.pol[p].vtx_count - 1 - v))
 
-static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, const int &primitiveID, hg::Object &object, const Config &config,
-	hg::PipelineResources &resources, hg::Geometry &geo) {
+static void ExportGeometry(
+	const Model &model, const Primitive &meshPrimitive, const int &primitiveID, const Config &config, hg::PipelineResources &resources, hg::Geometry &geo) {
 	// TODO detect instancing (using SHA1 on model)
-
-	object.SetMaterialCount(primitiveID + 1);
 
 	// Boolean used to check if we have converted the vertex buffer format
 	bool convertedToTriangleList = false;
@@ -890,7 +856,7 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 					geo.binding.push_back(triangleStrip[i]);
 				}
 			}
-		case TINYGLTF_MODE_TRIANGLES: {// this is the simpliest case to handle
+		case TINYGLTF_MODE_TRIANGLES: { // this is the simpliest case to handle
 			hg::debug("TRIANGLES");
 
 			using AttribWritter = std::function<void(float *w, uint32_t p)>;
@@ -903,15 +869,15 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 			AttribWritter w_weights0 = [](float *w, uint32_t p) {};
 
 			// get the accessor
-			for (const auto& attribute : meshPrimitive.attributes) {
+			for (const auto &attribute : meshPrimitive.attributes) {
 				const auto attribAccessor = model.accessors[attribute.second];
-				const auto& bufferView = model.bufferViews[attribAccessor.bufferView];
-				const auto& buffer = model.buffers[bufferView.buffer];
+				const auto &bufferView = model.bufferViews[attribAccessor.bufferView];
+				const auto &buffer = model.buffers[bufferView.buffer];
 				const auto dataPtr = buffer.data.data() + bufferView.byteOffset + attribAccessor.byteOffset;
 				const auto byte_stride = attribAccessor.ByteStride(bufferView);
 				const bool normalized = attribAccessor.normalized;
 
-				AttribWritter* writter = nullptr;
+				AttribWritter *writter = nullptr;
 				unsigned int max_components = 0;
 				if (attribute.first == "POSITION") {
 					writter = &w_position;
@@ -955,77 +921,77 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 				}
 
 				switch (attribAccessor.componentType) {
-				case TINYGLTF_COMPONENT_TYPE_FLOAT:
-					*writter = [dataPtr, byte_stride, max_components](float* w, uint32_t p) {
-						const float* f = (const float*)(dataPtr + p * byte_stride);
-						for (unsigned int i = 0; i < max_components; ++i) {
-							w[i] = f[i];
-						}
-					};
-					break;
-				case TINYGLTF_COMPONENT_TYPE_DOUBLE:
-					*writter = [dataPtr, byte_stride, max_components](float* w, uint32_t p) {
-						const double* f = (const double*)(dataPtr + p * byte_stride);
-						for (unsigned int i = 0; i < max_components; ++i) {
-							w[i] = (float)f[i];
-						}
-					};
-					break;
-				case TINYGLTF_COMPONENT_TYPE_BYTE:
-					*writter = [dataPtr, byte_stride, max_components, normalized](float* w, uint32_t p) {
-						const int8_t* f = (const int8_t*)(dataPtr + p * byte_stride);
-						for (unsigned int i = 0; i < max_components; ++i) {
-							w[i] = normalized ? f[i] / (float)128 : f[i];
-						}
-					};
-					break;
-				case TINYGLTF_COMPONENT_TYPE_SHORT:
-					*writter = [dataPtr, byte_stride, max_components, normalized](float* w, uint32_t p) {
-						const int16_t* f = (const int16_t*)(dataPtr + p * byte_stride);
-						for (unsigned int i = 0; i < max_components; ++i) {
-							w[i] = normalized ? f[i] / (float)32768 : f[i];
-						}
-					};
-					break;
-				case TINYGLTF_COMPONENT_TYPE_INT:
-					*writter = [dataPtr, byte_stride, max_components, normalized](float* w, uint32_t p) {
-						const int32_t* f = (const int32_t*)(dataPtr + p * byte_stride);
-						for (unsigned int i = 0; i < max_components; ++i) {
-							w[i] = normalized ? f[i] / (float)2147483648 : f[i];
-						}
-					};
-					break;
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-					*writter = [dataPtr, byte_stride, max_components, normalized](float* w, uint32_t p) {
-						const uint8_t* f = (const uint8_t*)(dataPtr + p * byte_stride);
-						for (unsigned int i = 0; i < max_components; ++i) {
-							w[i] = normalized ? f[i] / (float)255 : f[i];
-						}
-					};
-					break;
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-					*writter = [dataPtr, byte_stride, max_components, normalized](float* w, uint32_t p) {
-						const uint16_t* f = (const uint16_t*)(dataPtr + p * byte_stride);
-						for (unsigned int i = 0; i < max_components; ++i) {
-							w[i] = normalized ? f[i] / (float)65535 : f[i];
-						}
-					};
-					break;
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-					*writter = [dataPtr, byte_stride, max_components, normalized](float* w, uint32_t p) {
-						const uint32_t* f = (const uint32_t*)(dataPtr + p * byte_stride);
-						for (unsigned int i = 0; i < max_components; ++i) {
-							w[i] = normalized ? f[i] / (float)4294967295 : f[i];
-						}
-					};
-					break;
-				default:
-					assert(!"Not supported component type (yet)");
+					case TINYGLTF_COMPONENT_TYPE_FLOAT:
+						*writter = [dataPtr, byte_stride, max_components](float *w, uint32_t p) {
+							const float *f = (const float *)(dataPtr + p * byte_stride);
+							for (unsigned int i = 0; i < max_components; ++i) {
+								w[i] = f[i];
+							}
+						};
+						break;
+					case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+						*writter = [dataPtr, byte_stride, max_components](float *w, uint32_t p) {
+							const double *f = (const double *)(dataPtr + p * byte_stride);
+							for (unsigned int i = 0; i < max_components; ++i) {
+								w[i] = (float)f[i];
+							}
+						};
+						break;
+					case TINYGLTF_COMPONENT_TYPE_BYTE:
+						*writter = [dataPtr, byte_stride, max_components, normalized](float *w, uint32_t p) {
+							const int8_t *f = (const int8_t *)(dataPtr + p * byte_stride);
+							for (unsigned int i = 0; i < max_components; ++i) {
+								w[i] = normalized ? f[i] / (float)128 : f[i];
+							}
+						};
+						break;
+					case TINYGLTF_COMPONENT_TYPE_SHORT:
+						*writter = [dataPtr, byte_stride, max_components, normalized](float *w, uint32_t p) {
+							const int16_t *f = (const int16_t *)(dataPtr + p * byte_stride);
+							for (unsigned int i = 0; i < max_components; ++i) {
+								w[i] = normalized ? f[i] / (float)32768 : f[i];
+							}
+						};
+						break;
+					case TINYGLTF_COMPONENT_TYPE_INT:
+						*writter = [dataPtr, byte_stride, max_components, normalized](float *w, uint32_t p) {
+							const int32_t *f = (const int32_t *)(dataPtr + p * byte_stride);
+							for (unsigned int i = 0; i < max_components; ++i) {
+								w[i] = normalized ? f[i] / (float)2147483648 : f[i];
+							}
+						};
+						break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+						*writter = [dataPtr, byte_stride, max_components, normalized](float *w, uint32_t p) {
+							const uint8_t *f = (const uint8_t *)(dataPtr + p * byte_stride);
+							for (unsigned int i = 0; i < max_components; ++i) {
+								w[i] = normalized ? f[i] / (float)255 : f[i];
+							}
+						};
+						break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+						*writter = [dataPtr, byte_stride, max_components, normalized](float *w, uint32_t p) {
+							const uint16_t *f = (const uint16_t *)(dataPtr + p * byte_stride);
+							for (unsigned int i = 0; i < max_components; ++i) {
+								w[i] = normalized ? f[i] / (float)65535 : f[i];
+							}
+						};
+						break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+						*writter = [dataPtr, byte_stride, max_components, normalized](float *w, uint32_t p) {
+							const uint32_t *f = (const uint32_t *)(dataPtr + p * byte_stride);
+							for (unsigned int i = 0; i < max_components; ++i) {
+								w[i] = normalized ? f[i] / (float)4294967295 : f[i];
+							}
+						};
+						break;
+					default:
+						assert(!"Not supported component type (yet)");
 				}
 			}
 
 			// set the values
-			for (const auto& attribute : meshPrimitive.attributes) {
+			for (const auto &attribute : meshPrimitive.attributes) {
 				const auto attribAccessor = model.accessors[attribute.second];
 				const auto count = attribAccessor.count;
 
@@ -1042,46 +1008,46 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 					pMax.y = attribAccessor.maxValues[1];
 					pMax.z = attribAccessor.maxValues[2];
 					*/
-							// 3D vector of float
+					// 3D vector of float
 					hg::Vec3 v;
-					for (size_t i{ 0 }; i < count; ++i) {
+					for (size_t i{0}; i < count; ++i) {
 						w_position(&v.x, i);
-								v.z = -v.z;
-								geo.vtx.push_back(v * config.geometry_scale);
-							}
-						}
+						v.z = -v.z;
+						geo.vtx.push_back(v * config.geometry_scale);
+					}
+				}
 
 				if (attribute.first == "NORMAL") {
 					hg::debug("found normal attribute");
 
 					hg::Vec3 n;
-							for (size_t i{ start_id_binding }; i < geo.binding.size(); ++i) {
+					for (size_t i{start_id_binding}; i < geo.binding.size(); ++i) {
 						w_normal(&n.x, geo.binding[i] - start_id_vtx);
-								n.z = -n.z;
-								geo.normal.push_back(n);
-							}
-						}
+						n.z = -n.z;
+						geo.normal.push_back(n);
+					}
+				}
 
 				// Face varying comment on the normals is also true for the UVs
 				if (attribute.first == "TEXCOORD_0") {
 					hg::debug("Found texture coordinates 0");
 
 					hg::Vec2 uv;
-							for (size_t i{ start_id_binding }; i < geo.binding.size(); ++i) {
+					for (size_t i{start_id_binding}; i < geo.binding.size(); ++i) {
 						w_texcoord0(&uv.x, geo.binding[i] - start_id_vtx);
 						geo.uv[0].push_back(uv);
-							}
-						}
+					}
+				}
 				// Face varying comment on the normals is also true for the UVs
 				if (attribute.first == "TEXCOORD_1") {
 					hg::debug("Found texture coordinates 1");
 
 					hg::Vec2 uv;
-					for (size_t i{ start_id_binding }; i < geo.binding.size(); ++i) {
+					for (size_t i{start_id_binding}; i < geo.binding.size(); ++i) {
 						w_texcoord1(&uv.x, geo.binding[i] - start_id_vtx);
 						geo.uv[1].push_back(uv);
-						}
 					}
+				}
 
 				// JOINTS_0
 				if (attribute.first == "JOINTS_0") {
@@ -1091,14 +1057,14 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 						geo.skin.resize(count + start_id_vtx);
 
 					hg::Vec4 joints;
-					for (size_t i{ 0 }; i < count; ++i) {
+					for (size_t i{0}; i < count; ++i) {
 						w_joints0(&joints.x, i);
 						geo.skin[i + start_id_vtx].index[0] = hg::numeric_cast<uint16_t>((int)(joints.x));
 						geo.skin[i + start_id_vtx].index[1] = hg::numeric_cast<uint16_t>((int)(joints.y));
 						geo.skin[i + start_id_vtx].index[2] = hg::numeric_cast<uint16_t>((int)(joints.z));
 						geo.skin[i + start_id_vtx].index[3] = hg::numeric_cast<uint16_t>((int)(joints.w));
-							}
-							}
+					}
+				}
 
 				// WEIGHTS_0
 				if (attribute.first == "WEIGHTS_0") {
@@ -1108,15 +1074,15 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 						geo.skin.resize(count + start_id_vtx);
 
 					hg::Vec4 weights;
-					for (size_t i{ 0 }; i < count; ++i) {
+					for (size_t i{0}; i < count; ++i) {
 						w_weights0(&weights.x, i);
 						geo.skin[i + start_id_vtx].weight[0] = hg::pack_float<uint8_t>(weights.x);
 						geo.skin[i + start_id_vtx].weight[1] = hg::pack_float<uint8_t>(weights.y);
 						geo.skin[i + start_id_vtx].weight[2] = hg::pack_float<uint8_t>(weights.z);
 						geo.skin[i + start_id_vtx].weight[3] = hg::pack_float<uint8_t>(weights.w);
-									}
-							}
-						}
+					}
+				}
+			}
 
 			// special for the tangent, because it need the normal to compute the bitangent
 			for (const auto &attribute : meshPrimitive.attributes) {
@@ -1130,13 +1096,13 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 					hg::debug("found tangent attribute");
 
 					hg::Vec4 t;
-									for (size_t i{start_id_binding}; i < geo.binding.size(); ++i) {
+					for (size_t i{start_id_binding}; i < geo.binding.size(); ++i) {
 						w_tangent(&t.x, geo.binding[i] - start_id_vtx);
-										geo.tangent.push_back(hg::Geometry::TangentFrame{
-											hg::Vec3(t.x, t.y, t.z), hg::Cross(geo.normal[geo.binding[i] - start_id_vtx], hg::Vec3(t.x, t.y, t.z)) * t.w});
-									}
-							}
+						geo.tangent.push_back(hg::Geometry::TangentFrame{
+							hg::Vec3(t.x, t.y, t.z), hg::Cross(geo.normal[geo.binding[i] - start_id_vtx], hg::Vec3(t.x, t.y, t.z)) * t.w});
 					}
+				}
+			}
 			break;
 		}
 		default:
@@ -1149,181 +1115,199 @@ static void ExportGeometry(const Model &model, const Primitive &meshPrimitive, c
 		case TINYGLTF_MODE_LINE_LOOP:
 			hg::error("primitive is not triangle based, ignoring");
 	}
-
-	// 1 material per primitive
-	if (meshPrimitive.material >= 0) {
-		auto gltf_mat = model.materials[meshPrimitive.material];
-		auto mat = ExportMaterial(model, gltf_mat, config, resources);
-		if (geo.skin.size())
-			mat.flags |= hg::MF_EnableSkinning;
-
-		object.SetMaterial(primitiveID, std::move(mat));
-		object.SetMaterialName(primitiveID, gltf_mat.name.empty() ? hg::format("mat_%1").arg(primitiveID) : gltf_mat.name);
-
-	} else { // make a dummy material to see the object in the engine
-		hg::debug(hg::format("    - Has no material, set a dummy one"));
-
-		hg::Material mat;
-		std::string shader;
-
-		shader = "core/shader/pbr.hps";
-
-		hg::debug(hg::format("    - Using pipeline shader '%1'").arg(shader));
-		mat.program = resources.programs.Add(shader.c_str(), {});
-
-		mat.values["uBaseOpacityColor"] = {bgfx::UniformType::Vec4, {1.f, 1.f, 1.f, 1.f}};
-		mat.values["uOcclusionRoughnessMetalnessColor"] = {bgfx::UniformType::Vec4, {1.f, 1.f, 0.f, -1.f}};
-		mat.values["uSelfColor"] = {bgfx::UniformType::Vec4, {0.f, 0.f, 0.f, -1.f}};
-
-		object.SetMaterial(primitiveID, std::move(mat));
-		object.SetMaterialName(primitiveID, "dummy_mat");
-	}
 }
 
 //
-static void ExportObject(const Model &model, const Node &gltf_node, hg::Node &node, hg::Scene &scene, const Config &config, hg::PipelineResources &resources, const int &gltf_id_node) {
+static void ExportObject(const Model &model, const Node &gltf_node, hg::Node &node, hg::Scene &scene, const Config &config, hg::PipelineResources &resources,
+	const int &gltf_id_node) {
+
+	// if there is no mesh or no skin, nothing inside object
+	if (gltf_node.mesh < 0 && gltf_node.skin < 0)
+		return;
+
 	hg::Geometry geo;
 	std::string path = node.GetName();
-	std::string ids;
+	std::string primitiveIds;
 	auto object = scene.CreateObject();
 
-	// check path
+	// check path geo
 	if (gltf_node.mesh >= 0) {
 		auto gltf_mesh = model.meshes[gltf_node.mesh];
-		if(!gltf_mesh.name.empty())
+		if (!gltf_mesh.name.empty())
 			path = hg::CleanFileName(hg::CutFileExtension(gltf_mesh.name));
-		for (auto meshPrimitive : gltf_mesh.primitives)
-			// add id index to be sure to have this one particular geo
-			ids += std::to_string(meshPrimitive.indices) + "_";
+		for (auto meshPrimitive : gltf_mesh.primitives) {
+			// add attribute ids to be sure to have this one particular geo and material
+			for (const auto &a : meshPrimitive.attributes)
+				primitiveIds += std::to_string(a.second) + "_";
+			primitiveIds += std::to_string(meshPrimitive.indices) + "_";
+		}
 	}
 
-	// check if the geo path already was saved and is different from the ids list
-	auto already_saved_geo_itr = already_saved_geo_with_primitives_ids.find(path);
-	if(already_saved_geo_itr != already_saved_geo_with_primitives_ids.end()){
+	primitiveIds += "_" + std::to_string(gltf_node.skin);
+	bool found_geo = false;
 
-		auto it = find(already_saved_geo_itr->second.ids.begin(), already_saved_geo_itr->second.ids.end(), ids);
-		// reuse the object on the geo
-		if (it == already_saved_geo_itr->second.ids.end()) {
-			hg::warn(hg::format("BEWARE a geometry with the name %1 already exists but with a different sets of primitives\nSetup another path name").arg(path));
+	// if there is set of primitive ids existing
+	auto primitiveIdsToGeoPath_itr = primitiveIdsToGeoPath.find(primitiveIds);
+	if (primitiveIdsToGeoPath_itr != primitiveIdsToGeoPath.end()) {
+		// get path to geo
+		path = primitiveIdsToGeoPath_itr->second;
+		GetOutputPath(path, config.base_output_path, path, {}, "geo", config.import_policy_geometry);
+		path = MakeRelativeResourceName(path, config.prj_path, config.prefix);
+	} else {
+		// export geo mesh
+		if (gltf_node.mesh >= 0) {
+			auto gltf_mesh = model.meshes[gltf_node.mesh];
 
-			path += hg::format("%1").arg( already_saved_geo_itr->second.ids.size()).str();
-			already_saved_geo_itr->second.ids.push_back(ids);
-			already_saved_geo_with_primitives_ids[path] = {object, {ids}};
-		} else {
-			int index = it - already_saved_geo_itr->second.ids.begin();
-			if (index)
-				already_saved_geo_itr = already_saved_geo_with_primitives_ids.find(path + hg::format("%1").arg(index).str());
+			int primitiveId = 0;
+			for (auto meshPrimitive : gltf_mesh.primitives) {
+				ExportGeometry(model, meshPrimitive, primitiveId, config, resources, geo);
+				++primitiveId;
+			}
 
-			// reuse the object on the geo
-		if (gltf_node.mesh >= 0 || gltf_node.skin >= 0)
-			node.SetObject(already_saved_geo_itr->second.object);
-	
-		scene.DestroyObject(object);
-		return;
+			const auto vtx_to_pol = hg::ComputeVertexToPolygon(geo);
+			auto vtx_normal = hg::ComputeVertexNormal(geo, vtx_to_pol, hg::Deg(45.f));
+
+			// recalculate normals
+			bool recalculate_normal = config.recalculate_normal;
+			if (geo.normal.empty())
+				recalculate_normal = true;
+
+			if (recalculate_normal) {
+				hg::debug("    - Recalculate normals");
+				geo.normal = vtx_normal;
+			} else
+				vtx_normal = geo.normal;
+
+			// recalculate tangent frame
+			bool recalculate_tangent = config.recalculate_tangent;
+			if (geo.tangent.empty())
+				recalculate_tangent = true;
+			else if (geo.tangent.size() != geo.normal.size()) { // be sure tangent is same size of normal, some strange things can happen with multiple submesh
+				hg::debug("CAREFUL Normal and Tangent are not the same size, can happen if you have submesh (some with tangent and some without)");
+				geo.tangent.resize(geo.normal.size());
+			}
+
+			if (recalculate_tangent) {
+				hg::debug("    - Recalculate tangent frames (MikkT)");
+				if (!geo.uv[0].empty())
+					geo.tangent = hg::ComputeVertexTangent(geo, vtx_normal, 0, hg::Deg(45.f));
+			}
+		}
+		// find bind pose in the skins
+		if (gltf_node.skin >= 0) {
+			hg::debug(hg::format("Exporting geometry skin"));
+
+			const auto &skin = model.skins[gltf_node.skin];
+			geo.bind_pose.resize(skin.joints.size());
+
+			const auto attribAccessor = model.accessors[skin.inverseBindMatrices];
+			const auto &bufferView = model.bufferViews[attribAccessor.bufferView];
+			const auto &buffer = model.buffers[bufferView.buffer];
+			const auto dataPtr = buffer.data.data() + bufferView.byteOffset + attribAccessor.byteOffset;
+			const auto byte_stride = attribAccessor.ByteStride(bufferView);
+			const auto count = attribAccessor.count;
+
+			switch (attribAccessor.type) {
+				case TINYGLTF_TYPE_MAT4: {
+					switch (attribAccessor.componentType) {
+						case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+						case TINYGLTF_COMPONENT_TYPE_FLOAT: {
+							floatArray<float> value(arrayAdapter<float>(dataPtr, count * 16, sizeof(float)));
+
+							for (size_t k{0}; k < count; ++k) {
+								hg::Mat4 m_InverseBindMatrices(value[k * 16], value[k * 16 + 1], value[k * 16 + 2], value[k * 16 + 4], value[k * 16 + 5],
+									value[k * 16 + 6], value[k * 16 + 8], value[k * 16 + 9], value[k * 16 + 10], value[k * 16 + 12], value[k * 16 + 13],
+									value[k * 16 + 14]);
+
+								m_InverseBindMatrices = hg::InverseFast(m_InverseBindMatrices);
+
+								auto p = hg::GetT(m_InverseBindMatrices);
+								p.z = -p.z;
+								auto r = hg::GetR(m_InverseBindMatrices);
+								r.x = -r.x;
+								r.y = -r.y;
+								auto s = hg::GetS(m_InverseBindMatrices);
+
+								geo.bind_pose[k] = hg::InverseFast(hg::TransformationMat4(p, r, s));
+							}
+						} break;
+						default:
+							hg::error("Unhandeled component type for inverseBindMatrices");
+					}
+				} break;
+				default:
+					hg::error("Unhandeled MAT4 type for inverseBindMatrices");
+			}
+		}
+
+		// check if name already taken
+		auto geoPathOcurrence_itr = geoPathOcurrence.find(path);
+		if (geoPathOcurrence_itr != geoPathOcurrence.end()) {
+			geoPathOcurrence_itr->second++;
+			path += hg::format("%1").arg(geoPathOcurrence_itr->second).str();
+		} else
+			geoPathOcurrence[path] = 0;
+
+		// save it to geo to keep
+		primitiveIdsToGeoPath[primitiveIds] = path;
+
+		if (gltf_node.mesh >= 0 || gltf_node.skin >= 0) {
+			if (GetOutputPath(path, config.base_output_path, path, {}, "geo", config.import_policy_geometry)) {
+				hg::debug(hg::format("Export geometry to '%1'").arg(path));
+				hg::SaveGeometryToFile(path.c_str(), geo);
+			}
+
+			path = MakeRelativeResourceName(path, config.prj_path, config.prefix);
+		}
 	}
-	} else
-		already_saved_geo_with_primitives_ids[path] = {object, {ids}};
 
+	// add materials
 	if (gltf_node.mesh >= 0) {
 		auto gltf_mesh = model.meshes[gltf_node.mesh];
-
 		int primitiveId = 0;
-
-		hg::debug(hg::format("Exporting geometry '%1'").arg(path));
-
 		for (auto meshPrimitive : gltf_mesh.primitives) {
-			ExportGeometry(model, meshPrimitive, primitiveId, object, config, resources, geo);
+			object.SetMaterialCount(primitiveId + 1);
+
+			// MATERIALS
+			// 1 material per primitive
+			if (meshPrimitive.material >= 0) {
+				auto gltf_mat = model.materials[meshPrimitive.material];
+				auto mat = ExportMaterial(model, gltf_mat, config, resources);
+				if (geo.skin.size())
+					mat.flags |= hg::MF_EnableSkinning;
+
+				object.SetMaterial(primitiveId, std::move(mat));
+				object.SetMaterialName(primitiveId, gltf_mat.name.empty() ? hg::format("mat_%1").arg(primitiveId) : gltf_mat.name);
+
+			} else { // make a dummy material to see the object in the engine
+				hg::debug(hg::format("    - Has no material, set a dummy one"));
+
+				hg::Material mat;
+				std::string shader;
+
+				shader = "core/shader/pbr.hps";
+
+				if (!config.shader.empty())
+					shader = config.shader; // use override
+
+				hg::debug(hg::format("    - Using pipeline shader '%1'").arg(shader));
+				mat.program = resources.programs.Add(shader.c_str(), {});
+
+				mat.values["uBaseOpacityColor"] = {bgfx::UniformType::Vec4, {1.f, 1.f, 1.f, 1.f}};
+				mat.values["uOcclusionRoughnessMetalnessColor"] = {bgfx::UniformType::Vec4, {1.f, 1.f, 0.f, -1.f}};
+				mat.values["uSelfColor"] = {bgfx::UniformType::Vec4, {0.f, 0.f, 0.f, -1.f}};
+
+				object.SetMaterial(primitiveId, std::move(mat));
+				object.SetMaterialName(primitiveId, "dummy_mat");
+			}
 			++primitiveId;
 		}
-
-		const auto vtx_to_pol = hg::ComputeVertexToPolygon(geo);
-		auto vtx_normal = hg::ComputeVertexNormal(geo, vtx_to_pol, hg::Deg(45.f));
-
-		// recalculate normals
-		bool recalculate_normal = config.recalculate_normal;
-		if (geo.normal.empty())
-			recalculate_normal = true;
-
-		if (recalculate_normal) {
-			hg::debug("    - Recalculate normals");
-			geo.normal = vtx_normal;
-		} else
-			vtx_normal = geo.normal;
-
-		// recalculate tangent frame
-		bool recalculate_tangent = config.recalculate_tangent;
-		if (geo.tangent.empty())
-			recalculate_tangent = true;
-		else if (geo.tangent.size() != geo.normal.size()) { // be sure tangent is same size of normal, some strange things can happen with multiple submesh
-			hg::debug("CAREFUL Normal and Tangent are not the same size, can happen if you have submesh (some with tangent and some without)");
-			geo.tangent.resize(geo.normal.size());
-		}
-
-		if (recalculate_tangent) {
-			hg::debug("    - Recalculate tangent frames (MikkT)");
-			if (!geo.uv[0].empty())
-				geo.tangent = hg::ComputeVertexTangent(geo, vtx_normal, 0, hg::Deg(45.f));
-		}
 	}
 
-	// find bind pose in the skins
-	if (gltf_node.skin >= 0) {
-		const auto& skin = model.skins[gltf_node.skin];
-		geo.bind_pose.resize(skin.joints.size());
-
-		const auto attribAccessor = model.accessors[skin.inverseBindMatrices];
-		const auto& bufferView = model.bufferViews[attribAccessor.bufferView];
-		const auto& buffer = model.buffers[bufferView.buffer];
-		const auto dataPtr = buffer.data.data() + bufferView.byteOffset + attribAccessor.byteOffset;
-		const auto byte_stride = attribAccessor.ByteStride(bufferView);
-		const auto count = attribAccessor.count;
-
-		switch (attribAccessor.type) {
-		case TINYGLTF_TYPE_MAT4: {
-			switch (attribAccessor.componentType) {
-			case TINYGLTF_COMPONENT_TYPE_DOUBLE:
-			case TINYGLTF_COMPONENT_TYPE_FLOAT: {
-				floatArray<float> value(arrayAdapter<float>(dataPtr, count*16, sizeof(float)));
-
-				for (size_t k{ 0 }; k < count; ++k) {
-					hg::Mat4 m_InverseBindMatrices(value[k * 16], value[k * 16 + 1], value[k * 16 + 2], value[k * 16 + 4], value[k * 16 + 5],
-						value[k * 16 + 6], value[k * 16 + 8], value[k * 16 + 9], value[k * 16 + 10], value[k * 16 + 12], value[k * 16 + 13],
-						value[k * 16 + 14]);
-
-					m_InverseBindMatrices = hg::InverseFast(m_InverseBindMatrices);
-
-					auto p = hg::GetT(m_InverseBindMatrices);
-					p.z = -p.z;
-					auto r = hg::GetR(m_InverseBindMatrices);
-					r.x = -r.x;
-					r.y = -r.y;
-					auto s = hg::GetS(m_InverseBindMatrices);
-				
-					geo.bind_pose[k] = hg::InverseFast(hg::TransformationMat4(p, r, s));
-				}
-			} break;
-			default:
-				hg::error("Unhandeled component type for inverseBindMatrices");
-			}
-		} break;
-		default:
-			hg::error("Unhandeled MAT4 type for inverseBindMatrices");
-		}
-	}
-
-	// save geo
+	// set object
 	if (gltf_node.mesh >= 0 || gltf_node.skin >= 0) {
 		node.SetObject(object);
-		if (GetOutputPath(path, config.base_output_path, path, {}, "geo", config.import_policy_geometry)) {
-			hg::debug(hg::format("    - Saving to '%1'").arg(path));
-			hg::SaveGeometryToFile(path.c_str(), geo);
-		}
-
-		path = MakeRelativeResourceName(path, config.prj_path, config.prefix);
-
 		object.SetModelRef(resources.models.Add(path.c_str(), {}));
-	} else{
-		scene.DestroyObject(object);
 	}
 }
 
@@ -1353,7 +1337,7 @@ static hg::Node ExportNode(const Model &model, const int &gltf_id_node, hg::Scen
 
 	// check if disable
 	auto KHR_nodes_disable = gltf_node.extensions.find("KHR_nodes_disable");
-	if (KHR_nodes_disable != gltf_node.extensions.end()){
+	if (KHR_nodes_disable != gltf_node.extensions.end()) {
 		if (KHR_nodes_disable->second.Has("visible") && KHR_nodes_disable->second.Get("visible").Get<bool>() == false)
 			node.Disable();
 	}
@@ -1420,17 +1404,17 @@ bool LoadImageDataEx(Image *image, const int image_idx, std::string *err, std::s
 	(void)user_data;
 	(void)warn;
 
-	Config* config = static_cast<Config*>(user_data);
+	Config *config = static_cast<Config *>(user_data);
 
 	std::string dst_path;
 
 	if (image->uri.empty()) { // copy the buffer into image
-		std::string mimeType = image->mimeType.replace(image->mimeType.find("image/", 0), std::string("image/").size(), ""); 
-		std::string name = image->name.empty() ? hg::format("%1").arg(image_idx): image->name;
+		std::string mimeType = image->mimeType.replace(image->mimeType.find("image/", 0), std::string("image/").size(), "");
+		std::string name = image->name.empty() ? hg::format("%1").arg(image_idx) : image->name;
 
 		if (GetOutputPath(dst_path, config->base_output_path, name, {}, mimeType, config->import_policy_texture)) {
 			auto myfile = std::fstream(dst_path, std::ios::out | std::ios::binary);
-			myfile.write((const char*)bytes, size);
+			myfile.write((const char *)bytes, size);
 			myfile.close();
 		}
 	} else {
@@ -1453,7 +1437,7 @@ bool LoadImageDataEx(Image *image, const int image_idx, std::string *err, std::s
 
 		if (GetOutputPath(dst_path, config->base_output_path, hg::GetFileName(src_path), {}, hg::GetFileExtension(src_path), config->import_policy_texture)) {
 			auto myfile = std::fstream(dst_path, std::ios::out | std::ios::binary);
-			myfile.write((const char*)bytes, size);
+			myfile.write((const char *)bytes, size);
 			myfile.close();
 		}
 	}
@@ -1466,7 +1450,6 @@ static bool ImportGltfScene(const std::string &path, const Config &config) {
 
 	if (config.base_output_path.empty())
 		return false;
-
 	// create output directory if missing
 	if (hg::Exists(config.base_output_path.c_str())) {
 		if (!hg::IsDir(config.base_output_path.c_str()))
@@ -1483,7 +1466,7 @@ static bool ImportGltfScene(const std::string &path, const Config &config) {
 	std::string warn;
 
 	// set our own save picture
-	loader.SetImageLoader(LoadImageDataEx, const_cast<Config*>(&config));
+	loader.SetImageLoader(LoadImageDataEx, const_cast<Config *>(&config));
 	bool ret;
 	if (hg::tolower(hg::GetFileExtension(path)) == "gltf")
 		ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
@@ -1533,8 +1516,9 @@ static bool ImportGltfScene(const std::string &path, const Config &config) {
 
 		// add default pbr map
 		scene.environment.brdf_map = resources.textures.Add("core/pbr/brdf.dds", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
-		scene.environment.irradiance_map = resources.textures.Add("core/pbr/probe.hdr.irradiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
-		scene.environment.radiance_map = resources.textures.Add("core/pbr/probe.hdr.radiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
+		scene.environment.probe = {};
+		scene.environment.probe.irradiance_map = resources.textures.Add("core/pbr/probe.hdr.irradiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
+		scene.environment.probe.radiance_map = resources.textures.Add("core/pbr/probe.hdr.radiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
 
 		std::string out_path;
 		if (GetOutputPath(out_path, config.base_output_path,

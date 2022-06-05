@@ -15,7 +15,7 @@ Start the Lua interpreter and type `hg = require("harfang")`, you should get an 
 
 ```text
 Harfang 2.0.0 for Lua 5.3 on windows-x64 (build ba08463ee9e6c0c93960230fb880c1d9b230610d Sep 30 2020 16:08:22)
-See http://harfang3d.com/license for licensing terms
+See https://www.harfang3d.com/license for licensing terms
 ```
 
 ## First Program

@@ -36,6 +36,7 @@ setup(
 	# See https://pypi.python.org/pypi?%3Aaction=list_classifiers
 	classifiers=[
 		'Intended Audience :: Developers',
+		'Intended Audience :: Science/Research',
 
 		'Topic :: Software Development',
 		'Topic :: Software Development :: Libraries :: Application Frameworks',

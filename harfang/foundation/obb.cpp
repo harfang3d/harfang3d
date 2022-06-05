@@ -18,9 +18,9 @@ MinMax MinMaxFromOBB(const OBB &obb) {
 		{xtd.x, xtd.y, -xtd.z}};
 
 	MinMax mm;
-	mm.mx = Abs(smt[0] * obb.rot);
+	mm.mx = Abs(obb.rot * smt[0]);
 	for (int n = 1; n < 4; ++n)
-		mm.mx = Max(mm.mx, Abs(smt[n] * obb.rot));
+		mm.mx = Max(mm.mx, Abs(obb.rot * smt[n]));
 	mm.mn = Reverse(mm.mx);
 
 	mm.mn += obb.pos;
@@ -32,7 +32,7 @@ OBB TransformOBB(const OBB &obb, const Mat4 &m) {
 	Vec3 pos, scl;
 	Mat3 rot;
 	Decompose(m, &pos, &rot, &scl);
-	return {obb.pos * rot + pos, obb.scl * scl, obb.rot * rot};
+	return {rot * obb.pos + pos, scl * obb.scl, rot * obb.rot};
 }
 
 } // namespace hg

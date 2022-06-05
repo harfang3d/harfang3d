@@ -79,7 +79,7 @@ json LoadJson(const Reader &ir, const Handle &h, bool *result) {
 		js = json::parse(LoadString(ir, h));
 		if (result)
 			*result = true;
-	} catch (const json::parse_error &e) { error(format("JSON error: %1").arg(e.what())); }
+	} catch (const json::parse_error &e) { warn(format("JSON error: %1").arg(e.what())); }
 
 	return js;
 }

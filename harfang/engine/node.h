@@ -72,6 +72,8 @@ struct CameraZRange {
 	float znear{0.01f}, zfar{1000.f};
 };
 
+/// Add this component to a Node to implement the camera aspect.
+/// Create a camera component with Scene_CreateCamera, use CreateCamera to create a complete camera node.
 struct Camera { // 16B on 64 bit
 	bool IsValid() const;
 	explicit operator bool() const { return IsValid(); }
@@ -207,7 +209,12 @@ struct Collision { // 16B on 64 bit
 	void SetType(CollisionType type);
 
 	Mat4 GetLocalTransform() const;
-	void SetLocalTransform(Mat4 m);
+	void SetLocalTransform(const Mat4 &local);
+
+	Vec3 GetPosition() const;
+	void SetPosition(const Vec3 &pos);
+	Vec3 GetRotation() const;
+	void SetRotation(const Vec3 &rot);
 	float GetMass() const;
 	void SetMass(float mass);
 	float GetRadius() const;

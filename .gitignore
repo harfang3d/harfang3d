@@ -5,3 +5,6 @@ build
 **/.vscode/**
 /tools/fbx_converter/tests/config.h
 /harfang/tests/data_compiled/**
+*.egg-info
+dist
+commit_id

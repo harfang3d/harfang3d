@@ -38,6 +38,7 @@ struct ProfilerFrame {
 //
 using ProfilerSectionIndex = size_t;
 
+/// Begin a named profiler section. Call EndProfilerSection to end the section.
 ProfilerSectionIndex BeginProfilerSection(const std::string &name, const std::string &section_details = {});
 void EndProfilerSection(ProfilerSectionIndex section_index);
 

@@ -7,12 +7,15 @@
 
 #include "foundation/format.h"
 #include "foundation/log.h"
-#include <foundation/string.h>
+#include "foundation/matrix4.h"
+#include "foundation/string.h"
 
 #include <json/json.hpp>
 #include <set>
 
 namespace hg {
+
+// [EJ] note: SaveComponent/LoadComponent are friend of class Scene and cannot be made static (breaks clang/gcc builds)
 
 void SaveComponent(const Scene::Transform_ *data_, json &js) {
 	js["pos"] = data_->TRS.pos;
@@ -48,7 +51,7 @@ void SaveComponent(const Scene::Object_ *data_, json &js, const PipelineResource
 	js["material_infos"] = material_infos;
 
 	json bones = json::array();
-	for (auto bone : data_->bones)
+	for (const auto &bone : data_->bones)
 		bones.push_back(bone);
 	js["bones"] = bones;
 }
@@ -77,10 +80,19 @@ void SaveComponent(const Scene::RigidBody_ *data_, json &js) {
 	js["rolling_friction"] = unpack_float(data_->rolling_friction);
 }
 
+void SaveComponent(const Scene::Collision_ *data_, json &js) {
+	js["type"] = data_->type;
+	js["mass"] = data_->mass;
+	js["path"] = data_->resource_path;
+	js["pos"] = data_->trs.pos;
+	js["rot"] = data_->trs.rot;
+	js["scl"] = data_->trs.scl;
+}
+
 void SaveComponent(const Scene::Script_ *data_, json &js) {
 	js["path"] = data_->path;
 
-	for (auto &i : data_->params) {
+	for (const auto &i : data_->params) {
 		if (i.second.type == SPT_Bool)
 			js["parameters"][i.first] = {{"type", "bool"}, {"value", i.second.bv}};
 		else if (i.second.type == SPT_Int)
@@ -101,12 +113,16 @@ void SaveComponent(const Scene::Instance_ *data_, json &js) {
 	}
 }
 
-void SaveComponent(const Scene::Collision_ *data_, json &js) {
-	js["type"] = data_->type;
-	js["mass"] = data_->mass;
-	js["size"] = data_->size;
-	js["path"] = data_->resource_path;
-	js["m"] = data_->m;
+static void SaveProbe(const Probe &probe, json &js, const PipelineResources &resources) {
+	js["irradiance_map"] = resources.textures.GetName(probe.irradiance_map);
+	js["radiance_map"] = resources.textures.GetName(probe.radiance_map);
+
+	js["type"] = probe.type;
+	js["parallax"] = unpack_float(probe.parallax);
+
+	js["pos"] = probe.trs.pos;
+	js["rot"] = probe.trs.rot;
+	js["scl"] = probe.trs.scl;
 }
 
 //
@@ -132,7 +148,7 @@ void LoadComponent(Scene::Object_ *data_, const json &js, const Reader &deps_ir,
 	if (!name.empty())
 		data_->model = SkipLoadOrQueueModelLoad(deps_ir, deps_ip, name.c_str(), resources, queue_model_loads, do_not_load_resources);
 
-	const auto i_mats = js.find("materials");
+	const auto &i_mats = js.find("materials");
 	if (i_mats != std::end(js)) {
 		const auto &mats = *i_mats;
 		const auto mat_count = mats.size();
@@ -141,7 +157,7 @@ void LoadComponent(Scene::Object_ *data_, const json &js, const Reader &deps_ir,
 			data_->materials[i] = LoadMaterial(mats[i], deps_ir, deps_ip, resources, pipeline, queue_texture_loads, do_not_load_resources);
 	}
 
-	const auto i_mat_infos = js.find("material_infos");
+	const auto &i_mat_infos = js.find("material_infos");
 	if (i_mat_infos != std::end(js)) {
 		const auto &mat_infos = *i_mat_infos;
 		const auto mat_count = data_->materials.size();
@@ -153,7 +169,7 @@ void LoadComponent(Scene::Object_ *data_, const json &js, const Reader &deps_ir,
 		}
 	}
 
-	const auto i_bones = js.find("bones");
+	const auto &i_bones = js.find("bones");
 	if (i_bones != std::end(js)) {
 		const auto &bones = *i_bones;
 		const auto bone_count = bones.size();
@@ -197,6 +213,15 @@ void LoadComponent(Scene::RigidBody_ *data_, const json &js) {
 		data_->rolling_friction = pack_float<uint8_t>(js.at("rolling_friction").get<float>());
 }
 
+void LoadComponent(Scene::Collision_ *data_, const json &js) {
+	data_->type = js["type"];
+	data_->mass = js["mass"];
+	data_->resource_path = js["path"].get<std::string>();
+	data_->trs.pos = js["pos"].get<Vec3>();
+	data_->trs.rot = js["rot"].get<Vec3>();
+	data_->trs.scl = js["scl"].get<Vec3>();
+}
+
 void LoadComponent(Scene::Script_ *data_, const json &js) {
 	data_->path = js["path"].get<std::string>();
 
@@ -236,12 +261,20 @@ void LoadComponent(Scene::Instance_ *data_, const json &js) {
 	}
 }
 
-void LoadComponent(Scene::Collision_ *data_, const json &js) {
-	data_->type = js["type"];
-	data_->mass = js["mass"];
-	data_->size = js["size"];
-	data_->resource_path = js["path"].get<std::string>();
-	data_->m = js["m"];
+static void LoadProbe(Probe &probe, const json &js, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources, bool queue_texture_loads,
+	bool do_not_load_resources, bool silent) {
+	const auto irradiance_map = js["irradiance_map"].get<std::string>();
+	const auto radiance_map = js["radiance_map"].get<std::string>();
+
+	probe.irradiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, irradiance_map.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
+	probe.radiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, radiance_map.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
+
+	probe.type = js["type"];
+	probe.parallax = pack_float<uint8_t>(js["parallax"].get<float>());
+
+	probe.trs.pos = js["pos"].get<Vec3>();
+	probe.trs.rot = js["rot"].get<Vec3>();
+	probe.trs.scl = js["scl"].get<Vec3>();
 }
 
 //
@@ -271,10 +304,10 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 
 	//
 	std::array<std::set<ComponentRef>, 5> used_component_refs;
-	std::set<ComponentRef> used_script_refs, used_instance_refs;
+	std::set<ComponentRef> used_script_refs, used_instance_refs, used_collision_refs;
 
 	if (save_flags & LSSF_Nodes)
-		for (const auto ref : node_refs)
+		for (const auto &ref : node_refs)
 			if (const auto *node_ = GetNode_(ref)) {
 				if (transforms.is_valid(node_->components[NCI_Transform]))
 					used_component_refs[NCI_Transform].insert(node_->components[NCI_Transform]);
@@ -288,9 +321,16 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 					used_component_refs[NCI_RigidBody].insert(node_->components[NCI_RigidBody]);
 
 				{
+					const auto &i = node_collisions.find(ref);
+					if (i != std::end(node_collisions))
+						for (const auto &col_ref : i->second)
+							used_collision_refs.insert(col_ref);
+				}
+
+				{
 					const auto &i = node_scripts.find(ref);
 					if (i != std::end(node_scripts))
-						for (const auto script_ref : i->second)
+						for (const auto &script_ref : i->second)
 							used_script_refs.insert(script_ref);
 				}
 
@@ -302,13 +342,13 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 			}
 
 	if (save_flags & LSSF_Scene)
-		for (auto ref : scene_scripts)
+		for (auto &ref : scene_scripts)
 			used_script_refs.insert(ref); // flag scene scripts as in-use
 
 	//
 	if (!used_component_refs[NCI_Transform].empty()) {
 		auto &js_trsf = js["transforms"];
-		for (const auto ref : used_component_refs[NCI_Transform]) {
+		for (const auto &ref : used_component_refs[NCI_Transform]) {
 			if (transforms.is_valid(ref)) {
 				json js_comp;
 				SaveComponent(&transforms[ref.idx], js_comp);
@@ -319,7 +359,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 
 	if (!used_component_refs[NCI_Camera].empty()) {
 		auto &js_cams = js["cameras"];
-		for (const auto ref : used_component_refs[NCI_Camera]) {
+		for (const auto &ref : used_component_refs[NCI_Camera]) {
 			if (cameras.is_valid(ref)) {
 				json js_comp;
 				SaveComponent(&cameras[ref.idx], js_comp);
@@ -330,7 +370,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 
 	if (!used_component_refs[NCI_Object].empty()) {
 		auto &js_objs = js["objects"];
-		for (const auto ref : used_component_refs[NCI_Object]) {
+		for (const auto &ref : used_component_refs[NCI_Object]) {
 			if (objects.is_valid(ref)) {
 				json js_comp;
 				SaveComponent(&objects[ref.idx], js_comp, resources);
@@ -341,7 +381,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 
 	if (!used_component_refs[NCI_Light].empty()) {
 		auto &js_lgts = js["lights"];
-		for (const auto ref : used_component_refs[NCI_Light]) {
+		for (const auto &ref : used_component_refs[NCI_Light]) {
 			if (lights.is_valid(ref)) {
 				json js_comp;
 				SaveComponent(&lights[ref.idx], js_comp);
@@ -352,7 +392,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 
 	if (!used_component_refs[NCI_RigidBody].empty()) {
 		auto &js_bodies = js["rigid_bodies"];
-		for (const auto ref : used_component_refs[NCI_RigidBody]) {
+		for (const auto &ref : used_component_refs[NCI_RigidBody]) {
 			if (rigid_bodies.is_valid(ref)) {
 				json js_comp;
 				SaveComponent(&rigid_bodies[ref.idx], js_comp);
@@ -361,9 +401,20 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 		}
 	}
 
+	if (!used_collision_refs.empty()) {
+		auto &js_cols = js["collisions"];
+		for (const auto &ref : used_collision_refs) {
+			if (collisions.is_valid(ref)) {
+				json js_comp;
+				SaveComponent(&collisions[ref.idx], js_comp);
+				js_cols.push_back(js_comp);
+			}
+		}
+	}
+
 	if (!used_script_refs.empty()) {
 		auto &js_scripts = js["scripts"];
-		for (const auto ref : used_script_refs) {
+		for (const auto &ref : used_script_refs) {
 			if (scripts.is_valid(ref)) {
 				json js_comp;
 				SaveComponent(&scripts[ref.idx], js_comp);
@@ -374,7 +425,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 
 	if (!used_instance_refs.empty()) {
 		auto &js_inss = js["instances"];
-		for (const auto ref : used_instance_refs) {
+		for (const auto &ref : used_instance_refs) {
 			if (instances.is_valid(ref)) {
 				json js_comp;
 				SaveComponent(&instances[ref.idx], js_comp);
@@ -425,13 +476,30 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 				js_node["components"] = idxs;
 
 				{
+					const auto &c = node_collisions.find(ref);
+
+					if (c != std::end(node_collisions)) {
+						auto &js_node_cols = js_node["collisions"];
+
+						for (const auto col_ref : c->second) {
+							const auto &i = used_collision_refs.find(col_ref);
+
+							json col;
+							col["idx"] = std::distance(std::begin(used_collision_refs), i);
+
+							js_node_cols.push_back(col);
+						}
+					}
+				}
+
+				{
 					const auto &c = node_scripts.find(ref);
 
 					if (c != std::end(node_scripts)) {
 						auto &js_node_scripts = js_node["scripts"];
 
-						for (const auto script_ref : c->second) {
-							const auto i = used_script_refs.find(script_ref);
+						for (const auto &script_ref : c->second) {
+							const auto &i = used_script_refs.find(script_ref);
 
 							json script;
 							script["idx"] = std::distance(std::begin(used_script_refs), i);
@@ -444,7 +512,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 				{
 					const auto &c = node_instance.find(ref);
 					if (c != std::end(node_instance)) {
-						const auto i = used_instance_refs.find(c->second);
+						const auto &i = used_instance_refs.find(c->second);
 						js_node["instance"] = std::distance(std::begin(used_instance_refs), i);
 					}
 				}
@@ -464,10 +532,8 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 		env["fog_far"] = environment.fog_far;
 		env["fog_color"] = environment.fog_color;
 
-		if (environment.irradiance_map != InvalidTextureRef)
-			env["irradiance_map"] = resources.textures.GetName(environment.irradiance_map);
-		if (environment.radiance_map != InvalidTextureRef)
-			env["radiance_map"] = resources.textures.GetName(environment.radiance_map);
+		SaveProbe(environment.probe, env["probe"], resources);
+
 		if (environment.brdf_map != InvalidTextureRef)
 			env["brdf_map"] = resources.textures.GetName(environment.brdf_map);
 
@@ -535,7 +601,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 
 	if (save_flags & LSSF_KeyValues) {
 		auto &kv = js["key_values"];
-		for (auto i : key_values)
+		for (const auto &i : key_values)
 			kv[i.first] = i.second;
 	}
 
@@ -545,7 +611,7 @@ bool Scene::Save_json(json &js, const PipelineResources &resources, uint32_t sav
 bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
 	const PipelineInfo &pipeline, LoadSceneContext &ctx, uint32_t load_flags) {
 	if (js.empty()) {
-		error(format("Cannot load scene '%1', empty JSON").arg(name));
+		warn(format("Cannot load scene '%1', empty JSON").arg(name));
 		return false;
 	}
 
@@ -624,6 +690,21 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 			for (const auto &j : *i) {
 				const auto ref = rigid_body_refs[n++] = CreateRigidBody().ref;
 				LoadComponent(&rigid_bodies[ref.idx], j);
+			}
+		}
+	}
+
+	std::vector<ComponentRef> col_refs;
+	{
+		const auto &i = js.find("collisions");
+		if (i != std::end(js)) {
+			const auto col_count = i->size();
+			col_refs.resize(col_count);
+
+			int n = 0;
+			for (const auto &j : *i) {
+				const auto ref = col_refs[n++] = CreateCollision().ref;
+				LoadComponent(&collisions[ref.idx], j);
 			}
 		}
 	}
@@ -708,12 +789,31 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 			}
 
 			{
+				const auto &js_cols = js_node.find("collisions");
+
+				if (js_cols != std::end(js_node)) {
+					const auto node_col_count = js_cols->size();
+					node_collisions[node.ref].reserve(node_col_count);
+					for (const auto &js_col : *js_cols) {
+						const auto col_idx = js_col["idx"].get<ComponentRef>().idx;
+
+						if (col_idx != 0xffffffff) {
+							const auto col_ref = col_refs[col_idx];
+							node_collisions[node.ref].push_back(col_ref);
+						} else {
+							node_collisions[node.ref].push_back(InvalidComponentRef);
+						}
+					}
+				}
+			}
+
+			{
 				const auto &js_scripts = js_node.find("scripts");
 
 				if (js_scripts != std::end(js_node)) {
 					const auto node_script_count = js_scripts->size();
 					node_scripts[node.ref].reserve(node_script_count);
-					for (auto &js_script : *js_scripts) {
+					for (const auto &js_script : *js_scripts) {
 						const auto script_idx = js_script["idx"].get<ComponentRef>().idx;
 
 						if (script_idx != 0xffffffff) {
@@ -785,20 +885,37 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 				environment.fog_far = (*js_env)["fog_far"];
 				environment.fog_color = (*js_env)["fog_color"];
 
-				auto i = js_env->find("irradiance_map");
-				if (i != std::end(*js_env))
-					environment.irradiance_map = SkipLoadOrQueueTextureLoad(
-						deps_ir, deps_ip, i->get<std::string>().c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
+				{
+					const auto &i = js_env->find("probe");
 
-				i = js_env->find("radiance_map");
-				if (i != std::end(*js_env))
-					environment.radiance_map = SkipLoadOrQueueTextureLoad(
-						deps_ir, deps_ip, i->get<std::string>().c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
+					if (i != std::end(*js_env)) {
+						LoadProbe(environment.probe, *i, deps_ir, deps_ip, resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources,
+							load_flags & LSSF_Silent);
+					} else {
+						environment.probe = {};
 
-				i = js_env->find("brdf_map");
-				if (i != std::end(*js_env))
-					environment.brdf_map = SkipLoadOrQueueTextureLoad(
-						deps_ir, deps_ip, i->get<std::string>().c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources);
+						{
+							const auto &i = js_env->find("irradiance_map");
+							if (i != std::end(*js_env))
+								environment.probe.irradiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, i->get<std::string>().c_str(), resources,
+									load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, load_flags & LSSF_Silent);
+						}
+
+						{
+							const auto &i = js_env->find("radiance_map");
+							if (i != std::end(*js_env))
+								environment.probe.radiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, i->get<std::string>().c_str(), resources,
+									load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, load_flags & LSSF_Silent);
+						}
+					}
+				}
+
+				{
+					const auto &i = js_env->find("brdf_map");
+					if (i != std::end(*js_env))
+						environment.brdf_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, i->get<std::string>().c_str(), resources,
+							load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, load_flags & LSSF_Silent);
+				}
 			}
 		}
 
@@ -878,7 +995,7 @@ bool Scene::Load_json(const json &js, const char *name, const Reader &deps_ir, c
 		const auto &js_key_values = js.find("key_values");
 
 		if (js_key_values != std::end(js))
-			for (auto i : js_key_values->items())
+			for (const auto &i : js_key_values->items())
 				key_values[i.key()] = i.value().get<std::string>();
 	}
 

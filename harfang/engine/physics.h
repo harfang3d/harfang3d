@@ -12,6 +12,7 @@ namespace hg {
 
 enum CollisionEventTrackingMode : uint8_t { CETM_EventOnly, CETM_EventAndContacts };
 
+/// Object containing the world space position, normal and depth of a contact as reported by the collision system.
 struct Contact {
 	Vec3 P, N;
 	float d;

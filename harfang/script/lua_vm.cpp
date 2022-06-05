@@ -232,7 +232,7 @@ bool Compile(lua_State *L, const std::string &source, const std::string &name, L
 	ProfilerPerfSection slice("LuaVM.Compile");
 	if (luaL_loadbuffer(L, source.c_str(), source.length(), name.c_str()) != 0) {
 		const auto err = lua_tostring(L, -1);
-		error((std::string("Lua VM error: ") + err).c_str());
+		warn(format("Lua VM error: %1").arg(err).c_str());
 		return false;
 	}
 	chunk_out = Pop(L);
@@ -242,7 +242,7 @@ bool Compile(lua_State *L, const std::string &source, const std::string &name, L
 //
 void GetAndReportError(lua_State *L) {
 	const auto err = lua_tostring(L, -1);
-	error(format("%1: %2").arg(GetVMName(L)).arg(err));
+	warn(format("%1: %2").arg(GetVMName(L)).arg(err).c_str());
 	lua_pop(L, 1);
 }
 
@@ -300,7 +300,7 @@ static int _error_handler(lua_State *L) {
 	for (auto &frame : callstack.frames)
 		msg += format("\t%1 - %2\n").arg(depth++).arg(frame.location).str();
 
-	error(msg.c_str()); // send full error to log
+	warn(msg.c_str()); // send full error to log
 	lua_pushstring(L, msg.c_str()); // and back to Lua
 
 	// if (vm->emit_runtime_error_signal)
@@ -329,7 +329,7 @@ bool Execute(lua_State *L, const std::string &source, const std::string &name, L
 	ResetExecutionWatchdog(L);
 	if (luaL_loadbuffer(L, source.c_str(), source.length(), name.c_str()) != LUA_OK) {
 		const auto err = lua_tostring(L, -1);
-		error((std::string("Lua VM error: ") + err).c_str());
+		warn((std::string("Lua VM error: ") + err).c_str());
 		return false;
 	}
 

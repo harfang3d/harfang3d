@@ -1,1 +1,3 @@
-Call [DuplicateNodeAndChildrenFromFile] for each node in a list.
+Duplicate each node and children hierarchy of a list. Resources will be loaded from the local filesystem.
+
+See [man.Assets].

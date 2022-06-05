@@ -13,7 +13,9 @@ void debug(const char *msg, const char *details = nullptr);
 
 void set_log_hook(void (*on_log)(const char *msg, int mask, const char *details, void *user), void *user);
 
+/// Set log levels filter.
 void set_log_level(int log_level);
+/// Enable detailed log output.
 void set_log_detailed(bool is_detailed);
 
 } // namespace hg
