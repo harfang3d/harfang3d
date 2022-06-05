@@ -19,7 +19,8 @@ namespace hg {
 #define IMGUI_FLAGS_NONE UINT8_C(0x00)
 #define IMGUI_FLAGS_ALPHA_BLEND UINT8_C(0x01)
 
-std::string input_buffer;
+static std::string input_buffer;
+static Signal<void(const char *)>::Connection on_text_input_connection;
 
 typedef union {
 	ImTextureID ptr;
@@ -482,8 +483,7 @@ DearImguiContext *ImGuiInitContext(float font_size, bgfx::ProgramHandle imgui_pr
 	*/
 
 	//
-	if (!on_text_input)
-		on_text_input = [=](const char *utf8) { input_buffer += utf8; };
+	on_text_input_connection = on_text_input.Connect([=](const char *utf8) { input_buffer += utf8; });
 
 	return ctx;
 }
@@ -494,6 +494,8 @@ void ImGuiInit(float font_size, bgfx::ProgramHandle imgui_program, bgfx::Program
 }
 
 void ImGuiShutdown(DearImguiContext &ctx) {
+	on_text_input.Disconnect(on_text_input_connection);
+
 	ImGui::DestroyContext(ctx.m_imgui);
 
 	if (bgfx::isValid(ctx.s_tex))

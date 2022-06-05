@@ -22,11 +22,13 @@ namespace hg {
 void UpdateForwardPipeline(ForwardPipeline &pipeline, const ForwardPipelineShadowData &shadow_data, const Color &ambient, const ForwardPipelineLights &lights,
 	const ForwardPipelineFog &fog, const hg::iVec2 &fb_size);
 void UpdateForwardPipelineNoise(ForwardPipeline &pipeline, Texture noise);
-void UpdateForwardPipelinePBRProbe(ForwardPipeline &pipeline, Texture irradiance, Texture radiance, Texture brdf);
+void UpdateForwardPipelineProbe(
+	ForwardPipeline &pipeline, Texture irradiance, Texture radiance, Texture brdf, ProbeType type, const Mat4 &world, float parallax);
 void UpdateForwardPipelineAO(ForwardPipeline &pipeline, Texture ao);
 void UpdateForwardPipelineAAA(ForwardPipeline &pipeline, const iRect &rect, const Mat4 &view, const Mat44 &proj, const Mat4 &prv_view, const Mat44 &prv_proj,
 	const Vec2 &jitter, bgfx::BackbufferRatio::Enum ssgi_ratio, bgfx::BackbufferRatio::Enum ssr_ratio, float temporal_aa_weight, float motion_blur_strength,
-	float exposure, float gamma, int sample_count, float max_distance);
+	float exposure, float gamma, int sample_count, float max_distance, float specular_weight, float sharpen);
+void UpdateForwardPipelineAAA(ForwardPipeline &pipeline, Texture ssgi, Texture ssr);
 
 static const uint64_t attribute_texture_flags = 0 | BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
@@ -246,6 +248,12 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 		aaa.u_depth = bgfx::createUniform("u_depth", bgfx::UniformType::Sampler);
 	}
 
+	{
+		aaa.copy_prg = LoadProgram(ir, ip, format("%1/shader/copy").arg(path).c_str());
+		aaa.u_copyColor = bgfx::createUniform("u_copyColor", bgfx::UniformType::Sampler);
+		aaa.u_copyDepth = bgfx::createUniform("u_copyDepth", bgfx::UniformType::Sampler);
+	}
+
 	aaa.taa = CreateTAAFromAssets(path);
 	aaa.bloom = CreateBloomFromAssets(hg::format("%1/shader").arg(path), rb_factory, bgfx::BackbufferRatio::Equal);
 
@@ -268,16 +276,17 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 	bgfx::setName(aaa.work_frame_hdr_fb, "Work HDR frame FB");
 	bgfx::setName(aaa.prv_frame_hdr_fb, "Previous HDR frame FB");
 	bgfx::setName(aaa.next_frame_hdr_fb, "Next HDR frame FB");
-	if (ssgi_ratio != bgfx::BackbufferRatio::Equal) {
+
+	if (ssgi_ratio != bgfx::BackbufferRatio::Equal)
 		bgfx::setName(aaa.ssgi_output.handle, "aaa.ssgi_output");
-	}
-	if (ssr_ratio != bgfx::BackbufferRatio::Equal) {
+	if (ssr_ratio != bgfx::BackbufferRatio::Equal)
 		bgfx::setName(aaa.ssr_output.handle, "aaa.ssr_output");
-	}
+
 	if (ssgi_ratio != ssr_ratio) {
 		bgfx::setName(aaa.work[1].handle, "aaa.work[1]");
 		bgfx::setName(aaa.work_fb[1], "Work FB #1");
 	}
+
 	return aaa;
 }
 
@@ -351,6 +360,11 @@ void DestroyForwardPipelineAAA(ForwardPipelineAAA &aaa) {
 	bgfx_Destroy(aaa.compositing_prg);
 	bgfx_Destroy(aaa.u_color);
 	bgfx_Destroy(aaa.u_depth);
+
+	//
+	bgfx_Destroy(aaa.copy_prg);
+	bgfx_Destroy(aaa.u_copyColor);
+	bgfx_Destroy(aaa.u_copyDepth);
 
 	//
 	DestroyTAA(aaa.taa);
@@ -456,7 +470,7 @@ std::vector<uint32_t> ComputeModelDisplayListSortKeys(
 		float closest = std::numeric_limits<float>::max();
 
 		for (auto &v : vtx) {
-			const auto &in_view = v * mdl_view_mtx;
+			const auto &in_view = mdl_view_mtx * v;
 			if (in_view.z < closest)
 				closest = in_view.z;
 		}
@@ -572,6 +586,21 @@ static iRect ScreenSpaceRect(const iRect &rect, bgfx::BackbufferRatio::Enum rati
 	return rect;
 }
 
+static void UpdateForwardPipelineProbe(ForwardPipeline &pipeline, const Probe &probe, TextureRef brdf_map_ref, const PipelineResources &resources) {
+	auto &brdf_map = resources.textures.Get(brdf_map_ref);
+
+	auto &irradiance_map = resources.textures.Get(probe.irradiance_map);
+	auto &radiance_map = resources.textures.Get(probe.radiance_map);
+
+	Mat4 world;
+	if (probe.type == PT_Cube)
+		world = TransformationMat4(probe.trs.pos, probe.trs.rot, probe.trs.scl);
+	else if (probe.type == PT_Sphere)
+		world = TransformationMat4(probe.trs.pos, probe.trs.rot, {probe.trs.scl.x, probe.trs.scl.x, probe.trs.scl.x});
+
+	UpdateForwardPipelineProbe(pipeline, irradiance_map, radiance_map, brdf_map, probe.type, world, unpack_float(probe.parallax));
+}
+
 void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, const Rect<int> &rect, const ViewState &view_state, ForwardPipeline &pipeline,
 	const SceneForwardPipelineRenderData &render_data, const PipelineResources &resources, SceneForwardPipelinePassViewId &views, ForwardPipelineAAA &aaa,
 	const ForwardPipelineAAAConfig &aaa_config, int frame, uint16_t rb_width, uint16_t rb_height, bgfx::FrameBufferHandle fb, const char *debug_name) {
@@ -592,7 +621,8 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	UpdateForwardPipeline(pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, render_data.fog, fb_size);
 	UpdateForwardPipelineAAA(pipeline, rect, view_state.view, view_state.proj, aaa.prv_view_state.view, aaa.prv_view_state.proj, TAAHaltonJitter8(frame),
 		aaa.ssgi_ratio, aaa.ssr_ratio, aaa_config.temporal_aa_weight, aaa_config.motion_blur, aaa_config.exposure, aaa_config.gamma, aaa_config.sample_count,
-		aaa_config.max_distance); // [todo] ssgi_ratio/ssr_ratio
+		aaa_config.max_distance, aaa_config.specular_weight, aaa_config.sharpen); // [todo] ssgi_ratio/ssr_ratio ([EJ] what is wrong with ssgi_ratio/ssr_ratio)
+	UpdateForwardPipelineProbe(pipeline, scene.environment.probe, scene.environment.brdf_map, resources);
 
 	// TAA jittered projection matrix
 	const auto jitter = TAAHaltonJitter8(frame) / Vec2(float(GetWidth(rect)), float(GetHeight(rect)));
@@ -651,7 +681,7 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 
 	// SSGI
 	{
-		auto &probe_map = resources.textures.Get(scene.environment.irradiance_map);
+		auto &probe_map = resources.textures.Get(scene.environment.probe.irradiance_map);
 		if (aaa.ssgi_ratio != bgfx::BackbufferRatio::Equal) {
 			ComputeSSGI(view_id, ScreenSpaceRect(rect, aaa.ssgi_ratio), aaa.ssgi_ratio, aaa.downsample.color, aaa.downsample.attr0,
 				aaa.attr1, // [todo] downsample attr1 ?!
@@ -678,7 +708,8 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 
 	// SSR
 	{
-		auto &probe_map = resources.textures.Get(scene.environment.radiance_map);
+		auto &probe_map = resources.textures.Get(scene.environment.probe.radiance_map);
+
 		if (aaa.ssr_ratio != bgfx::BackbufferRatio::Equal) {
 			ComputeSSR(view_id, ScreenSpaceRect(rect, aaa.ssr_ratio), aaa.ssr_ratio, aaa.downsample.color, aaa.downsample.attr0,
 				aaa.attr1, // [todo] downsample attr1 ?!
@@ -708,10 +739,7 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 #endif
 
 	// setup environment for AAA pipeline
-	{
-		auto &brdf_map = resources.textures.Get(scene.environment.brdf_map);
-		UpdateForwardPipelinePBRProbe(pipeline, ssgi_output, ssr_output, brdf_map);
-	}
+	UpdateForwardPipelineAAA(pipeline, ssgi_output, ssr_output);
 
 	// opaque pass
 	{
@@ -742,12 +770,7 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	}
 
 	// setup environment for non AAA pipeline
-	{
-		auto &irradiance_map = resources.textures.Get(scene.environment.irradiance_map);
-		auto &radiance_map = resources.textures.Get(scene.environment.radiance_map);
-		auto &brdf_map = resources.textures.Get(scene.environment.brdf_map);
-		UpdateForwardPipelinePBRProbe(pipeline, irradiance_map, radiance_map, brdf_map);
-	}
+	// UpdateForwardPipelineProbe(pipeline, scene.environment.probe, scene.environment.brdf_map, resources);
 
 	// transparent pass
 	{
@@ -787,7 +810,7 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 		aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity);
 
 	// final compositing for presentation (exposure/gamma correction)
-	{
+	if (aaa_config.use_tonemapping) {
 		if (bgfx::isValid(fb))
 			bgfx::setViewName(view_id, "Final compositing to target framebuffer");
 		else
@@ -820,6 +843,30 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 		DrawTriangles(view_id, {0, 1, 2, 0, 2, 3}, vtx, aaa.compositing_prg, {}, {}, ComputeRenderState(BM_Opaque, DT_Always));
 
 		++view_id;
+	} else {
+		bgfx::setViewName(view_id, "Copying to back buffer");
+
+		bgfx::setViewRect(view_id, 0, 0, fb_size.x, fb_size.y);
+		bgfx::setViewFrameBuffer(view_id, fb);
+		bgfx::setViewClear(view_id, BGFX_CLEAR_NONE, 0, 1.f);
+		bgfx::setViewTransform(view_id, nullptr, nullptr);
+
+		bgfx::setTexture(0, aaa.u_copyColor, aaa.frame_hdr.handle, BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
+		bgfx::setTexture(1, aaa.u_copyDepth, aaa.depth.handle, uint32_t(aaa.depth.flags));
+
+		bgfx::VertexLayout decl;
+		decl.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float).end();
+
+		const float k_y = bgfx::getCaps()->originBottomLeft ? 0.f : 1.f;
+
+		Vertices vtx(decl, 4);
+		vtx.Begin(0).SetPos({-1, -1, 0}).SetTexCoord0({0, k_y}).End();
+		vtx.Begin(1).SetPos({1, -1, 0}).SetTexCoord0({1, k_y}).End();
+		vtx.Begin(2).SetPos({1, 1, 0}).SetTexCoord0({1, 1.f - k_y}).End();
+		vtx.Begin(3).SetPos({-1, 1, 0}).SetTexCoord0({0, 1.f - k_y}).End();
+		DrawTriangles(view_id, {0, 1, 2, 0, 2, 3}, vtx, aaa.copy_prg, {}, {}, ComputeRenderState(BM_Opaque, DT_Always));
+
+		++view_id;
 	}
 }
 
@@ -839,13 +886,7 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	UpdateForwardPipeline(
 		pipeline, render_data.shadow_data, scene.environment.ambient, render_data.pipe_lights, render_data.fog, hg::iVec2(GetWidth(rect), GetHeight(rect)));
 	//	UpdateForwardPipelineAAA(pipeline, rect, view_state.view, view_state.proj, view_state.view, view_state.proj, {});
-
-	{
-		auto &irradiance_map = resources.textures.Get(scene.environment.irradiance_map);
-		auto &radiance_map = resources.textures.Get(scene.environment.radiance_map);
-		auto &brdf_map = resources.textures.Get(scene.environment.brdf_map);
-		UpdateForwardPipelinePBRProbe(pipeline, irradiance_map, radiance_map, brdf_map);
-	}
+	UpdateForwardPipelineProbe(pipeline, scene.environment.probe, scene.environment.brdf_map, resources);
 
 	const int pipeline_config_idx = ComputeForwardPipelineConfigurationIdx(FPS_Basic, render_data.pipe_lights);
 

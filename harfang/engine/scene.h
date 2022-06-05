@@ -51,7 +51,7 @@ using AnimRef = gen_ref;
 extern const AnimRef InvalidAnimRef;
 
 enum NodeBoolAnimTarget { NBAT_Enable, NBAT_Count };
-enum NodeFloatAnimTarget { NFAT_LightDiffuseIntensity, NFAT_LightSpecularIntensity, NFAT_FogNear, NFAT_FogFar, NFAT_Count };
+enum NodeFloatAnimTarget { NFAT_LightDiffuseIntensity, NFAT_LightSpecularIntensity, NFAT_CameraFov, NFAT_Count };
 enum NodeVec3AnimTarget { NV3AT_TransformPosition, NV3AT_TransformRotation, NV3AT_TransformScale, NV3AT_Count };
 enum NodeVec4AnimTarget { NV4AT_Count };
 enum NodeQuatAnimTarget { NQAT_TransformRotation, NQAT_Count };
@@ -130,6 +130,18 @@ using ScenePlayAnimRef = gen_ref;
 extern const ScenePlayAnimRef InvalidScenePlayAnimRef;
 
 //
+enum ProbeType : uint8_t { PT_Sphere, PT_Cube, PT_Count };
+
+struct Probe {
+	TextureRef irradiance_map;
+	TextureRef radiance_map;
+
+	ProbeType type{PT_Sphere};
+	uint8_t parallax{0};
+	TransformTRS trs;
+};
+
+//
 struct SceneView {
 	std::vector<NodeRef> nodes;
 
@@ -189,11 +201,6 @@ public:
 	std::vector<Node> GetNodeChildren(NodeRef ref) const;
 	std::vector<Node> GetNodeChildren(const Node &node) const { return GetNodeChildren(node.ref); }
 
-	Node GetNode(uint32_t idx) const {
-		auto ref = nodes.get_ref(idx);
-		return ref != InvalidNodeRef ? Node{scene_ref, ref} : Node{nullptr, {}};
-	}
-
 	NodeRef GetNodeRef(uint32_t idx) const { return nodes.get_ref(idx); }
 
 	size_t GetNodeCount() const;
@@ -248,7 +255,7 @@ public:
 
 	void SetTransformLocalMatrix(ComponentRef ref, const Mat4 &local);
 	/*!
-		@short Set and decompose transform world matrix.
+		Set and decompose transform world matrix.
 		The provided matrix is decomposed over the position, rotation and scale members of the Transform.
 		@see SetNodeWorldMatrix to set a node world matrix in the scene graph without affecting the Transform component.
 	*/
@@ -267,17 +274,13 @@ public:
 	void SetNodeTransform(NodeRef ref, const Transform &v) { SetNodeTransform(ref, v.ref); }
 
 	Mat4 GetNodeWorldMatrix(NodeRef ref) const;
-	/*!
-		@short Set node world matrix.
-		Set a node world matrix and flag it as updated so that it won't be computed by the next call to ComputeWorldMatrices().
-		@note This function INTENTIONALLY does not decompose the provided matrix to the transfrom position/rotation/scale fields.
-	*/
+	/// Set node world matrix.
+	/// Set a node world matrix and flag it as updated so that it won't be computed by the next call to ComputeWorldMatrices().
+	/// @note This function INTENTIONALLY does not decompose the provided matrix to the transfrom position/rotation/scale fields.
 	void SetNodeWorldMatrix(NodeRef ref, const Mat4 &world);
 
-	/*!
-		@short Compute node world matrix from scratch on-the-fly.
-		This function is slow but useful when scene matrices are not yet up-to-date.
-	*/
+	/// Compute node world matrix from scratch on-the-fly.
+	/// This function is slow but useful when scene matrices are not yet up-to-date.
 	Mat4 ComputeNodeWorldMatrix(NodeRef ref) const;
 
 	//
@@ -289,6 +292,7 @@ public:
 	void Update(time_ns dt);
 
 	// camera component
+	/// Create a new Node with a Transform and Camera components.
 	Camera CreateCamera();
 	void DestroyCamera(ComponentRef ref);
 	void DestroyCamera(const Camera &c) { DestroyCamera(c.ref); }
@@ -380,11 +384,14 @@ public:
 	float GetLightShadowBias(ComponentRef ref) const;
 	void SetLightShadowBias(ComponentRef ref, float v);
 
+	/// Create a Node with a Transform and a point Light component.
 	Light CreatePointLight(float radius, const Color &diffuse = {1, 1, 1}, float diffuse_intensity = 1, const Color &specular = {1, 1, 1},
 		float specular_intensity = 1, float priority = 0, LightShadowType shadow_type = LST_None, float shadow_bias = default_shadow_bias);
+	/// Create a Node with a Transform and a spot Light component.
 	Light CreateSpotLight(float radius, float inner_angle, float outer_angle, const Color &diffuse = {1, 1, 1}, float diffuse_intensity = 1,
 		const Color &specular = {1, 1, 1}, float specular_intensity = 1, float priority = 0, LightShadowType shadow_type = LST_None,
 		float shadow_bias = default_shadow_bias);
+	/// Create a Node with a Transform and a linear Light component.
 	Light CreateLinearLight(const Color &diffuse = {1, 1, 1}, float diffuse_intensity = 1, const Color &specular = {1, 1, 1}, float specular_intensity = 1,
 		float priority = 0, LightShadowType shadow_type = LST_None, float shadow_bias = default_shadow_bias, const Vec4 &pssm_split = default_pssm_split);
 
@@ -443,25 +450,31 @@ public:
 	void DestroyCollision(ComponentRef ref);
 	void DestroyCollision(const Collision &s) { DestroyCollision(s.ref); }
 
-	void SetCollisionType(ComponentRef ref, CollisionType type);
-	CollisionType GetCollisionType(ComponentRef ref) const;
-	void SetCollisionLocalTransform(ComponentRef ref, Mat4 m);
 	Mat4 GetCollisionLocalTransform(ComponentRef ref) const;
-	void SetCollisionMass(ComponentRef ref, float mass);
+	void SetCollisionLocalTransform(ComponentRef ref, const Mat4 &local);
+
+	CollisionType GetCollisionType(ComponentRef ref) const;
+	void SetCollisionType(ComponentRef ref, CollisionType type);
+	Vec3 GetCollisionPosition(ComponentRef ref) const;
+	void SetCollisionPosition(ComponentRef ref, const Vec3 &pos);
+	Vec3 GetCollisionRotation(ComponentRef ref) const;
+	void SetCollisionRotation(ComponentRef ref, const Vec3 &rot);
 	float GetCollisionMass(ComponentRef ref) const;
-	void SetCollisionSize(ComponentRef ref, const Vec3 &size);
+	void SetCollisionMass(ComponentRef ref, float mass);
 	Vec3 GetCollisionSize(ComponentRef ref) const;
-	void SetCollisionRadius(ComponentRef ref, float radius);
+	void SetCollisionSize(ComponentRef ref, const Vec3 &size);
 	float GetCollisionRadius(ComponentRef ref) const;
-	void SetCollisionHeight(ComponentRef ref, float radius);
+	void SetCollisionRadius(ComponentRef ref, float radius);
 	float GetCollisionHeight(ComponentRef ref) const;
-	void SetCollisionResource(ComponentRef ref, const std::string &path);
+	void SetCollisionHeight(ComponentRef ref, float radius);
 	std::string GetCollisionResource(ComponentRef ref);
+	void SetCollisionResource(ComponentRef ref, const std::string &path);
 
 	Collision CreateSphereCollision(float radius, float mass = Kg(1.f));
 	Collision CreateCubeCollision(float x, float y, float z, float mass = Kg(1.f));
 	Collision CreateCapsuleCollision(float radius, float height, float mass = Kg(1.f));
 	Collision CreateCylinderCollision(float radius, float height, float mass = Kg(1.f));
+	Collision CreateConeCollision(float radius, float height, float mass = Kg(1.f));
 	Collision CreateMeshCollision(const std::string &collision_path, float mass = Kg(1.f));
 	Collision CreateMeshConvexCollision(const std::string &collision_path, float mass = Kg(1.f));
 
@@ -514,6 +527,7 @@ public:
 	Instance CreateInstance(const std::string &path);
 
 	// scripts
+	/// Helper function to create a Node with a Script component.
 	Script CreateScript();
 	Script CreateScript(const std::string &path);
 	void DestroyScript(ComponentRef ref);
@@ -549,7 +563,7 @@ public:
 	const std::vector<ComponentRef> &GetSceneScripts() const { return scene_scripts; }
 	const std::map<NodeRef, std::vector<ComponentRef>> &GetNodeScripts() const { return node_scripts; }
 
-	// canvas
+	/// Holds the canvas properties of a scene, see the `canvas` member of class Scene.
 	struct Canvas {
 		bool clear_z{true}, clear_color{true};
 		Color color{0.f, 0.f, 0.f, 1.f};
@@ -557,14 +571,14 @@ public:
 
 	Canvas canvas;
 
-	// environment
+	/// Environment properties of a scene.
+	/// @see Scene::environment member of the Scene class.
 	struct Environment {
 		Color ambient;
 		Color fog_color;
 		float fog_near, fog_far;
 
-		TextureRef irradiance_map;
-		TextureRef radiance_map;
+		Probe probe;
 		TextureRef brdf_map;
 	};
 
@@ -604,6 +618,8 @@ public:
 	std::vector<AnimRef> GetAnims() const;
 	Anim *GetAnim(AnimRef ref);
 	const Anim *GetAnim(AnimRef ref) const;
+
+	AnimRef GetAnimRef(uint32_t idx) const { return anims.get_ref(idx); }
 
 	BoundToSceneAnim BindSceneAnim(AnimRef ref) const;
 	void EvaluateBoundAnim(const BoundToSceneAnim &bound_anim, time_ns t);
@@ -738,9 +754,9 @@ private:
 		LightShadowType shadow_type{LST_None};
 
 		Color diffuse{1.f, 1.f, 1.f, 1.f};
-		float diffuse_intensity{1.0f};
+		float diffuse_intensity{1.f};
 		Color specular{1.f, 1.f, 1.f, 1.f};
-		float specular_intensity{1.0f};
+		float specular_intensity{1.f};
 		float radius{0.f};
 		float inner_angle{Deg(30.f)}, outer_angle{Deg(45.f)};
 
@@ -771,10 +787,8 @@ private:
 	struct Collision_ {
 		CollisionType type;
 		float mass;
-		Vec3 size;
 		std::string resource_path;
-		Mat4 m;
-		Collision_() : m(Mat4::Identity) {}
+		TransformTRS trs;
 	};
 
 	generational_vector_list<Collision_> collisions;
@@ -889,7 +903,7 @@ struct SceneRef {
 	uint32_t ref_count{};
 };
 
-//
+/// Helper function to create a Node with a Transform component then parent all root nodes in the scene to it.
 Node CreateSceneRootNode(Scene &scene, std::string name = {}, const Mat4 &mtx = Mat4::Identity);
 
 Node CreateCamera(Scene &scene, const Mat4 &mtx, float znear, float zfar, float fov = Deg(45.f));
@@ -961,9 +975,13 @@ bool LoadSceneFromAssets(
 std::vector<NodeRef> DuplicateNodes(Scene &scene, const std::vector<NodeRef> &nodes, const Reader &deps_ir, const ReadProvider &deps_ip,
 	PipelineResources &resources, const PipelineInfo &pipeline);
 
+/// Duplicate each node of a list. Resources will be loaded from the local filesystem.
 std::vector<Node> DuplicateNodesFromFile(Scene &scene, const std::vector<Node> &nodes, PipelineResources &resources, const PipelineInfo &pipeline);
+/// Duplicate each node of a list. Resources will be loaded from the assets system.
 std::vector<Node> DuplicateNodesFromAssets(Scene &scene, const std::vector<Node> &nodes, PipelineResources &resources, const PipelineInfo &pipeline);
+/// Duplicate each node and children of a list. Resources will be loaded from the local filesystem.
 std::vector<Node> DuplicateNodesAndChildrenFromFile(Scene &scene, const std::vector<Node> &nodes, PipelineResources &resources, const PipelineInfo &pipeline);
+/// Duplicate each node and children of a list. Resources will be loaded from the assets system.
 std::vector<Node> DuplicateNodesAndChildrenFromAssets(Scene &scene, const std::vector<Node> &nodes, PipelineResources &resources, const PipelineInfo &pipeline);
 
 Node DuplicateNodeFromFile(Scene &scene, Node node, PipelineResources &resources, const PipelineInfo &pipeline);
@@ -999,6 +1017,8 @@ Color GetAnimableNodePropertyColor(const Scene &scene, NodeRef ref, const std::s
 void SetAnimableNodePropertyColor(Scene &scene, NodeRef ref, const std::string &name, const Color &v);
 
 void ReverseSceneAnim(Scene &scene, SceneAnim &scene_anim);
+void QuantizeSceneAnim(Scene &scene, SceneAnim &scene_anim, time_ns t_step);
+void DeleteEmptySceneAnims(Scene &scene, SceneAnim &scene_anim);
 
 #ifdef NDEBUG
 #define _HG_CHECK_DLL_SCENE_DATA_TYPES

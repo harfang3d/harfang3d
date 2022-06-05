@@ -12,7 +12,7 @@
 
 namespace hg {
 
-std::function<void(const char *text_utf8)> on_text_input;
+Signal<void(const char *)> on_text_input;
 
 // Mouse
 
@@ -30,7 +30,7 @@ MouseState ReadMouse(const char *name) {
 	auto i = mouses.find(name);
 	if (i == std::end(mouses)) {
 		if (name && !strcmp(name, "default"))
-			error("Failed to read default mouse, was InputInit() called?");
+			warn("Failed to read default mouse, was InputInit() called?");
 		return {};
 	}
 	return i->second();
@@ -70,7 +70,7 @@ KeyboardState ReadKeyboard(const char *name) {
 	auto i = keyboards.find(name);
 	if (i == std::end(keyboards)) {
 		if (name && !strcmp(name, "default"))
-			error("Failed to read default keyboard, was InputInit() called?");
+			warn("Failed to read default keyboard, was InputInit() called?");
 		return {};
 	}
 	return i->second.read();

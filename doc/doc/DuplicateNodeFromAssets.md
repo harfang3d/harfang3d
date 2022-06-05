@@ -1,3 +1,3 @@
-Duplicate a node. Resources will be load from the assets system.
+Duplicate a node. Resources will be loaded from the assets system.
 
 See [man.Assets].

@@ -1,14 +1,32 @@
-add_custom_command(
-	OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/build_info.cpp
-	COMMAND ${Python3_EXECUTABLE} gen_build_info_cpp.py --host_prefix=${HG_HOST_PREFIX} --target_prefix=${HG_TARGET_PREFIX}
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../version.txt
-	COMMENT "Generating build_info.cpp"
-)
+if(NOT DEFINED HG_COMMIT_ID)
+	if(NOT DEFINED GIT_EXECUTABLE)
+		find_package(Git QUIET REQUIRED)
+	endif()
 
-add_custom_target(build_info ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/build_info.cpp)
-set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/build_info.cpp PROPERTIES GENERATED TRUE)
-set_target_properties(build_info PROPERTIES FOLDER "harfang")
+	if(NOT DEFINED GIT_EXECUTABLE)
+		message(FATAL_ERROR "Unable to determine GIT filepath.")
+	endif()
+
+	get_filename_component(GIT_EXECUTABLE ${GIT_EXECUTABLE} ABSOLUTE)
+
+	if(DEFINED GIT_EXECUTABLE)
+		execute_process(COMMAND
+			"${GIT_EXECUTABLE}" rev-parse HEAD
+		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+		RESULT_VARIABLE exit_code
+		OUTPUT_VARIABLE HG_COMMIT_ID
+		ERROR_VARIABLE stderr
+		OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+		if(NOT exit_code EQUAL 0)
+			set(HG_COMMIT_ID "unknown")
+		endif()
+	else()
+		set(HG_COMMIT_ID "unknown")
+	endif()
+endif()
+
+configure_file(build_info.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/build_info.cpp)
 
 set(HDRS
 	ascii_encoder.h
@@ -142,7 +160,6 @@ set(SRCS
 	xxhash.c)
 
 add_library(foundation STATIC ${SRCS} ${HDRS})
-add_dependencies(foundation build_info)
 set_property(TARGET foundation PROPERTY PUBLIC_HEADER "${HDRS}")
 set_target_properties(foundation PROPERTIES FOLDER "harfang")
 

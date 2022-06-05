@@ -15,6 +15,7 @@ struct DirEntry {
 	int type{};
 	std::string name;
 	time_ns last_modified;
+	size_t size;
 };
 
 std::vector<DirEntry> ListDir(const char *path, int mask = DE_All);
@@ -33,9 +34,13 @@ char *MkTempDir(const char *tmplt);
 
 bool IsDir(const char *path);
 
+/// Copy a directory on the local filesystem, this function does not recurse through subdirectories.
+/// @see CopyDirRecursive.
 bool CopyDir(const char *src, const char *dst);
+/// Copy a directory on the local filesystem, recurse through subdirectories.
 bool CopyDirRecursive(const char *src, const char *dst);
 
+/// Return `true` if a file exists on the local filesystem, `false` otherwise.
 bool Exists(const char *path);
 
 } // namespace hg

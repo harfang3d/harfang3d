@@ -17,6 +17,7 @@ struct AllocatorI;
 
 namespace hg {
 
+/// Context to render immediate GUI.
 struct DearImguiContext {
 	ImGuiContext *m_imgui = nullptr;
 	bx::AllocatorI *m_allocator = nullptr;

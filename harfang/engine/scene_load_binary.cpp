@@ -12,6 +12,8 @@
 
 namespace hg {
 
+// [EJ] note: SaveComponent/LoadComponent are friend of class Scene and cannot be made static (breaks clang/gcc builds)
+
 void SaveComponent(const Scene::Transform_ *data_, const Writer &iw, const Handle &h) {
 	Write(iw, h, data_->TRS); // pos, rot, scl
 	Write(iw, h, data_->parent.idx);
@@ -64,6 +66,13 @@ void SaveComponent(const Scene::RigidBody_ *data_, const Writer &iw, const Handl
 	Write(iw, h, data_->rolling_friction);
 }
 
+void SaveComponent(const Scene::Collision_ *data_, const Writer &iw, const Handle &h) {
+	Write(iw, h, data_->type);
+	Write(iw, h, data_->mass);
+	Write(iw, h, data_->resource_path);
+	Write(iw, h, data_->trs);
+}
+
 void SaveComponent(const Scene::Script_ *data_, const Writer &iw, const Handle &h) {
 	Write(iw, h, data_->path);
 
@@ -91,6 +100,15 @@ void SaveComponent(const Scene::Instance_ *data_, const Writer &iw, const Handle
 	Write(iw, h, uint8_t(data_->loop_mode));
 }
 
+static void SaveProbe(const Probe &probe, const Writer &iw, const Handle &h, const PipelineResources &resources) {
+	Write(iw, h, resources.textures.GetName(probe.irradiance_map));
+	Write(iw, h, resources.textures.GetName(probe.radiance_map));
+
+	Write(iw, h, probe.type);
+	Write(iw, h, probe.parallax);
+	Write(iw, h, probe.trs);
+}
+
 //
 void LoadComponent(Scene::Transform_ *data_, const Reader &ir, const Handle &h) {
 	Read(ir, h, data_->TRS);
@@ -104,8 +122,8 @@ void LoadComponent(Scene::Camera_ *data_, const Reader &ir, const Handle &h) {
 	Read(ir, h, data_->size);
 }
 
-void LoadComponent(Scene::Object_ *data_, const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
-	const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
+void LoadComponent(Scene::Object_ *data_, const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip,
+	PipelineResources &resources, const PipelineInfo &pipeline, bool queue_model_loads, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
 	std::string name;
 	Read(ir, h, name);
 
@@ -151,6 +169,13 @@ void LoadComponent(Scene::RigidBody_ *data_, const Reader &ir, const Handle &h) 
 	Read(ir, h, data_->rolling_friction);
 }
 
+void LoadComponent(Scene::Collision_ *data_, const Reader &ir, const Handle &h) {
+	Read(ir, h, data_->type);
+	Read(ir, h, data_->mass);
+	Read(ir, h, data_->resource_path);
+	Read(ir, h, data_->trs);
+}
+
 void LoadComponent(Scene::Script_ *data_, const Reader &ir, const Handle &h) {
 	data_->path = Read<std::string>(ir, h);
 
@@ -181,8 +206,33 @@ void LoadComponent(Scene::Instance_ *data_, const Reader &ir, const Handle &h) {
 	data_->loop_mode = AnimLoopMode(Read<uint8_t>(ir, h));
 }
 
+static void LoadProbe(Probe &probe, const Reader &ir, const Handle &h, const Reader &deps_ir, const ReadProvider &deps_ip, PipelineResources &resources,
+	const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent) {
+	std::string tex_name;
+
+	Read(ir, h, tex_name);
+	if (!tex_name.empty())
+		probe.irradiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, tex_name.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
+	Read(ir, h, tex_name);
+	if (!tex_name.empty())
+		probe.radiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, tex_name.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
+
+	Read(ir, h, probe.type);
+	Read(ir, h, probe.parallax);
+	Read(ir, h, probe.trs);
+}
+
+static void SkipProbe(const Reader &ir, const Handle &h) {
+	SkipString(ir, h);
+	SkipString(ir, h);
+
+	Skip<ProbeType>(ir, h);
+	Skip<uint8_t>(ir, h);
+	Skip<TransformTRS>(ir, h);
+}
+
 //
-uint32_t GetSceneBinaryFormatVersion() { return 7; }
+uint32_t GetSceneBinaryFormatVersion() { return 9; }
 
 bool Scene::Save_binary(
 	const Writer &iw, const Handle &h, const PipelineResources &resources, uint32_t save_flags, const std::vector<NodeRef> *nodes_to_save) const {
@@ -201,6 +251,8 @@ bool Scene::Save_binary(
 		version 5: save rigid body properties
 		version 6: remove obsolete rigid properties
 		version 7: store animation chunk size so that it can be jumped over without parsing its content
+		version 8: save collision properties
+		version 9: save environment probe
 	*/
 	const auto version = GetSceneBinaryFormatVersion();
 	Write<uint32_t>(iw, h, version);
@@ -232,10 +284,10 @@ bool Scene::Save_binary(
 
 	//
 	std::array<std::set<ComponentRef>, 5> used_component_refs;
-	std::set<ComponentRef> used_script_refs, used_instance_refs;
+	std::set<ComponentRef> used_script_refs, used_instance_refs, used_collision_refs;
 
 	if (save_flags & LSSF_Nodes)
-		for (const auto ref : node_refs)
+		for (const auto &ref : node_refs)
 			if (const auto *node_ = GetNode_(ref)) {
 				if (transforms.is_valid(node_->components[NCI_Transform]))
 					used_component_refs[NCI_Transform].insert(node_->components[NCI_Transform]);
@@ -246,122 +298,146 @@ bool Scene::Save_binary(
 				if (lights.is_valid(node_->components[NCI_Light]))
 					used_component_refs[NCI_Light].insert(node_->components[NCI_Light]);
 
-				if (save_flags & LSSF_Physics)
+				if (save_flags & LSSF_Physics) {
 					if (rigid_bodies.is_valid(node_->components[NCI_RigidBody]))
 						used_component_refs[NCI_RigidBody].insert(node_->components[NCI_RigidBody]);
 
+					{
+						const auto &i = node_collisions.find(ref);
+						if (i != std::end(node_collisions))
+							for (const auto &ref : i->second)
+								used_collision_refs.insert(ref);
+					}
+				}
+
 				if (save_flags & LSSF_Scripts) {
-					const auto i = node_scripts.find(ref);
+					const auto &i = node_scripts.find(ref);
 					if (i != std::end(node_scripts))
-						for (const auto ref : i->second)
+						for (const auto &ref : i->second)
 							used_script_refs.insert(ref);
 				}
 
 				{
-					const auto i = node_instance.find(ref);
+					const auto &i = node_instance.find(ref);
 					if (i != std::end(node_instance))
 						used_instance_refs.insert(i->second);
 				}
 			}
 
 	if (save_flags & LSSF_Scene)
-		for (auto ref : scene_scripts)
+		for (auto &ref : scene_scripts)
 			used_script_refs.insert(ref); // flag scene scripts as in-use
 
 	//
-	Write(iw, h, uint32_t(used_component_refs[NCI_Transform].size()));
-	for (const auto ref : used_component_refs[NCI_Transform])
+	Write(iw, h, numeric_cast<uint32_t>(used_component_refs[NCI_Transform].size()));
+	for (const auto &ref : used_component_refs[NCI_Transform])
 		if (transforms.is_valid(ref))
 			SaveComponent(&transforms[ref.idx], iw, h);
 
-	Write(iw, h, uint32_t(used_component_refs[NCI_Camera].size()));
-	for (const auto ref : used_component_refs[NCI_Camera])
+	Write(iw, h, numeric_cast<uint32_t>(used_component_refs[NCI_Camera].size()));
+	for (const auto &ref : used_component_refs[NCI_Camera])
 		if (cameras.is_valid(ref))
 			SaveComponent(&cameras[ref.idx], iw, h);
 
-	Write(iw, h, uint32_t(used_component_refs[NCI_Object].size()));
-	for (const auto ref : used_component_refs[NCI_Object])
+	Write(iw, h, numeric_cast<uint32_t>(used_component_refs[NCI_Object].size()));
+	for (const auto &ref : used_component_refs[NCI_Object])
 		if (objects.is_valid(ref))
 			SaveComponent(&objects[ref.idx], iw, h, resources);
 
-	Write(iw, h, uint32_t(used_component_refs[NCI_Light].size()));
-	for (const auto ref : used_component_refs[NCI_Light])
+	Write(iw, h, numeric_cast<uint32_t>(used_component_refs[NCI_Light].size()));
+	for (const auto &ref : used_component_refs[NCI_Light])
 		if (lights.is_valid(ref))
 			SaveComponent(&lights[ref.idx], iw, h);
 
 	if (save_flags & LSSF_Physics) {
-		Write(iw, h, uint32_t(used_component_refs[NCI_RigidBody].size()));
-		for (const auto ref : used_component_refs[NCI_RigidBody])
+		Write(iw, h, numeric_cast<uint32_t>(used_component_refs[NCI_RigidBody].size()));
+		for (const auto &ref : used_component_refs[NCI_RigidBody])
 			if (rigid_bodies.is_valid(ref))
 				SaveComponent(&rigid_bodies[ref.idx], iw, h);
+
+		Write(iw, h, numeric_cast<uint32_t>(used_collision_refs.size()));
+		for (const auto &ref : used_collision_refs)
+			if (collisions.is_valid(ref))
+				SaveComponent(&collisions[ref.idx], iw, h);
 	}
 
 	if (save_flags & LSSF_Scripts) {
-		Write(iw, h, uint32_t(used_script_refs.size()));
-		for (const auto ref : used_script_refs)
+		Write(iw, h, numeric_cast<uint32_t>(used_script_refs.size()));
+		for (const auto &ref : used_script_refs)
 			if (scripts.is_valid(ref))
 				SaveComponent(&scripts[ref.idx], iw, h);
 	}
 
-	Write(iw, h, uint32_t(used_instance_refs.size()));
-	for (const auto ref : used_instance_refs)
+	Write(iw, h, numeric_cast<uint32_t>(used_instance_refs.size()));
+	for (const auto &ref : used_instance_refs)
 		if (instances.is_valid(ref))
 			SaveComponent(&instances[ref.idx], iw, h);
 
 	//
 	if (save_flags & LSSF_Nodes) {
-		Write(iw, h, uint32_t(node_refs.size()));
+		Write(iw, h, numeric_cast<uint32_t>(node_refs.size()));
 
-		for (const auto ref : node_refs)
+		for (const auto &ref : node_refs)
 			if (const auto *node_ = GetNode_(ref)) {
 				Write(iw, h, ref.idx);
 				Write(iw, h, node_->name);
 				Write(iw, h, node_->flags & NF_SerializedMask);
 
 				if (transforms.is_valid(node_->components[NCI_Transform])) {
-					const auto i = used_component_refs[NCI_Transform].find(node_->components[NCI_Transform]);
-					Write(iw, h, uint32_t(std::distance(std::begin(used_component_refs[NCI_Transform]), i)));
+					const auto &i = used_component_refs[NCI_Transform].find(node_->components[NCI_Transform]);
+					Write(iw, h, numeric_cast<uint32_t>(std::distance(std::begin(used_component_refs[NCI_Transform]), i)));
 				} else {
 					Write<uint32_t>(iw, h, 0xffffffff);
 				}
 
 				if (cameras.is_valid(node_->components[NCI_Camera])) {
-					const auto i = used_component_refs[NCI_Camera].find(node_->components[NCI_Camera]);
-					Write(iw, h, uint32_t(std::distance(std::begin(used_component_refs[NCI_Camera]), i)));
+					const auto &i = used_component_refs[NCI_Camera].find(node_->components[NCI_Camera]);
+					Write(iw, h, numeric_cast<uint32_t>(std::distance(std::begin(used_component_refs[NCI_Camera]), i)));
 				} else {
 					Write<uint32_t>(iw, h, 0xffffffff);
 				}
 
 				if (objects.is_valid(node_->components[NCI_Object])) {
-					const auto i = used_component_refs[NCI_Object].find(node_->components[NCI_Object]);
-					Write(iw, h, uint32_t(std::distance(std::begin(used_component_refs[NCI_Object]), i)));
+					const auto &i = used_component_refs[NCI_Object].find(node_->components[NCI_Object]);
+					Write(iw, h, numeric_cast<uint32_t>(std::distance(std::begin(used_component_refs[NCI_Object]), i)));
 				} else {
 					Write<uint32_t>(iw, h, 0xffffffff);
 				}
 
 				if (lights.is_valid(node_->components[NCI_Light])) {
-					const auto i = used_component_refs[NCI_Light].find(node_->components[NCI_Light]);
-					Write(iw, h, uint32_t(std::distance(std::begin(used_component_refs[NCI_Light]), i)));
+					const auto &i = used_component_refs[NCI_Light].find(node_->components[NCI_Light]);
+					Write(iw, h, numeric_cast<uint32_t>(std::distance(std::begin(used_component_refs[NCI_Light]), i)));
 				} else {
 					Write<uint32_t>(iw, h, 0xffffffff);
 				}
 
 				if (save_flags & LSSF_Physics) {
 					if (rigid_bodies.is_valid(node_->components[NCI_RigidBody])) {
-						const auto i = used_component_refs[NCI_RigidBody].find(node_->components[NCI_RigidBody]);
-						Write(iw, h, uint32_t(std::distance(std::begin(used_component_refs[NCI_RigidBody]), i)));
+						const auto &i = used_component_refs[NCI_RigidBody].find(node_->components[NCI_RigidBody]);
+						Write(iw, h, numeric_cast<uint32_t>(std::distance(std::begin(used_component_refs[NCI_RigidBody]), i)));
 					} else {
 						Write<uint32_t>(iw, h, 0xffffffff);
+					}
+
+					const auto &c = node_collisions.find(ref);
+					if (c != std::end(node_collisions)) {
+						Write(iw, h, numeric_cast<uint32_t>(c->second.size())); // collision count
+						for (const auto &col_ref : c->second) {
+							const auto &i = used_collision_refs.find(col_ref);
+							Write(iw, h, numeric_cast<uint32_t>(std::distance(std::begin(used_collision_refs), i))); // idx
+						}
+					} else {
+						Write<uint32_t>(iw, h, 0); // collision count
 					}
 				}
 
 				if (save_flags & LSSF_Scripts) {
-					const auto c = node_scripts.find(ref);
+					const auto &c = node_scripts.find(ref);
 					if (c != std::end(node_scripts)) {
-						Write(iw, h, uint32_t(c->second.size())); // script count
-						for (const auto script_ref : c->second) {
-							const auto i = used_script_refs.find(script_ref);
-							Write(iw, h, uint32_t(std::distance(std::begin(used_script_refs), i))); // idx
+						Write(iw, h, numeric_cast<uint32_t>(c->second.size())); // script count
+						for (const auto &script_ref : c->second) {
+							const auto &i = used_script_refs.find(script_ref);
+							Write(iw, h, numeric_cast<uint32_t>(std::distance(std::begin(used_script_refs), i))); // idx
 						}
 					} else {
 						Write<uint32_t>(iw, h, 0); // script count
@@ -371,8 +447,8 @@ bool Scene::Save_binary(
 				{
 					const auto c = node_instance.find(ref);
 					if (c != std::end(node_instance)) {
-						const auto i = used_instance_refs.find(c->second);
-						Write(iw, h, uint32_t(std::distance(std::begin(used_instance_refs), i)));
+						const auto &i = used_instance_refs.find(c->second);
+						Write(iw, h, numeric_cast<uint32_t>(std::distance(std::begin(used_instance_refs), i)));
 					} else {
 						Write(iw, h, InvalidComponentRef.idx);
 					}
@@ -389,8 +465,7 @@ bool Scene::Save_binary(
 		Write(iw, h, environment.fog_far);
 		Write(iw, h, environment.fog_color);
 
-		Write(iw, h, resources.textures.GetName(environment.irradiance_map));
-		Write(iw, h, resources.textures.GetName(environment.radiance_map));
+		SaveProbe(environment.probe, iw, h, resources);
 		Write(iw, h, resources.textures.GetName(environment.brdf_map));
 
 		Write(iw, h, canvas.clear_z);
@@ -459,7 +534,7 @@ bool Scene::Save_binary(
 	if (save_flags & LSSF_KeyValues) {
 		Write(iw, h, uint32_t(key_values.size()));
 
-		for (auto i : key_values) {
+		for (const auto &i : key_values) {
 			Write(iw, h, i.first);
 			Write(iw, h, i.second);
 		}
@@ -477,26 +552,26 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 
 	if (!ir.is_valid(h)) {
 		if (!silent)
-			error(format("Cannot load scene '%1', invalid read handle").arg(name));
+			warn(format("Cannot load scene '%1', invalid read handle").arg(name));
 		return false;
 	}
 
 	if (Read<uint32_t>(ir, h) != HarfangMagic) {
 		if (!silent)
-			error(format("Cannot load scene '%1', invalid magic marker").arg(name));
+			warn(format("Cannot load scene '%1', invalid magic marker").arg(name));
 		return false;
 	}
 
 	if (Read<uint8_t>(ir, h) != SceneMarker) {
 		if (!silent)
-			error(format("Cannot load scene '%1', invalid scene marker").arg(name));
+			warn(format("Cannot load scene '%1', invalid scene marker").arg(name));
 		return false;
 	}
 
 	const auto version = Read<uint32_t>(ir, h);
 	if (version != GetSceneBinaryFormatVersion()) {
 		if (!silent)
-			error(format("Cannot load scene '%1', unsupported binary version %2").arg(name).arg(version));
+			warn(format("Cannot load scene '%1', unsupported binary version %2").arg(name).arg(version));
 		return false;
 	}
 
@@ -535,13 +610,20 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 		LoadComponent(&lights[ref.idx], ir, h);
 	}
 
-	std::vector<ComponentRef> rigid_body_refs;
+	std::vector<ComponentRef> rigid_body_refs, collision_refs;
 	if (file_flags & LSSF_Physics) {
 		const auto rigid_body_count = Read<uint32_t>(ir, h);
 		rigid_body_refs.resize(rigid_body_count);
 		for (size_t i = 0; i < rigid_body_count; ++i) {
 			const auto ref = rigid_body_refs[i] = CreateRigidBody().ref;
 			LoadComponent(&rigid_bodies[ref.idx], ir, h);
+		}
+
+		const auto collision_count = Read<uint32_t>(ir, h);
+		collision_refs.resize(collision_count);
+		for (size_t i = 0; i < collision_count; ++i) {
+			const auto ref = collision_refs[i] = CreateCollision().ref;
+			LoadComponent(&collisions[ref.idx], ir, h);
 		}
 	}
 
@@ -606,6 +688,12 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 				const auto rigid_body_idx = Read<uint32_t>(ir, h);
 				if (rigid_body_idx != 0xffffffff)
 					node_.components[NCI_RigidBody] = rigid_body_refs[rigid_body_idx];
+
+				const auto collision_count = Read<uint32_t>(ir, h);
+				for (uint32_t j = 0; j < collision_count; ++j) {
+					const auto col_idx = Read<uint32_t>(ir, h);
+					node_collisions[node_ref].push_back(collision_refs[col_idx]);
+				}
 			}
 
 			if (file_flags & LSSF_Scripts) {
@@ -677,19 +765,11 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 			Read(ir, h, environment.fog_color); // 16B
 
 			{
+				LoadProbe(environment.probe, ir, h, deps_ir, deps_ip, resources, pipeline, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, silent);
+
 				std::string name;
-
 				Read(ir, h, name);
-				if (!name.empty())
-					environment.irradiance_map = SkipLoadOrQueueTextureLoad(
-						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, silent);
 
-				Read(ir, h, name);
-				if (!name.empty())
-					environment.radiance_map = SkipLoadOrQueueTextureLoad(
-						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, silent);
-
-				Read(ir, h, name);
 				if (!name.empty())
 					environment.brdf_map = SkipLoadOrQueueTextureLoad(
 						deps_ir, deps_ip, name.c_str(), resources, load_flags & LSSF_QueueTextureLoads, load_flags & LSSF_DoNotLoadResources, silent);
@@ -704,8 +784,7 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 
 			Seek(ir, h, 40, SM_Current); // skip environment chunk
 
-			SkipString(ir, h); // irradiance name
-			SkipString(ir, h); // radiance name
+			SkipProbe(ir, h); // probe
 			SkipString(ir, h); // brdf name
 
 			Seek(ir, h, sizeof(bool) * 2 + 16, SM_Current);
@@ -821,7 +900,7 @@ bool Scene::Load_binary(const Reader &ir, const Handle &h, const char *name, con
 
 	//
 	if (!silent)
-		debug(format("Load scene '%1' took %2 ms").arg(name).arg(time_to_ms(time_now() - t_start)));
+		log(format("Load scene '%1' took %2 ms").arg(name).arg(time_to_ms(time_now() - t_start)));
 
 	return true;
 }

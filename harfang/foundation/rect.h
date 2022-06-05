@@ -53,7 +53,9 @@ template <typename T> bool operator!=(const Rect<T> &a, const Rect<T> &b) { retu
 
 template <typename T, typename O> bool Inside(const Rect<T> &r, const O &o) { return T(o.x) > r.sx && T(o.y) > r.sy && T(o.x) < r.ex && T(o.y) < r.ey; }
 
+/// Return whether `a` fits in `b`.
 template <typename T> bool FitsInside(const Rect<T> &a, const Rect<T> &b) { return GetWidth(a) <= GetWidth(b) && GetHeight(a) <= GetHeight(b); }
+/// Return `true` if rect `a` intersects rect `b`.
 template <typename T> bool Intersects(const Rect<T> &a, const Rect<T> &b) { return !(a.ex < b.sx || a.ey < b.sy || a.sx > b.ex || a.sy > b.ey); }
 
 template <typename T> Rect<T> Intersection(const Rect<T> &a, const Rect<T> &b) {
@@ -63,8 +65,12 @@ template <typename T> Rect<T> Intersection(const Rect<T> &a, const Rect<T> &b) {
 }
 
 template <typename T> Rect<T> Union(const Rect<T> &a, const Rect<T> &b) { return {Min(a.sx, b.sx), Min(a.sy, b.sy), Max(a.ex, b.ex), Max(a.ey, b.ey)}; }
+/// Grow a rectangle by the specified amount of units.
+/// @see Crop.
 template <typename T> Rect<T> Grow(const Rect<T> &r, T border) { return {r.sx - border, r.sy - border, r.ex + border, r.ey + border}; }
 
+/// Crop a rectangle. Remove the specified amount of units on each side of the rectangle. 
+/// @see Grow.
 template <typename T> Rect<T> Crop(const Rect<T> &r, T left, T top, T right, T bottom) { return {r.sx + left, r.sy + top, r.ex - right, r.ey - bottom}; }
 
 template <typename T, typename O> bool Clamp(const Rect<T> &r, O &o) {

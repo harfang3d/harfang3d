@@ -15,13 +15,13 @@ public:
 	explicit Data(size_t size) { Resize(size); }
 
 	Data(const Data &data) { *this = data; }
-	Data(Data &&data) { *this = data; }
+//	Data(Data &&data) { *this = data; }
 
 	Data(const void *data, size_t size) { Write(data, size); }
 	Data(void *data, size_t size) : data_(reinterpret_cast<uint8_t *>(data)), size_(size) {}
 
 	Data &operator=(const Data &data);
-	Data &operator=(Data &&data);
+//	Data &operator=(Data &&data);
 
 	uint8_t *GetData() { return data_; }
 	const uint8_t *GetData() const { return data_; }
@@ -72,18 +72,32 @@ template <typename T> T Read(Data &data) {
 	return v;
 }
 
-template <typename T> bool ReadAt(Data &data, T &v, size_t at) {
-	data.SetCursor(at);
-	return data.Read(&v, sizeof(T));
-}
-
 template <typename T> bool Write(Data &data, const T &v) { return data.Write(&v, sizeof(T)) == sizeof(T); }
 
-template <typename T> bool WriteAt(Data &data, const T &v, size_t at) {
-	data.SetCursor(at);
-	return Write(data, v);
-}
+//
+template <typename T> struct DeferredDataWrite {
+	DeferredDataWrite(Data &data_) : data(data_) {
+		cursor = data.GetCursor();
+		data.Skip(sizeof(T)); // leave space for deferred write
+	}
 
+	void Commit(const T &v) {
+		const auto seek_ = data.GetCursor();
+
+		data.SetCursor(cursor);
+		data.Write(&v, sizeof(T));
+
+		data.SetCursor(seek_);
+	}
+
+	void CommitAsChunkSize() {
+		const auto chunk_size = data.GetCursor() - (cursor + sizeof(T));
+		Commit(T(chunk_size));
+	}
+
+	size_t cursor;
+	Data &data;
+};
 
 //
 bool LoadDataFromFile(const char *path, Data &data);

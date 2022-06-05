@@ -130,17 +130,17 @@ bool OpenVRInit() {
 	vr_system = vr::VR_Init(&eError, vr::VRApplication_Scene);
 
 	if (!vr_system) {
-		error(format("OpenVR initialization failed: %1").arg(vr::VR_GetVRInitErrorAsEnglishDescription(eError)));
+		warn(format("OpenVR initialization failed: %1").arg(vr::VR_GetVRInitErrorAsEnglishDescription(eError)));
 		return false; // initialization failure
 	}
 
 	const auto driver = GetStringTrackedDeviceProperty_(vr_system, vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_TrackingSystemName_String);
 	const auto display = GetStringTrackedDeviceProperty_(vr_system, vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_SerialNumber_String);
 
-	debug(format("OpenVR driver %2 initialized on display %1").arg(display).arg(driver));
+	log(format("OpenVR driver %2 initialized on display %1").arg(display).arg(driver));
 
 	vr_system->GetRecommendedRenderTargetSize(&rt_width, &rt_height);
-	debug(format("OpenVR recommended render target size %1x%2").arg(rt_width).arg(rt_height));
+	log(format("OpenVR recommended render target size %1x%2").arg(rt_width).arg(rt_height));
 
 	AddVRControllerReader("openvr_controller_0", OpenVRControllerReader<0>, OpenVRControllerSendHapticPulse<0>);
 	AddVRControllerReader("openvr_controller_1", OpenVRControllerReader<1>, OpenVRControllerSendHapticPulse<1>);
@@ -179,7 +179,7 @@ bool OpenVRInit() {
 }
 
 void OpenVRShutdown() {
-	debug("OpenVR shutting down");
+	log("OpenVR shutting down");
 
 	RemoveVRControllerReader("openvr_controller_0");
 	RemoveVRControllerReader("openvr_controller_1");
@@ -340,7 +340,7 @@ Texture OpenVRGetDepthTexture(const OpenVREyeFrameBuffer &eye) { return {BGFX_TE
 namespace hg {
 
 bool OpenVRInit() {
-	error("OpenVR support DISABLED when building Harfang");
+	warn("OpenVR support DISABLED when building Harfang");
 	return false;
 }
 

@@ -43,6 +43,10 @@ struct ForwardPipelineAAAConfig {
 	float bloom_threshold = 5.f, bloom_bias = 0.5f, bloom_intensity = 0.1f;
 	float motion_blur = 1.f;
 	float exposure = 1.f, gamma = 2.2f;
+	float sharpen = 0.1f;
+
+	bool use_tonemapping = true;
+	float specular_weight = 1.f;
 
 	ForwardPipelineAAADebugBuffer debug_buffer = FPAAADB_None;
 };
@@ -131,6 +135,11 @@ struct ForwardPipelineAAA {
 	bgfx::UniformHandle u_depth;
 	bgfx::ProgramHandle compositing_prg;
 
+	// no compositing
+	bgfx::UniformHandle u_copyColor;
+	bgfx::UniformHandle u_copyDepth;
+	bgfx::ProgramHandle copy_prg;
+
 	//
 	Bloom bloom;
 };
@@ -194,8 +203,8 @@ void PrepareSceneForwardPipelineViewDependentRenderData(bgfx::ViewId &view_id, c
 	SceneForwardPipelineRenderData &render_data, const ForwardPipeline &pipeline, const PipelineResources &resources, SceneForwardPipelinePassViewId &views,
 	const char *debug_name = "scene");
 
-/// Submit a scene to the forward pipeline. Scene render data must be prepared beforehand by calling PrepareSceneForwardPipelineCommonRenderData and
-/// PrepareSceneForwardPipelineViewDependentRenderData.
+/// Submit a scene to the forward pipeline.
+/// Scene render data must be prepared beforehand by calling PrepareSceneForwardPipelineCommonRenderData and PrepareSceneForwardPipelineViewDependentRenderData.
 void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, const Rect<int> &rect, const ViewState &view_state, ForwardPipeline &pipeline,
 	const SceneForwardPipelineRenderData &render_data, const PipelineResources &resources, SceneForwardPipelinePassViewId &views,
 	bgfx::FrameBufferHandle fb = BGFX_INVALID_HANDLE, const char *debug_name = "scene");

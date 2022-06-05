@@ -1,6 +1,7 @@
-.title System of Units
+.title Coordinates and Units System
 
-Harfang internally uses the Internal System of Units (SI) or metric system:
+Harfang uses a left-handed coordinate system with the X axis pointing right, the Y axis pointing up and the Z axis pointing away from the viewer.
+For units, it uses the International System of Units (SI) or metric system:
 
 - Distances are expressed in meters, see [Mtr], [Cm] and [Mm].
 - Angles are expressed in radians, see [Rad] and [Deg].

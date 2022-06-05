@@ -88,7 +88,7 @@ bool KeyValueStore::Open(const Reader &ir, const Handle &h) {
 	return res;
 }
 
-bool KeyValueStore::Open(const char *path) { return Open(g_file_reader, ScopedReadHandle(g_file_read_provider, path)); }
+bool KeyValueStore::Open(const char *path, bool silent) { return Open(g_file_reader, ScopedReadHandle(g_file_read_provider, path, silent)); }
 
 bool KeyValueStore::Save(const char *path) {
 	FILE *f = fopen(path, "w");

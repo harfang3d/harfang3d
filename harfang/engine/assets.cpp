@@ -21,6 +21,14 @@
 
 namespace hg {
 
+enum AssetsSourceType { AssetsFolder, AssetsPackage };
+
+struct AssetsSource {
+	AssetsSourceType type;
+	std::string name;
+};
+
+//
 static std::mutex assets_mutex;
 
 static std::deque<std::string> assets_folders;
@@ -151,7 +159,7 @@ Asset OpenAsset(const char *name, bool silent) {
 		} else {
 			const mz_zip_error err = mz_zip_get_last_error(&p.archive);
 			if (!silent)
-				error(format("Failed to open asset '%1' from file '%2' (asset was found but failed to open) : %3")
+				warn(format("Failed to open asset '%1' from file '%2' (asset was found but failed to open) : %3")
 						  .arg(name)
 						  .arg(p.filename)
 						  .arg(mz_zip_get_error_string(err)));
@@ -160,7 +168,7 @@ Asset OpenAsset(const char *name, bool silent) {
 	}
 
 	if (!silent)
-		error(format("Failed to open asset '%1' (file not found)").arg(name));
+		warn(format("Failed to open asset '%1' (file not found)").arg(name));
 
 	return {};
 }

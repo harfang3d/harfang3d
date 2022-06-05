@@ -99,7 +99,7 @@ SRanipalState SRanipalGetState() {
 namespace hg {
 
 bool SRanipalInit() {
-	error("SRanipal eye-tracking support DISABLED when building Harfang");
+	warn("SRanipal eye-tracking support DISABLED when building Harfang");
 	return false;
 }
 

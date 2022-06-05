@@ -1,14 +1,14 @@
 // HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include "engine/assets.h"
-#include <engine/stb_image.h>
 
-#include "engine/vertex.h"
+#include <engine/vertex.h>
 #include <engine/geometry.h>
 #include <engine/model_builder.h>
 #include <engine/node.h>
 #include <engine/physics.h>
 #include <engine/render_pipeline.h>
+#include <engine/forward_pipeline.h>
 #include <engine/scene.h>
 
 #include <foundation/build_info.h>
@@ -27,14 +27,12 @@
 #include <foundation/time.h>
 #include <foundation/vector3.h>
 
-#include "fabgen.h"
-
-#include "bind_Lua.h"
+#include "stb_image.h"
 
 #include "tiny_gltf.h"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <mutex>
 
 #undef CopyFile
@@ -56,17 +54,6 @@ static inline const hg::Material::Value *GetMaterialValue(const hg::Material &ma
 }
 
 std::map<hg::NodeRef, int> NodeRef_to_IdNode;
-
-#if 0
-// CWE 561: The function 'Indent' is never used.
-static std::string Indent(const int indent) {
-	std::string s;
-	for (int i = 0; i < indent; i++) {
-		s += "  ";
-	}
-	return s;
-}
-#endif
 
 /// Adapts an array of bytes to an array of T. Will advace of byte_stride each
 /// elements.
@@ -158,6 +145,7 @@ struct Config {
 	std::string compiled_output_path{"./"};
 	std::string source_output_path{"./"};
 	bool binary;
+	bool filter_disabled_node;
 };
 
 static bool GetOutputPath(std::string &path, const std::string &base, const std::string &name, const std::string &prefix, const std::string &ext) {
@@ -169,17 +157,6 @@ static bool GetOutputPath(std::string &path, const std::string &base, const std:
 
 	return true;
 }
-
-#if 0
-// CWE 561: The function 'MakeRelativeResourceName' is never used.
-static std::string MakeRelativeResourceName(const std::string &name, const std::string &base_path, const std::string &prefix) {
-	if (hg::starts_with(name, base_path, hg::case_sensitivity::insensitive)) {
-		const auto stripped_name = hg::lstrip(hg::slice(name, base_path.length()), "/");
-		return prefix.empty() ? stripped_name : prefix + "/" + stripped_name;
-	}
-	return name;
-}
-#endif
 
 #define for_with_index(V, ...)                                                                                                                                 \
 	for (size_t V = 0, _brk_ = 0, _i_ = 1; _i_; _i_ = 0)                                                                                                       \
@@ -223,6 +200,10 @@ static void ExportMotions(Model &model, hg::Scene &scene) {
 
 			auto *anim = scene.GetAnim(node_anim.anim);
 
+			//check if anim track can be exported TODO maybe add some other type
+			if (!anim->vec3_tracks.size() && !anim->quat_tracks.size())
+				continue;
+
 			Buffer InputBuffer, OutputBuffer;
 			BufferView InputBufferView, OutputBufferView;
 			Accessor InputAccessor, OutputAccessor;
@@ -242,7 +223,7 @@ static void ExportMotions(Model &model, hg::Scene &scene) {
 				float input_max = 0;
 
 				std::vector<float> output;
-				hg::Vec4 output_min(std::numeric_limits<float>::max()), output_max(std::numeric_limits<float>::min());
+				hg::Vec4 output_min(std::numeric_limits<float>::max()), output_max(std::numeric_limits<float>::lowest());
 
 				for (const auto &key : anim->quat_tracks[0].keys) {
 					// t
@@ -321,7 +302,7 @@ static void ExportMotions(Model &model, hg::Scene &scene) {
 				float input_max = 0;
 
 				std::vector<float> output;
-				hg::Vec3 output_min(std::numeric_limits<float>::max()), output_max(std::numeric_limits<float>::min());
+				hg::Vec3 output_min(std::numeric_limits<float>::max()), output_max(std::numeric_limits<float>::lowest());
 
 				for (const auto &key : anim->vec3_tracks[0].keys) {
 					// t
@@ -393,7 +374,9 @@ static void ExportMotions(Model &model, hg::Scene &scene) {
 			animation.channels.push_back(channel);
 			animation.name = scene_anim->name;
 		}
-		model.animations.push_back(animation);
+
+		if(animation.channels.size())
+			model.animations.push_back(animation);
 	}
 }
 
@@ -417,11 +400,14 @@ static size_t ExportTexture(Model &model, const hg::TextureRef &tex_ref, const C
 				return -1;
 
 			texture_name = hg::CutFileExtension(texture_name) + ".png";
-			SavePNG(pic, hg::PathJoin({config.source_output_path, texture_name}).c_str());
+			texture_path = hg::PathJoin({ config.source_output_path, texture_name });
+			SavePNG(pic, texture_path.c_str());
 		}
 
 		if (!hg::LoadPicture(pic, texture_path.c_str()))
 			return -1;
+
+		image.name = hg::CutFileExtension(texture_name);
 
 		image.mimeType = file_ext == "jpg" || file_ext == "jpeg" ? "image/jpeg" : "image/png";
 
@@ -430,7 +416,7 @@ static size_t ExportTexture(Model &model, const hg::TextureRef &tex_ref, const C
 		image.pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
 		image.width = pic.GetWidth();
 		image.height = pic.GetHeight();
-		image.image = std::vector<unsigned char>(&pic.GetData()[0], &pic.GetData()[image.width * image.height * image.component]);
+	//	image.image = std::vector<unsigned char>(&pic.GetData()[0], &pic.GetData()[image.width * image.height * image.component]);
 
 		// open the file:
 		std::streampos fileSize;
@@ -462,7 +448,7 @@ static size_t ExportTexture(Model &model, const hg::TextureRef &tex_ref, const C
 		model.textures.push_back(texture);
 
 		textures_cache.emplace(texture_path, texture_id);
-
+	
 		// remove the temporary file
 		if (file_ext != "png" && file_ext != "jpg" && file_ext != "jpeg")
 			remove(hg::PathJoin({config.source_output_path, texture_name}).c_str());
@@ -477,6 +463,11 @@ static void ExportMaterial(Model &model, Material &mat, hg::Material &m, const C
 	auto t = hg::GetMaterialTexture(m, "uBaseOpacityMap");
 	if (t != hg::InvalidTextureRef)
 		mat.pbrMetallicRoughness.baseColorTexture.index = ExportTexture(model, t, config, resources);
+	else {
+		t = hg::GetMaterialTexture(m, "uDiffuseMap");
+		if (t != hg::InvalidTextureRef)
+			mat.pbrMetallicRoughness.baseColorTexture.index = ExportTexture(model, t, config, resources);
+	}
 
 	t = hg::GetMaterialTexture(m, "uOcclusionRoughnessMetalnessMap");
 	if (t != hg::InvalidTextureRef)
@@ -502,6 +493,11 @@ static void ExportMaterial(Model &model, Material &mat, hg::Material &m, const C
 		mat.pbrMetallicRoughness.baseColorFactor[1] = v->value[1];
 		mat.pbrMetallicRoughness.baseColorFactor[2] = v->value[2];
 		mat.pbrMetallicRoughness.baseColorFactor[3] = v->value[3];
+	}else if (const auto &v = GetMaterialValue(m, "uDiffuseColor")) {
+		mat.pbrMetallicRoughness.baseColorFactor[0] = v->value[0];
+		mat.pbrMetallicRoughness.baseColorFactor[1] = v->value[1];
+		mat.pbrMetallicRoughness.baseColorFactor[2] = v->value[2];
+		mat.pbrMetallicRoughness.baseColorFactor[3] = v->value[3];
 	}
 
 	if (const auto &v = GetMaterialValue(m, "uOcclusionRoughnessMetalnessColor")) {
@@ -509,6 +505,7 @@ static void ExportMaterial(Model &model, Material &mat, hg::Material &m, const C
 		mat.pbrMetallicRoughness.metallicFactor = v->value[2];
 	}
 	if (const auto &v = GetMaterialValue(m, "uSelfColor")) {
+		mat.emissiveFactor.resize(3, 0);
 		mat.emissiveFactor[0] = v->value[0];
 		mat.emissiveFactor[1] = v->value[1];
 		mat.emissiveFactor[2] = v->value[2];
@@ -587,7 +584,7 @@ static void ExportGeometry(Model &model, Mesh &mesh, const int &nb_materials, co
 		// bufferView.byteStride = 4; // not sur if needed yet
 
 		std::vector<float> vertices;
-		hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
+		hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::lowest());
 
 		for (const auto &vertex : geo_vtx) {
 			const auto &vtx = vertex.pos;
@@ -637,7 +634,7 @@ static void ExportGeometry(Model &model, Mesh &mesh, const int &nb_materials, co
 		// bufferView.byteStride = 4; // not sur if needed yet
 
 		std::vector<float> normal;
-		hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
+		hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::lowest());
 		for (const auto &vertex : geo_vtx) {
 			const auto &nrm = vertex.normal;
 			normal.push_back(nrm.x);
@@ -687,7 +684,7 @@ static void ExportGeometry(Model &model, Mesh &mesh, const int &nb_materials, co
 	// bufferView.byteStride = 4; // not sur if needed yet
 
 	std::vector<float> tangent;
-	hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
+	hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::lowest()/*);
 	for (const auto &tgt : geo.tangent) {
 	tangent.push_back(tgt.T.x);
 	tangent.push_back(tgt.T.y);
@@ -740,7 +737,7 @@ static void ExportGeometry(Model &model, Mesh &mesh, const int &nb_materials, co
 		// bufferView.byteStride = 4; // not sur if needed yet
 
 		std::vector<float> uv0;
-		hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
+		hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::lowest());
 		for (const auto &vertex : geo_vtx) {
 			const auto &uv = vertex.uv0;
 			uv0.push_back(uv.x);
@@ -783,7 +780,7 @@ static void ExportGeometry(Model &model, Mesh &mesh, const int &nb_materials, co
 		// bufferView.byteStride = 4; // not sur if needed yet
 
 		std::vector<float> uv1;
-		hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
+		hg::Vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::lowest());
 		for (const auto &vertex : geo_vtx) {
 			const auto &uv = vertex.uv1;
 			uv1.push_back(uv.x);
@@ -921,11 +918,24 @@ static const size_t ExportObject(Model &model, const hg::Object &object, const C
 }
 
 //
-static const size_t ExportNode(Model &model, const hg::NodeRef nodeRef, const std::vector<hg::NodeRef> &children, const hg::NodesChildren &nodes_children,
+static const int ExportNode(Model &model, const hg::NodeRef nodeRef, const std::vector<hg::NodeRef> &children, const hg::NodesChildren &nodes_children,
 	const hg::Scene &scene, const Config &config, hg::PipelineResources &resources) {
-	const auto &node = scene.GetNode(nodeRef.idx);
+	// [EJ] this code is confusing/confused...
+	// is nodeRef.gen known to be outdated? if so, why pass a ref and not an index?
+	// why is the returned Node object stored as a reference to a temporary?
+	const auto &node = scene.GetNode(scene.GetNodeRef(nodeRef.idx));
 	Node n;
 	n.name = node.GetName();
+
+	// if disable
+	if (!node.IsEnabled()) {
+		if (config.filter_disabled_node)
+			return -1;
+
+		if (std::find(model.extensionsUsed.begin(), model.extensionsUsed.end(), "KHR_nodes_disable") == model.extensionsUsed.end())
+			model.extensionsUsed.push_back("KHR_nodes_disable");
+		n.extensions["KHR_nodes_disable"] = Value({ { "visible", Value(false) } });
+	}
 
 	if (node.GetTransform()) {
 		auto p = node.GetTransform().GetPos();
@@ -961,8 +971,11 @@ static const size_t ExportNode(Model &model, const hg::NodeRef nodeRef, const st
 	}
 
 	// save children
-	for (const auto &child : children)
-		n.children.push_back(ExportNode(model, child, nodes_children.GetChildren(child), nodes_children, scene, config, resources));
+	for (const auto &child : children) {
+		auto id_node = ExportNode(model, child, nodes_children.GetChildren(child), nodes_children, scene, config, resources);
+		if (id_node >= 0)
+			n.children.push_back(id_node);
+	}
 
 	auto id_node = model.nodes.size();
 	NodeRef_to_IdNode[node.ref] = id_node;
@@ -995,8 +1008,7 @@ static bool ExportGltfScene(const std::string &path, const Config &config) {
 	hg::PipelineResources pl_resources;
 	hg::Scene scene;
 	hg::LoadSceneContext ctx;
-	if (!hg::LoadSceneFromAssets(
-			hg::PathStripPrefix(path, config.compiled_output_path).c_str(), scene, pl_resources, hg::GetForwardPipelineInfo(), ctx, hg::LSSF_All))
+	if (!hg::LoadSceneFromAssets(hg::PathStripPrefix(path, config.compiled_output_path).c_str(), scene, pl_resources, hg::GetForwardPipelineInfo(), ctx, hg::LSSF_All))
 		return false;
 
 	// get root nodes to export (then proceed with children)
@@ -1020,25 +1032,33 @@ static bool ExportGltfScene(const std::string &path, const Config &config) {
 
 	Scene scn;
 	// export root node (following by the children)
-	for (const auto &node : root_nodes)
-		scn.nodes.push_back(ExportNode(model, node, nodes_children.GetChildren(node), nodes_children, scene, config, pl_resources));
+	for (const auto &node : root_nodes) {
+		auto id_node = ExportNode(model, node, nodes_children.GetChildren(node), nodes_children, scene, config, pl_resources);
+		if (id_node >= 0)
+			scn.nodes.push_back(id_node);
+	}
 
 	ExportMotions(model, scene);
 
 	model.scenes.push_back(scn);
 
+	std::string export_path = config.name.empty() ? hg::GetFileName(path) : config.name;
+	// if no extension, set to binary
+	if (hg::GetFileExtension(export_path) == "")
+		export_path += ".glb";
+
 	std::string out_path;
 	bool embedImages = true;
 	bool embedBuffers = true;
 	bool prettyPrint = true;
-	bool writeBinary = config.binary;
-	if (!GetOutputPath(out_path, config.base_output_path, config.name.empty() ? hg::GetFileName(path) : config.name, {}, writeBinary ? "glb" : "gltf")) {
+	bool writeBinary = config.binary || (hg::GetFileExtension(export_path) == "glb");
+	if (!GetOutputPath(out_path, config.base_output_path,  hg::GetFileName(export_path), {}, hg::GetFileExtension(export_path))) {
 		hg::error("failed to compute output path");
 		return false;
 	}
 
-	bool ret = saver.WriteGltfSceneToFile(&model, out_path, embedImages, embedBuffers, prettyPrint, writeBinary);
-	if(!ret) {
+		bool ret = saver.WriteGltfSceneToFile(&model, out_path, embedImages, embedBuffers, prettyPrint, writeBinary);
+	if (!ret) {
 		hg::error(hg::format("failed to write scene to %1").arg(out_path.c_str()));
 		return false;
 	}
@@ -1089,6 +1109,7 @@ int main(int argc, const char **argv) {
 		{
 			{"-quiet", "Quiet log, only log errors"},
 			{"-binary", "Export binary file"},
+			{"-filter_disabled_node", "Don't export disabled node"},
 		},
 		{{"-out", "Output directory", true}, {"-compiled-resource-path", "Where the scene compiled resources are", true},
 			{"-source-resource-path", "Where the scene not compiled resources are", true}, {"-name", "Specify the output scene name", true}},
@@ -1113,6 +1134,7 @@ int main(int argc, const char **argv) {
 
 	quiet = hg::GetCmdLineFlagValue(cmd_content, "-quiet");
 	config.binary = hg::GetCmdLineFlagValue(cmd_content, "-binary");
+	config.filter_disabled_node = hg::GetCmdLineFlagValue(cmd_content, "-filter_disabled_node");
 
 	//
 	if (cmd_content.positionals.size() != 1) {

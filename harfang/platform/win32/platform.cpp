@@ -182,7 +182,7 @@ bool SaveFileDialog(const std::string &title, const std::vector<hg::FileFilter> 
 				hr = pFileSave->SetFolder(psiFolder);
 				psiFolder->Release();
 			} else {
-				debug(format("SHCreateItemFromParsingName failed in SaveFileDialog: %1").arg(GetLastError_Win32()));
+				warn(format("SHCreateItemFromParsingName failed in SaveFileDialog: %1").arg(GetLastError_Win32()).c_str());
 			}
 		}
 

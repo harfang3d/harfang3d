@@ -105,7 +105,8 @@ Mat3 TranslationMat3(const Vec3 &t);
 /// Scale matrix.
 Mat3 ScaleMat3(const tVec2<float> &s);
 Mat3 ScaleMat3(const Vec3 &s);
-/// Cross product matrix.
+/// Creates a matrix __M__ so that __Mv = p⨯v__.
+/// Simply put, multiplying this matrix to any vector __v__ is equivalent to compute the cross product between __p__ and __v__.
 Mat3 CrossProductMat3(const Vec3 &v);
 
 /// Rotation matrix in 2D around a pivot point.

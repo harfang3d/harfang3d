@@ -1,3 +1,3 @@
 Convert microseconds to time.
 
-See [man.UnitSystem].
+See [man.CoordinateAndUnitSystem].

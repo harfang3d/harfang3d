@@ -48,10 +48,10 @@ Mat3 VectorMat3(const Vec3 &v) { return {v.x, 0, 0, v.y, 0, 0, v.z, 0, 0}; }
 Mat3 CrossProductMat3(const Vec3 &v) { return {0, -v.z, v.y, v.z, 0, -v.x, -v.y, v.x, 0}; }
 
 //
-Mat3 Normalize(const Mat3 &m) { return {Normalize(GetRow(m, 0)), Normalize(GetRow(m, 1)), Normalize(GetRow(m, 2))}; }
+Mat3 Normalize(const Mat3 &m) { return {Normalize(GetColumn(m, 0)), Normalize(GetColumn(m, 1)), Normalize(GetColumn(m, 2))}; }
 
 Mat3 Orthonormalize(const Mat3 &m) {
-	const auto x = GetRow(m, 0), y = GetRow(m, 1), z = Normalize(Cross(x, y));
+	const auto x = GetX(m), y = GetY(m), z = Normalize(Cross(x, y));
 	return {Normalize(x), Normalize(Cross(z, x)), z};
 }
 
@@ -264,30 +264,30 @@ Mat3 RotationMatZ(float a) { return {Cos(a), Sin(a), 0, -Sin(a), Cos(a), 0, 0, 0
 Mat3 RotationMat2D(float a, const tVec2<float> &pivot) { return TranslationMat3(pivot) * RotationMatZ(a) * TranslationMat3({-pivot.x, -pivot.y}); }
 
 //
-Vec3 GetRow(const Mat3 &m, int n) { return {m.m[0][n], m.m[1][n], m.m[2][n]}; }
-Vec3 GetColumn(const Mat3 &m, int n) { return {m.m[n][0], m.m[n][1], m.m[n][2]}; }
+Vec3 GetRow(const Mat3 &m, int n) { return {m.m[n][0], m.m[n][1], m.m[n][2]}; }
+Vec3 GetColumn(const Mat3 &m, int n) { return {m.m[0][n], m.m[1][n], m.m[2][n]}; }
 
 void SetRow(Mat3 &m, int n, const Vec3 &v) {
-	m.m[0][n] = v.x;
-	m.m[1][n] = v.y;
-	m.m[2][n] = v.z;
-}
-
-void SetColumn(Mat3 &m, int n, const Vec3 &v) {
 	m.m[n][0] = v.x;
 	m.m[n][1] = v.y;
 	m.m[n][2] = v.z;
 }
 
-Vec3 GetX(const Mat3 &m) { return GetRow(m, 0); }
-Vec3 GetY(const Mat3 &m) { return GetRow(m, 1); }
-Vec3 GetZ(const Mat3 &m) { return GetRow(m, 2); }
+void SetColumn(Mat3 &m, int n, const Vec3 &v) {
+	m.m[0][n] = v.x;
+	m.m[1][n] = v.y;
+	m.m[2][n] = v.z;
+}
+
+Vec3 GetX(const Mat3 &m) { return GetColumn(m, 0); }
+Vec3 GetY(const Mat3 &m) { return GetColumn(m, 1); }
+Vec3 GetZ(const Mat3 &m) { return GetColumn(m, 2); }
 Vec3 GetTranslation(const Mat3 &m) { return {m.m[0][2], m.m[1][2], 0.f}; }
 Vec3 GetScale(const Mat3 &m) { return {Len(GetX(m)), Len(GetY(m)), Len(GetZ(m))}; }
 
-void SetX(Mat3 &m, const Vec3 &v) { SetRow(m, 0, v); }
-void SetY(Mat3 &m, const Vec3 &v) { SetRow(m, 1, v); }
-void SetZ(Mat3 &m, const Vec3 &v) { SetRow(m, 2, v); }
+void SetX(Mat3 &m, const Vec3 &v) { SetColumn(m, 0, v); }
+void SetY(Mat3 &m, const Vec3 &v) { SetColumn(m, 1, v); }
+void SetZ(Mat3 &m, const Vec3 &v) { SetColumn(m, 2, v); }
 
 void SetTranslation(Mat3 &m, const tVec2<float> &v) {
 	m.m[0][2] = v.x;

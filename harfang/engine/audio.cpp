@@ -59,22 +59,22 @@ static bool CheckALSuccess(const char *file = "unknown", ALuint line = 0) {
 		case AL_NO_ERROR:
 			return true;
 		case AL_INVALID_NAME:
-			error(format("AL invalid name (%1:%2)").arg(file).arg(line));
+			warn(format("AL invalid name (%1:%2)").arg(file).arg(line));
 			break;
 		case AL_INVALID_ENUM:
-			error(format("AL invalid enum (%1:%2)").arg(file).arg(line));
+			warn(format("AL invalid enum (%1:%2)").arg(file).arg(line));
 			break;
 		case AL_INVALID_VALUE:
-			error(format("AL invalid value (%1:%2)").arg(file).arg(line));
+			warn(format("AL invalid value (%1:%2)").arg(file).arg(line));
 			break;
 		case AL_INVALID_OPERATION:
-			error(format("AL invalid operation (%1:%2)").arg(file).arg(line));
+			warn(format("AL invalid operation (%1:%2)").arg(file).arg(line));
 			break;
 		case AL_OUT_OF_MEMORY:
-			error(format("AL out of memory (%1:%2)").arg(file).arg(line));
+			warn(format("AL out of memory (%1:%2)").arg(file).arg(line));
 			break;
 		default:
-			error(format("AL error (%1:%2)").arg(file).arg(line));
+			warn(format("AL error (%1:%2)").arg(file).arg(line));
 			break;
 	}
 	return false;
@@ -163,7 +163,7 @@ static bool UpdateSourceStream(SourceRef src_ref) {
 	ALint processed;
 	__AL_CALL_RET(alGetSourcei(src, AL_BUFFERS_PROCESSED, &processed));
 	if (processed < 0 || processed > numeric_cast<ALint>(stream.buffers.size())) {
-		error("Incoherent processed buffer count returned from the OpenAL back-end");
+		warn("Incoherent processed buffer count returned from the OpenAL back-end");
 		return false;
 	}
 
@@ -255,14 +255,14 @@ bool AudioInit() {
 		al_mixer.device = alcOpenDevice("Generic Software");
 
 		if (!al_mixer.device) {
-			error("OpenAL initialization failed");
+			warn("OpenAL initialization failed");
 			return false;
 		}
 	}
 
 	ALCint freq;
 	alcGetIntegerv(al_mixer.device, ALC_FREQUENCY, 1, &freq);
-	debug(format("OpenAL ready on device '%1' - @%2hz").arg(alcGetString(al_mixer.device, ALC_DEVICE_SPECIFIER)).arg(freq));
+	log(format("OpenAL ready on device '%1' - @%2hz").arg(alcGetString(al_mixer.device, ALC_DEVICE_SPECIFIER)).arg(freq));
 
 	al_mixer.context = alcCreateContext(al_mixer.device, nullptr);
 	alcMakeContextCurrent(al_mixer.context);

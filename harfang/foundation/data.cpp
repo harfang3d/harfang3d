@@ -23,6 +23,7 @@ Data &Data::operator=(const Data &data) {
 	return *this;
 }
 
+/*
 Data &Data::operator=(Data &&data) {
 	Free();
 
@@ -38,6 +39,7 @@ Data &Data::operator=(Data &&data) {
 
 	return *this;
 }
+*/
 
 void Data::Reserve(size_t size) {
 	const auto new_capacity = (size / 8192 + 1) * 8192; // grow in 8KB increments

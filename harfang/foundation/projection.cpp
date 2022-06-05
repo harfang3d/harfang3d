@@ -82,11 +82,27 @@ bool ProjectToClipSpace(const Mat44 &proj, const Vec3 &view, Vec3 &clip) {
 	return true;
 }
 
+bool ProjectOrthoToClipSpace(const Mat44& proj, const Vec3& view, Vec3& clip) {
+	Vec4 ndc = proj * Vec4(view);
+	if (ndc.w <= 0.f)
+		return false;
+	clip = Vec3(ndc);
+	return true;
+}
+
 bool UnprojectFromClipSpace(const Mat44 &inv_proj, const Vec3 &clip, Vec3 &view) {
 	Vec4 ndc = inv_proj * Vec4(clip);
 	if (ndc.w <= 0.f)
 		return false;
 	view = Vec3(ndc) / ndc.w;
+	return true;
+}
+
+bool UnprojectOrthoFromClipSpace(const Mat44 &inv_proj, const Vec3 &clip, Vec3 &view) {
+	Vec4 ndc = inv_proj * Vec4(clip);
+	if (ndc.w <= 0.f)
+		return false;
+	view = Vec3(ndc);
 	return true;
 }
 
@@ -103,9 +119,22 @@ bool ProjectToScreenSpace(const Mat44 &proj, const Vec3 &view, const Vec2 &res, 
 	return true;
 }
 
+bool ProjectOrthoToScreenSpace(const Mat44& proj, const Vec3& view, const Vec2& res, Vec3& screen) {
+	Vec3 clip;
+	if (!ProjectOrthoToClipSpace(proj, view, clip))
+		return false;
+	screen = ClipSpaceToScreenSpace(clip, res);
+	return true;
+}
+
 bool UnprojectFromScreenSpace(const Mat44 &inv_proj, const Vec3 &screen, const Vec2 &res, Vec3 &view) {
 	const auto clip = ScreenSpaceToClipSpace(screen, res);
 	return UnprojectFromClipSpace(inv_proj, clip, view);
+}
+
+bool UnprojectOrthoFromScreenSpace(const Mat44 &inv_proj, const Vec3 &screen, const Vec2 &res, Vec3 &view) {
+	const auto clip = ScreenSpaceToClipSpace(screen, res);
+	return UnprojectOrthoFromClipSpace(inv_proj, clip, view);
 }
 
 //
@@ -122,7 +151,7 @@ bool WorldRaycastScreenPos(float x, float y, float width, float height, const Ma
 		return false;
 
 	ray_o = GetT(inv_view);
-	ray_d = view_pos * inv_view - ray_o;
+	ray_d = inv_view * view_pos - ray_o;
 	return true;
 }
 

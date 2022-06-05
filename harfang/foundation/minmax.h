@@ -38,7 +38,7 @@ inline bool Overlap(const MinMax &a, const MinMax &b) {
 inline bool operator==(const MinMax &a, const MinMax &b) { return a.mn == b.mn && a.mx == b.mx; }
 inline bool operator!=(const MinMax &a, const MinMax &b) { return a.mn != b.mn || a.mx != b.mx; }
 
-/// Test position.
+/// Returns true if the provided position is inside the bounding volume, false otherwise.
 inline bool Contains(const MinMax &mm, const Vec3 &p) {
 	return !(p.x < mm.mn.x || p.y < mm.mn.y || p.z < mm.mn.z || p.x > mm.mx.x || p.y > mm.mx.y || p.z > mm.mx.z);
 }

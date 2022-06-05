@@ -356,7 +356,7 @@ bool SetOutputDir(const std::string &path) {
 //
 static json LoadMeta(const std::string &path) {
 	ProfilerPerfSection perf("Manage/LoadMeta");
-	return LoadResourceMetaFromFile(FullInputPath(path), true);
+	return LoadResourceMetaFromFile(FullInputPath(path));
 }
 
 //
@@ -1055,9 +1055,14 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 static void ProcessGeometry(const std::string &src, const std::string &dst, ModelOptimisationLevel optimisation_level) {
 	const auto geo = LoadGeometryFromFile(src.c_str());
 
-	if (!SaveGeometryModelToFile(dst.c_str(), geo, optimisation_level)) {
-		const json json_err = {{"type", "FailedToSaveModel"}, {"dst", dst}};
+	if (!Validate(geo)) {
+		const json json_err = {{"type", "InvalidGeometry"}, {"dst", dst}};
 		log_error(json_err);
+	} else {
+		if (!SaveGeometryModelToFile(dst.c_str(), geo, optimisation_level)) {
+			const json json_err = {{"type", "FailedToSaveModel"}, {"dst", dst}};
+			log_error(json_err);
+		}
 	}
 }
 
@@ -1174,7 +1179,7 @@ static void BuildShader(std::map<std::string, Hash> &hashes, const std::string &
 		return;
 	}
 
-	const std::string optim_flags = compile_with_debug_info ? "-O 0 --debug" : "-O 3";
+	const std::string optim_flags = compile_with_debug_info ? "--debug" : "-O 3";
 
 	//
 	const auto vs_defines = std::string("IS_VERTEX_SHADER=1;") + defines;

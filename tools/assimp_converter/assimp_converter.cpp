@@ -62,8 +62,8 @@ struct Config {
 	float max_smoothing_angle{0.7f};
 	bool recalculate_normal{false}, recalculate_tangent{false};
 	bool calculate_normal_if_missing{false}, calculate_tangent_if_missing{false};
-	//bool detect_geometry_instances{false};
-	//bool anim_to_file{false};
+	// bool detect_geometry_instances{false};
+	// bool anim_to_file{false};
 	bool merge_meshes{false};
 
 	std::string finalizer_script;
@@ -71,7 +71,7 @@ struct Config {
 
 struct ExportMap {
 	std::vector<const aiNode *> all_nodes;
-	
+
 	std::set<std::string> exported_object_names;
 	std::map<const aiNode *, hg::Node> exported_nodes;
 	std::map<std::string, hg::TextureRef> exported_textures;
@@ -80,8 +80,8 @@ struct ExportMap {
 	bool fps_workaround = false;
 };
 
-static hg::Node
-ExportNode(const aiScene *ai_scene, const aiNode *ai_node, hg::Scene &scene, ExportMap &export_map, const Config &config, hg::PipelineResources &resources);
+static hg::Node ExportNode(
+	const aiScene *ai_scene, const aiNode *ai_node, hg::Scene &scene, ExportMap &export_map, const Config &config, hg::PipelineResources &resources);
 
 static hg::Mat4 AIMatrixToMatrix4(const aiMatrix4x4 &ai_m) {
 	hg::Mat4 m;
@@ -195,11 +195,10 @@ static void ExportMotions(const aiScene *ai_scene, hg::Scene &scene, ExportMap &
 	if (!config.import_animation || config.merge_meshes)
 		return;
 
-	
 	for (unsigned int n = 0; n < ai_scene->mNumAnimations; ++n) {
 
 		const aiAnimation *ai_anim = ai_scene->mAnimations[n];
-		
+
 		std::map<std::string, const aiNodeAnim *> channels;
 		std::map<std::string, int> channels_indices;
 
@@ -219,7 +218,6 @@ static void ExportMotions(const aiScene *ai_scene, hg::Scene &scene, ExportMap &
 
 		scene_anim.name = ai_anim->mName.C_Str();
 
-
 		double ticksPerSecond = ai_anim->mTicksPerSecond;
 		if (ticksPerSecond == 0)
 			ticksPerSecond = 30.0; // TODO: fps import option in case this is not set?
@@ -231,10 +229,9 @@ static void ExportMotions(const aiScene *ai_scene, hg::Scene &scene, ExportMap &
 
 		const double tStart = 0.0f;
 		double tEnd = ai_anim->mDuration / ticksPerSecond;
-			
+
 		scene_anim.t_start = hg::time_from_sec_f(float(tStart));
 		scene_anim.t_end = hg::time_from_sec_f(float(tEnd));
-
 
 		for (auto i : export_map.exported_nodes) {
 			if (!i.second)
@@ -256,7 +253,7 @@ static void ExportMotions(const aiScene *ai_scene, hg::Scene &scene, ExportMap &
 
 			for (unsigned int k = 0; k < node_channel->mNumPositionKeys; k++) {
 				const aiVectorKey &ai_key = node_channel->mPositionKeys[k];
-				
+
 				hg::time_ns hg_t = hg::time_from_sec_f(float(ai_key.mTime / ticksPerSecond));
 
 				hg::AnimKeyHermiteT<hg::Vec3> pos_key;
@@ -349,12 +346,11 @@ static void ExportMotions(const aiScene *ai_scene, hg::Scene &scene, ExportMap &
 
 		// add animation take to the scene
 		scene.AddSceneAnim(scene_anim);
-
 	}
 }
 
 //----
-static void AppendGeometrySkin(const aiScene *ai_scene, hg::Geometry &geo, aiMesh *ai_mesh, const std::map<const aiBone *, unsigned int>& bone_indices ) {
+static void AppendGeometrySkin(const aiScene *ai_scene, hg::Geometry &geo, aiMesh *ai_mesh, const std::map<const aiBone *, unsigned int> &bone_indices) {
 
 	auto start_skin = geo.skin.size();
 
@@ -373,9 +369,9 @@ static void AppendGeometrySkin(const aiScene *ai_scene, hg::Geometry &geo, aiMes
 
 		// import weights
 		for (unsigned int i = 0; i < bone->mNumWeights; i++) {
-		
+
 			const aiVertexWeight bw = bone->mWeights[i];
-			
+
 			auto skin = &geo.skin[start_skin + bw.mVertexId];
 			auto weight = hg::pack_float<uint8_t>(float(bw.mWeight));
 
@@ -397,8 +393,7 @@ static void AppendGeometrySkin(const aiScene *ai_scene, hg::Geometry &geo, aiMes
 }
 
 static hg::TextureRef ExportTexture(const aiScene *ai_scene, const aiString &ai_path, uint32_t bgfx_flags, const std::string &meta, ExportMap &export_map,
-	const Config &config, 
-	hg::PipelineResources &resources) {
+	const Config &config, hg::PipelineResources &resources) {
 
 	if (ai_path.length == 0)
 		return hg::TextureRef();
@@ -413,8 +408,7 @@ static hg::TextureRef ExportTexture(const aiScene *ai_scene, const aiString &ai_
 
 	// is this an embedded texture?
 	const aiTexture *embedded_texture = ai_scene->GetEmbeddedTexture(ai_path.C_Str());
-	if (embedded_texture != nullptr)
-	{
+	if (embedded_texture != nullptr) {
 		if (embedded_texture->mHeight == 0) {
 			// If mHeight = 0 this is a pointer to a memory buffer of size mWidth containing the compressed texture
 			// and achFormatHint contains the file extension
@@ -467,7 +461,6 @@ static hg::TextureRef ExportTexture(const aiScene *ai_scene, const aiString &ai_
 		}
 	}
 
-
 	dst_path = MakeRelativeResourceName(dst_path, config.prj_path, config.prefix);
 
 	auto result = resources.textures.Add(dst_path.c_str(), {bgfx_flags, BGFX_INVALID_HANDLE});
@@ -499,24 +492,17 @@ enum class TextureType {
 };
 
 static const std::map<aiTextureType, TextureType> &GetTextureTypeMap() {
-	static std::map<aiTextureType, TextureType> map = { 
-		{aiTextureType_DIFFUSE, TextureType::Diffuse},
-		{aiTextureType_SPECULAR, TextureType::Specular},
-		{aiTextureType_AMBIENT, TextureType::Ambient},
+	static std::map<aiTextureType, TextureType> map = {
+		{aiTextureType_DIFFUSE, TextureType::Diffuse}, {aiTextureType_SPECULAR, TextureType::Specular}, {aiTextureType_AMBIENT, TextureType::Ambient},
 		{aiTextureType_EMISSIVE, TextureType::Emissive},
 		{aiTextureType_HEIGHT, TextureType::Normal}, // found a normal map exported as "height" while exporting a .obj from blender
-		{aiTextureType_NORMALS, TextureType::Normal},
-		{aiTextureType_SHININESS, TextureType::Shininess},
+		{aiTextureType_NORMALS, TextureType::Normal}, {aiTextureType_SHININESS, TextureType::Shininess},
 		{aiTextureType_OPACITY, TextureType::TransparentColor}, // check if this is fit
 		{aiTextureType_DISPLACEMENT, TextureType::BumpMap}, // check if this is fit
-		{aiTextureType_LIGHTMAP, TextureType::Lightmap},
-		{aiTextureType_REFLECTION, TextureType::ReflColorMap},
-		{aiTextureType_BASE_COLOR, TextureType::BaseColorMap},
-		{aiTextureType_NORMAL_CAMERA, TextureType::Last}, // not supported
-		{aiTextureType_EMISSION_COLOR, TextureType::Emissive},
-		{aiTextureType_METALNESS, TextureType::MetalnessMap},
-		{aiTextureType_DIFFUSE_ROUGHNESS, TextureType::RoughnessMap},
-		{aiTextureType_AMBIENT_OCCLUSION, TextureType::Last}, // not supported
+		{aiTextureType_LIGHTMAP, TextureType::Lightmap}, {aiTextureType_REFLECTION, TextureType::ReflColorMap},
+		{aiTextureType_BASE_COLOR, TextureType::BaseColorMap}, {aiTextureType_NORMAL_CAMERA, TextureType::Last}, // not supported
+		{aiTextureType_EMISSION_COLOR, TextureType::Emissive}, {aiTextureType_METALNESS, TextureType::MetalnessMap},
+		{aiTextureType_DIFFUSE_ROUGHNESS, TextureType::RoughnessMap}, {aiTextureType_AMBIENT_OCCLUSION, TextureType::Last}, // not supported
 	};
 
 	return map;
@@ -548,15 +534,15 @@ static hg::Material ExportMaterial(
 	hg::debug(hg::format("Exporting material '%1'").arg(ai_material->GetName().C_Str()));
 	aiColor3D color(0.f, 0.f, 0.f);
 	float flt = 0.0f;
-	
+
 	if (AI_SUCCESS == ai_material->Get(AI_MATKEY_OPACITY, flt)) {
 		diffuse.a = flt;
-	} 
-	// we skip this if Opacity is set. fbx_converter seems to use it anyway 
+	}
+	// we skip this if Opacity is set. fbx_converter seems to use it anyway
 	// see "diffuse.a = 1.f - static_cast<float>(fbx_lambert->TransparencyFactor.Get());"
 	// but this causes the spaceship assemble-demo-assets\space_station\work\space_ship.fbx to be transparent
 	// when according to the fbx viewer, it shouldn't
-	else if (AI_SUCCESS == ai_material->Get(AI_MATKEY_TRANSPARENCYFACTOR, flt)) { 
+	else if (AI_SUCCESS == ai_material->Get(AI_MATKEY_TRANSPARENCYFACTOR, flt)) {
 		diffuse.a = 1.0f - flt;
 	}
 	if (AI_SUCCESS == ai_material->Get(AI_MATKEY_SHININESS, flt)) {
@@ -568,12 +554,10 @@ static hg::Material ExportMaterial(
 	if (AI_SUCCESS == ai_material->Get(AI_MATKEY_SHININESS_STRENGTH, flt)) {
 		glossiness *= hg::Clamp(glossiness * flt, 0.01f, 0.5f);
 	}
-		
-	if (AI_SUCCESS == ai_material->Get(AI_MATKEY_REFRACTI, flt)) {
-	}
 
-	if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, color))
-	{
+	if (AI_SUCCESS == ai_material->Get(AI_MATKEY_REFRACTI, flt)) {}
+
+	if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, color)) {
 		diffuse.r = color.r;
 		diffuse.g = color.g;
 		diffuse.b = color.b;
@@ -607,10 +591,10 @@ static hg::Material ExportMaterial(
 	std::array<hg::TextureRef, (size_t)TextureType::Last> texture;
 
 	aiString path;
-	aiTextureMapMode mapMode[3] = { aiTextureMapMode_Wrap };
+	aiTextureMapMode mapMode[3] = {aiTextureMapMode_Wrap};
 	const auto &textureTypeMap = GetTextureTypeMap();
 
-	for (aiTextureType ai_tex_type = aiTextureType_NONE; ai_tex_type < (int)aiTextureType_UNKNOWN; ai_tex_type = (aiTextureType)((int)ai_tex_type+1)) {
+	for (aiTextureType ai_tex_type = aiTextureType_NONE; ai_tex_type < (int)aiTextureType_UNKNOWN; ai_tex_type = (aiTextureType)((int)ai_tex_type + 1)) {
 		auto it = textureTypeMap.find(ai_tex_type);
 		if (it == textureTypeMap.end())
 			continue;
@@ -626,8 +610,7 @@ static hg::Material ExportMaterial(
 		// TODO: handle multiple textures if needed
 		// TODO: handle modulate with lightmaps
 
-		if (AI_SUCCESS == ai_material->GetTexture(ai_tex_type, 0, &path,
-			&mapping, &uvindex, &blend, &op, mapMode)) {
+		if (AI_SUCCESS == ai_material->GetTexture(ai_tex_type, 0, &path, &mapping, &uvindex, &blend, &op, mapMode)) {
 
 			uint32_t flags = BGFX_SAMPLER_NONE;
 
@@ -660,8 +643,7 @@ static hg::Material ExportMaterial(
 							flags |= BGFX_SAMPLER_W_MIRROR;
 							break;
 					}
-				}
-				else {
+				} else {
 					hg::warn(hg::format("Unsupported mapping mode decal '%1'").arg(path.C_Str()));
 				}
 			}
@@ -674,7 +656,6 @@ static hg::Material ExportMaterial(
 			std::string meta_BC6_text("{\"profiles\": {\"default\": {\"compression\": \"BC6\"}}}");
 			std::string meta_BC7_text("{\"profiles\": {\"default\": {\"compression\": \"BC7\"}}}");
 			std::string meta_BC7_srgb_text("{\"profiles\": {\"default\": {\"compression\": \"BC7\", \"sRGB\": true}}}");
-
 
 			std::string meta;
 			if (hg_textype == TextureType::Diffuse || hg_textype == TextureType::BaseColorMap || hg_textype == TextureType::Emissive ||
@@ -738,7 +719,7 @@ static hg::Material ExportMaterial(
 		shader = "core/shader/pbr.hps";
 
 		mat.values["uBaseOpacityColor"] = {bgfx::UniformType::Vec4, {diffuse.r, diffuse.g, diffuse.b, diffuse.a}};
-		mat.values["uOcclusionRoughnessMetalnessColor"] = {bgfx::UniformType::Vec4, {specular.r, specular.g, specular.b, glossiness}};
+		mat.values["uOcclusionRoughnessMetalnessColor"] = {bgfx::UniformType::Vec4, {1.f, 0.5f, 0.f, 0.f}};
 		mat.values["uSelfColor"] = {bgfx::UniformType::Vec4, {emissive.r, emissive.g, emissive.b, -1.f}};
 
 		if (diffuse_map != hg::InvalidTextureRef) {
@@ -762,8 +743,7 @@ static hg::Material ExportMaterial(
 			hg::debug(hg::format("    - uSelfMap: %1").arg(resources.textures.GetName(self_map)));
 			mat.textures["uSelfMap"] = {self_map, 4};
 		}
-	} 
-	else if (config.profile == "pbr_physical") {
+	} else if (config.profile == "pbr_physical") {
 		shader = "core/shader/pbr.hps";
 
 		// pbr
@@ -775,7 +755,8 @@ static hg::Material ExportMaterial(
 
 		float emission_factor = 1.0f;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_EMISSIVE_INTENSITY, emission_factor)) {
-			emissive = {emissive.r * emission_factor, emissive.g * emission_factor, emissive.b * emission_factor, -1.f}; // the -1 was there in the fbx_converter, not sure about its purpose
+			emissive = {emissive.r * emission_factor, emissive.g * emission_factor, emissive.b * emission_factor,
+				-1.f}; // the -1 was there in the fbx_converter, not sure about its purpose
 		}
 
 		// set occlusion to 1
@@ -806,8 +787,7 @@ static hg::Material ExportMaterial(
 		else {
 			// check if there is alpha in the base color map
 			hg::Picture pic;
-			if (LoadPicture(pic, (config.prj_path + "/" + resources.textures.GetName(diffuse_map)).c_str()) &&
-				PictureHasTransparency(pic))
+			if (LoadPicture(pic, (config.prj_path + "/" + resources.textures.GetName(diffuse_map)).c_str()) && PictureHasTransparency(pic))
 				SetMaterialBlendMode(mat, hg::BM_Alpha);
 		}
 
@@ -818,8 +798,7 @@ static hg::Material ExportMaterial(
 			} else if (metalness_map != hg::InvalidTextureRef) {
 				hg::debug(hg::format("    - uOcclusionRoughnessMetalnessMap: %1").arg(resources.textures.GetName(metalness_map)));
 				mat.textures["uOcclusionRoughnessMetalnessMap"] = {metalness_map, 1};
-			} 
-
+			}
 		}
 
 		if (bump_map != hg::InvalidTextureRef) {
@@ -834,9 +813,7 @@ static hg::Material ExportMaterial(
 			hg::debug(hg::format("    - uSelfMap: %1").arg(resources.textures.GetName(self_map)));
 			mat.textures["uSelfMap"] = {self_map, 4};
 		}
-	} 
-	else
-	{
+	} else {
 		if (config.profile != "default")
 			hg::warn(hg::format("Unknown material profile '%1', using 'default' profile").arg(config.profile));
 
@@ -914,7 +891,7 @@ static hg::Material ExportMaterial(
 	return mat;
 }
 
-static void AppendGeometry(const aiScene *ai_scene, hg::Geometry &geo, aiMesh *ai_mesh, std::map<const aiMaterial *, int>& material_indices) {
+static void AppendGeometry(const aiScene *ai_scene, hg::Geometry &geo, aiMesh *ai_mesh, std::map<const aiMaterial *, int> &material_indices) {
 	aiMatrix4x4 mesh_matrix; //, mesh_rmatrix;
 
 	auto mat = ai_scene->mMaterials[ai_mesh->mMaterialIndex];
@@ -929,7 +906,7 @@ static void AppendGeometry(const aiScene *ai_scene, hg::Geometry &geo, aiMesh *a
 
 	auto start_vtx = geo.vtx.size();
 	auto start_faces = geo.pol.size();
-	
+
 	geo.vtx.resize(geo.vtx.size() + ai_mesh->mNumVertices);
 	for (size_t n = start_vtx; n < geo.vtx.size(); ++n) {
 		const aiVector3D v = mesh_matrix * ai_mesh->mVertices[n - start_vtx];
@@ -963,7 +940,6 @@ static void AppendGeometry(const aiScene *ai_scene, hg::Geometry &geo, aiMesh *a
 				auto N = ai_mesh->mNormals[v_idx];
 				geo.normal[size_t(pol_index[p]) + v] = {N.x, N.y, N.z};
 			}
-
 	}
 
 	// tangent and bi-normal
@@ -1030,7 +1006,8 @@ static hg::ModelRef ExportGeometry(const aiScene *ai_scene, hg::Node &node, cons
 
 	hg::Geometry geo;
 
-	std::string mesh_name = ai_node->mName.C_Str(); // can't really use aiMesh::mName as there can be more than 1 aiMesh per node and they split meshes into n aiMesh by materials
+	std::string mesh_name =
+		ai_node->mName.C_Str(); // can't really use aiMesh::mName as there can be more than 1 aiMesh per node and they split meshes into n aiMesh by materials
 
 	if (mesh_name.empty()) {
 		int unnamed_obj_idx = 0;
@@ -1046,9 +1023,8 @@ static hg::ModelRef ExportGeometry(const aiScene *ai_scene, hg::Node &node, cons
 
 	hg::debug(hg::format("Exporting geometry '%1'").arg(mesh_name));
 
-	
 	std::map<const aiMaterial *, int> material_indices;
-	
+
 	unsigned int total_vertices = 0;
 	unsigned int total_faces = 0;
 	for (unsigned int i = 0; i < ai_node->mNumMeshes; i++) {
@@ -1066,8 +1042,7 @@ static hg::ModelRef ExportGeometry(const aiScene *ai_scene, hg::Node &node, cons
 		for (unsigned int b = 0; b < ai_mesh->mNumBones; b++) {
 			const auto bone = ai_mesh->mBones[b];
 			auto it = bone_indices.find(bone);
-			if (it == bone_indices.end()) 
-			{
+			if (it == bone_indices.end()) {
 				auto idx = (unsigned int)bone_indices.size();
 				bone_indices[bone] = idx;
 			}
@@ -1110,14 +1085,14 @@ static hg::ModelRef ExportGeometry(const aiScene *ai_scene, hg::Node &node, cons
 		bool is_valid_node = false;
 
 		const aiNode *ai_bone_node = bone->mNode;
-		
+
 		for (auto some_node : export_map.all_nodes) {
 			if (some_node == bone->mNode) {
 				is_valid_node = true;
 				break;
 			}
 		}
-		
+
 		if (!is_valid_node) { // should not happen, but happens with doberman_animation.FBX
 			// search the scene for a node with the same name
 			ai_bone_node = nullptr;
@@ -1137,11 +1112,9 @@ static hg::ModelRef ExportGeometry(const aiScene *ai_scene, hg::Node &node, cons
 			if (bone_node.IsValid()) {
 				object.SetBone(bone_idx, bone_node.ref);
 			} else {
-			
 			}
 		}
 	}
-
 
 	const auto vtx_to_pol = hg::ComputeVertexToPolygon(geo);
 	const auto vtx_normal = hg::ComputeVertexNormal(geo, vtx_to_pol, hg::Deg(45.f));
@@ -1193,8 +1166,7 @@ static hg::ModelRef ExportGeometry(const aiScene *ai_scene, hg::Node &node, cons
 }
 
 //
-static hg::Object ExportObject(const aiScene *ai_scene, hg::Node &node, const aiNode *ai_node, 
-	hg::Scene &scene, ExportMap &export_map, const Config &config,
+static hg::Object ExportObject(const aiScene *ai_scene, hg::Node &node, const aiNode *ai_node, hg::Scene &scene, ExportMap &export_map, const Config &config,
 	hg::PipelineResources &resources) {
 
 	__ASSERT__(ai_node->mNumMeshes > 0);
@@ -1208,8 +1180,8 @@ static hg::Object ExportObject(const aiScene *ai_scene, hg::Node &node, const ai
 	return object;
 }
 
-static void ExportCamera(const aiScene *ai_scene, const aiCamera *ai_camera, 
-	hg::Scene &scene, ExportMap &export_map, const Config &config, hg::PipelineResources &resources) {
+static void ExportCamera(
+	const aiScene *ai_scene, const aiCamera *ai_camera, hg::Scene &scene, ExportMap &export_map, const Config &config, hg::PipelineResources &resources) {
 	// find corresponding node or create one if missing
 	auto camera = scene.CreateCamera();
 
@@ -1250,7 +1222,6 @@ static void ExportCamera(const aiScene *ai_scene, const aiCamera *ai_camera,
 
 	auto transform = camera_node.GetTransform();
 
-
 	hg::Vec3 pos, rot, scl;
 	auto mat = camera_ai_node != nullptr ? AIMatrixToMatrix4(camera_ai_node->mTransformation) : hg::Mat4::Identity;
 
@@ -1271,7 +1242,6 @@ static void ExportCamera(const aiScene *ai_scene, const aiCamera *ai_camera,
 	Decompose(mat, &pos, &rot, &scl);
 	transform.SetTRS({pos, rot, scl});
 
-	
 	// do we have a target?
 	const aiNode *camera_ai_target_node = nullptr;
 	const std::string target_name = ai_camera->mName.C_Str() + std::string(".Target");
@@ -1298,7 +1268,7 @@ static void ExportCamera(const aiScene *ai_scene, const aiCamera *ai_camera,
 		// for node_parent_light.gltf it appears that it contains the world position
 		// so just fallback to the node position, hoping it works for most cases.
 		// if not, either make a fix for assimp gltf, or a patch for this specific format
-		
+
 		// transform.SetPos(transform.GetPos() + hg::Vec3(ai_camera->mPosition.x, ai_camera->mPosition.y, ai_camera->mPosition.z));
 	}
 
@@ -1307,8 +1277,8 @@ static void ExportCamera(const aiScene *ai_scene, const aiCamera *ai_camera,
 	camera_node.SetTransform(transform);
 }
 
-static void ExportLight(const aiScene *ai_scene, const aiLight *ai_light, 
-	hg::Scene &scene, ExportMap &export_map, const Config &config, hg::PipelineResources &resources) {
+static void ExportLight(
+	const aiScene *ai_scene, const aiLight *ai_light, hg::Scene &scene, ExportMap &export_map, const Config &config, hg::PipelineResources &resources) {
 
 	// find corresponding node or create one if missing
 	auto light = scene.CreateLight(); // TODO: handle different types of lights, like linear lights
@@ -1355,11 +1325,9 @@ static void ExportLight(const aiScene *ai_scene, const aiLight *ai_light,
 	}
 	float intensity_factor = 0.2f; // of course all this is wrong but it's to get something good enough
 
-	light.SetDiffuseColor(
-		hg::Color(ai_light->mColorDiffuse.r, ai_light->mColorDiffuse.g, ai_light->mColorDiffuse.b));
+	light.SetDiffuseColor(hg::Color(ai_light->mColorDiffuse.r, ai_light->mColorDiffuse.g, ai_light->mColorDiffuse.b));
 	light.SetDiffuseIntensity(intensity_factor);
-	light.SetSpecularColor(
-		hg::Color(ai_light->mColorSpecular.r, ai_light->mColorSpecular.g, ai_light->mColorSpecular.b));
+	light.SetSpecularColor(hg::Color(ai_light->mColorSpecular.r, ai_light->mColorSpecular.g, ai_light->mColorSpecular.b));
 	light.SetSpecularIntensity(intensity_factor);
 
 	if (ai_light->mAttenuationLinear > 0) {
@@ -1367,8 +1335,7 @@ static void ExportLight(const aiScene *ai_scene, const aiLight *ai_light,
 		float intensity = ai_light->mAttenuationLinear * intensity_factor;
 		light.SetDiffuseColor(hg::Color(ai_light->mColorDiffuse.r, ai_light->mColorDiffuse.g, ai_light->mColorDiffuse.b));
 		light.SetDiffuseIntensity(intensity);
-		light.SetSpecularColor(
-			hg::Color(ai_light->mColorSpecular.r, ai_light->mColorSpecular.g, ai_light->mColorSpecular.b));
+		light.SetSpecularColor(hg::Color(ai_light->mColorSpecular.r, ai_light->mColorSpecular.g, ai_light->mColorSpecular.b));
 		light.SetSpecularIntensity(intensity);
 	}
 	if (ai_light->mAttenuationQuadratic > 0) {
@@ -1409,17 +1376,13 @@ static void ExportLight(const aiScene *ai_scene, const aiLight *ai_light,
 
 //
 static hg::Node ExportNode(
-	const aiScene *ai_scene, const aiNode *ai_node, hg::Scene &scene, ExportMap &export_map, const Config &config,
-	hg::PipelineResources &resources) {
+	const aiScene *ai_scene, const aiNode *ai_node, hg::Scene &scene, ExportMap &export_map, const Config &config, hg::PipelineResources &resources) {
 	auto i = export_map.exported_nodes.find(ai_node);
 	if (i != std::end(export_map.exported_nodes))
 		return i->second;
 
 	hg::Node node;
-	if (ai_node != ai_scene->mRootNode 
-		|| !ai_node->mTransformation.IsIdentity()
-		|| ai_node->mNumMeshes > 0
-		) {
+	if (ai_node != ai_scene->mRootNode || !ai_node->mTransformation.IsIdentity() || ai_node->mNumMeshes > 0) {
 
 		std::string node_name = ai_node->mName.C_Str();
 		if (node_name.empty()) {
@@ -1427,7 +1390,7 @@ static hg::Node ExportNode(
 		}
 
 		node = scene.CreateNode(node_name);
-		
+
 		auto transform = scene.CreateTransform();
 
 		hg::Vec3 pos, rot, scl;
@@ -1438,7 +1401,6 @@ static hg::Node ExportNode(
 		if (ai_node->mNumMeshes > 0) {
 			ExportObject(ai_scene, node, ai_node, scene, export_map, config, resources);
 		}
-
 	}
 
 	export_map.exported_nodes[ai_node] = node;
@@ -1453,32 +1415,29 @@ static hg::Node ExportNode(
 }
 
 //
-static const aiScene* LoadAssimpScene(Assimp::Importer* importer, const Config &config, const std::string &ai_path) {
-	
+static const aiScene *LoadAssimpScene(Assimp::Importer *importer, const Config &config, const std::string &ai_path) {
+
 	importer->SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	importer->SetPropertyBool(AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION, true);
 
 	if (!config.merge_meshes)
 		importer->SetPropertyBool(AI_CONFIG_PP_PTV_KEEP_HIERARCHY, true);
 
-	// importer->SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false); // see https://gamedev.stackexchange.com/questions/175044/assimp-skeletal-animation-with-some-fbx-files-has-issues-weird-node-added
+	// importer->SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false); // see
+	// https://gamedev.stackexchange.com/questions/175044/assimp-skeletal-animation-with-some-fbx-files-has-issues-weird-node-added
 
 	importer->SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, config.scene_scale);
 
-	auto scene = importer->ReadFile(hg::ansi_to_utf8(ai_path),
-		aiProcess_PopulateArmatureData | 
-		aiProcess_ConvertToLeftHanded |
-		aiProcess_CalcTangentSpace | 
-		aiProcess_GlobalScale |
-		aiProcess_FindInstances | aiProcess_OptimizeMeshes | aiProcess_JoinIdenticalVertices |
-		aiProcess_ImproveCacheLocality | aiProcess_SortByPType | 
-		(config.merge_meshes ? aiProcess_PreTransformVertices : 0)
+	auto scene = importer->ReadFile(
+		hg::ansi_to_utf8(ai_path), aiProcess_PopulateArmatureData | aiProcess_ConvertToLeftHanded | aiProcess_CalcTangentSpace | aiProcess_GlobalScale |
+									   aiProcess_FindInstances | aiProcess_OptimizeMeshes | aiProcess_JoinIdenticalVertices | aiProcess_ImproveCacheLocality |
+									   aiProcess_SortByPType | (config.merge_meshes ? aiProcess_PreTransformVertices : 0)
 		// aiProcess_Triangulate
 	);
 
 	if (scene == nullptr) {
 		auto str = importer->GetErrorString();
-		if (str != nullptr){
+		if (str != nullptr) {
 			hg::error(hg::format("Error while loading file '%1' :").arg(ai_path.c_str()));
 			hg::error(hg::format("%1").arg(str));
 		}
@@ -1498,7 +1457,7 @@ static std::vector<const aiNode *> ListAllNodes(const aiScene *ai_scene) {
 		}
 	};
 	traverse_nodes(ai_scene->mRootNode);
-	
+
 	return all_nodes;
 }
 
@@ -1529,7 +1488,7 @@ static bool ImportAssimpScene(const std::string &path, const Config &config) {
 		return false;
 
 	ExportMap export_map;
-	
+
 	// make a list of all nodes
 	export_map.all_nodes = ListAllNodes(ai_scene);
 
@@ -1574,15 +1533,15 @@ static bool ImportAssimpScene(const std::string &path, const Config &config) {
 		ExportLight(ai_scene, ai_light, scene, export_map, config, resources);
 	}
 
-
 	ExportMotions(ai_scene, scene, export_map, config, resources);
 
 	FinalizeScene(scene);
 
 	// add default pbr map
 	scene.environment.brdf_map = resources.textures.Add("core/pbr/brdf.dds", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
-	scene.environment.irradiance_map = resources.textures.Add("core/pbr/probe.hdr.irradiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
-	scene.environment.radiance_map = resources.textures.Add("core/pbr/probe.hdr.radiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
+	scene.environment.probe = {};
+	scene.environment.probe.irradiance_map = resources.textures.Add("core/pbr/probe.hdr.irradiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
+	scene.environment.probe.radiance_map = resources.textures.Add("core/pbr/probe.hdr.radiance", {BGFX_SAMPLER_NONE, BGFX_INVALID_HANDLE});
 
 	std::string out_path;
 	if (GetOutputPath(out_path, config.base_output_path, config.name.empty() ? hg::GetFileName(path) : config.name, {}, "scn", config.import_policy_scene))
@@ -1707,7 +1666,7 @@ int main(int argc, const char **argv) {
 
 	config.max_smoothing_angle = hg::GetCmdLineSingleValue(cmd_content, "-max-smoothing-angle", 0.7f);
 
-	//config.detect_geometry_instances = hg::GetCmdLineFlagValue(cmd_content, "-detect-geometry-instances");
+	// config.detect_geometry_instances = hg::GetCmdLineFlagValue(cmd_content, "-detect-geometry-instances");
 	config.merge_meshes = hg::GetCmdLineFlagValue(cmd_content, "-merge-meshes");
 
 	config.finalizer_script = hg::GetCmdLineSingleValue(cmd_content, "-finalizer-script", "");

@@ -88,13 +88,13 @@ void Set(Mat4 &m, const float *v);
 void Set(Mat4 &m, float m00, float m10, float m20, float m01, float m11, float m21, float m02, float m12, float m22, float m03, float m13, float m23);
 
 /// Return the nth row.
-Vec3 GetRow(const Mat4 &m, unsigned int n);
+Vec4 GetRow(const Mat4 &m, unsigned int n);
 /// Return the nth column.
-Vec4 GetColumn(const Mat4 &m, unsigned int n);
+Vec3 GetColumn(const Mat4 &m, unsigned int n);
 /// Set the nth row.
-void SetRow(Mat4 &m, unsigned int n, const Vec3 &v);
+void SetRow(Mat4 &m, unsigned int n, const Vec4 &v);
 /// Set the nth column.
-void SetColumn(Mat4 &m, unsigned int n, const Vec4 &v);
+void SetColumn(Mat4 &m, unsigned int n, const Vec3 &v);
 
 /// Interpolate between two 4x4 transformation matrices.
 Mat4 LerpAsOrthonormalBase(const Mat4 &a, const Mat4 &b, float k, bool fast = false);

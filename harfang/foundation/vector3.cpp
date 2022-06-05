@@ -37,19 +37,6 @@ int Hash(const Vec3 &v) {
 //
 Vec3 MakeVec3(const Vec4 &v) { return {v.x, v.y, v.z}; }
 
-Vec3 operator*(const Vec3 &v, const Mat4 &m) {
-	return {v.x * m.m[0][0] + v.y * m.m[0][1] + v.z * m.m[0][2] + m.m[0][3], v.x * m.m[1][0] + v.y * m.m[1][1] + v.z * m.m[1][2] + m.m[1][3],
-		v.x * m.m[2][0] + v.y * m.m[2][1] + v.z * m.m[2][2] + m.m[2][3]};
-}
-
-Vec3 operator*(const Vec3 &v, const Mat3 &m) {
-	return {v.x * m.m[0][0] + v.y * m.m[0][1] + v.z * m.m[0][2], v.x * m.m[1][0] + v.y * m.m[1][1] + v.z * m.m[1][2],
-		v.x * m.m[2][0] + v.y * m.m[2][1] + v.z * m.m[2][2]};
-}
-
-Vec3 operator*(const Vec3 &a, const Mat3 &m);
-Vec3 operator*(const Vec3 &a, const Mat4 &m);
-
 Vec3 RandomVec3(float min, float max) { return {FRRand(min, max), FRRand(min, max), FRRand(min, max)}; }
 Vec3 RandomVec3(const Vec3 &min, const Vec3 &max) { return {FRRand(min.x, max.x), FRRand(min.y, max.y), FRRand(min.z, max.z)}; }
 
@@ -126,7 +113,7 @@ Vec3 BaseToEuler(const Vec3 &u, const Vec3 &v) {
 	const auto mx = RotationMatX(Rad(euler.x));
 	const auto my = RotationMatY(Rad(euler.y));
 
-	const auto bv = Vec3(1, 0, 0) * my * mx;
+	const auto bv = mx * (my * Vec3(1, 0, 0));
 	const auto vn = Normalize(v);
 
 	const auto vc = Dot(vn, bv);

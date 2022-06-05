@@ -115,27 +115,27 @@ void RotateVec3(const Mat4 &__restrict m, Vec3 *__restrict out, const Vec3 *__re
 }
 
 //
-Vec3 GetRow(const Mat4 &m, unsigned int n) { return {m.m[0][n], m.m[1][n], m.m[2][n]}; }
-Vec4 GetColumn(const Mat4 &m, unsigned int n) { return {m.m[n][0], m.m[n][1], m.m[n][2], m.m[n][3]}; }
+Vec4 GetRow(const Mat4 &m, unsigned int n) { return {m.m[n][0], m.m[n][1], m.m[n][2], m.m[n][3]}; }
+Vec3 GetColumn(const Mat4 &m, unsigned int n) { return {m.m[0][n], m.m[1][n], m.m[2][n]}; }
 
-void SetRow(Mat4 &m, unsigned int n, const Vec3 &v) {
-	m.m[0][n] = v.x;
-	m.m[1][n] = v.y;
-	m.m[2][n] = v.z;
-}
-
-void SetColumn(Mat4 &m, unsigned int n, const Vec4 &v) {
+void SetRow(Mat4 &m, unsigned int n, const Vec4 &v) {
 	m.m[n][0] = v.x;
 	m.m[n][1] = v.y;
 	m.m[n][2] = v.z;
 	m.m[n][3] = v.w;
 }
 
-Vec3 GetX(const Mat4 &m) { return GetRow(m, 0); }
-Vec3 GetY(const Mat4 &m) { return GetRow(m, 1); }
-Vec3 GetZ(const Mat4 &m) { return GetRow(m, 2); }
+void SetColumn(Mat4 &m, unsigned int n, const Vec3 &v) {
+	m.m[0][n] = v.x;
+	m.m[1][n] = v.y;
+	m.m[2][n] = v.z;
+}
 
-Vec3 GetT(const Mat4 &m) { return GetRow(m, 3); }
+Vec3 GetX(const Mat4 &m) { return GetColumn(m, 0); }
+Vec3 GetY(const Mat4 &m) { return GetColumn(m, 1); }
+Vec3 GetZ(const Mat4 &m) { return GetColumn(m, 2); }
+
+Vec3 GetT(const Mat4 &m) { return GetColumn(m, 3); }
 Vec3 GetTranslation(const Mat4 &m) { return GetT(m); }
 
 Vec3 GetR(const Mat4 &m, RotationOrder order) {
@@ -157,12 +157,12 @@ Mat3 GetRMatrix(const Mat4 &m) {
 
 Mat3 GetRotationMatrix(const Mat4 &m) { return GetRMatrix(m); }
 
-void SetX(Mat4 &m, const Vec3 &v) { SetRow(m, 0, v); }
-void SetY(Mat4 &m, const Vec3 &v) { SetRow(m, 1, v); }
-void SetZ(Mat4 &m, const Vec3 &v) { SetRow(m, 2, v); }
+void SetX(Mat4 &m, const Vec3 &v) { SetColumn(m, 0, v); }
+void SetY(Mat4 &m, const Vec3 &v) { SetColumn(m, 1, v); }
+void SetZ(Mat4 &m, const Vec3 &v) { SetColumn(m, 2, v); }
 
 void SetT(Mat4 &m, const Vec3 &v) { SetTranslation(m, v); }
-void SetTranslation(Mat4 &m, const Vec3 &v) { SetRow(m, 3, v); }
+void SetTranslation(Mat4 &m, const Vec3 &v) { SetColumn(m, 3, v); }
 
 void SetS(Mat4 &m, const Vec3 &v) {
 	SetX(m, Normalize(GetX(m)) * v.x);
@@ -215,14 +215,18 @@ void Decompose(const Mat4 &m, Vec3 *position, Vec3 *rotation, Vec3 *scale, Rotat
 void Decompose(const Mat4 &m, Vec3 *position, Mat3 *rotation, Vec3 *scale) {
 	// extract position
 	if (position)
-		*position = GetRow(m, 3);
+		*position = GetT(m);
+
+	const Vec3 &vx = GetX(m);
+	const Vec3 &vy = GetY(m);
+	const Vec3 &vz = GetZ(m);
 
 	// extract scale
-	Vec3 scl(Len(GetRow(m, 0)), Len(GetRow(m, 1)), Len(GetRow(m, 2)));
+	Vec3 scl(Len(vx), Len(vy), Len(vz));
 
 	// handle negative scale (permute X to preserve left-handedness)
-	auto left = Cross(GetRow(m, 1), GetRow(m, 2));
-	if (Dot(left, GetRow(m, 0)) < 0.f)
+	auto left = Cross(vy, vz);
+	if (Dot(left, vx) < 0.f)
 		scl.x = -scl.x;
 
 	if (scale)
@@ -231,19 +235,19 @@ void Decompose(const Mat4 &m, Vec3 *position, Mat3 *rotation, Vec3 *scale) {
 	// rotation 3x3 (renormalized)
 	if (rotation) {
 		if (scl.x)
-			SetRow(*rotation, 0, {m.m[0][0] / scl.x, m.m[1][0] / scl.x, m.m[2][0] / scl.x});
+			SetX(*rotation, vx/scl.x);
 		else
-			SetRow(*rotation, 0, {1.f, 0.f, 0.f});
+			SetX(*rotation, {1.f, 0.f, 0.f});
 
 		if (scl.y)
-			SetRow(*rotation, 1, {m.m[0][1] / scl.y, m.m[1][1] / scl.y, m.m[2][1] / scl.y});
+			SetY(*rotation, vy/scl.y);
 		else
-			SetRow(*rotation, 1, {0.f, 1.f, 0.f});
+			SetY(*rotation, {0.f, 1.f, 0.f});
 
 		if (scl.z)
-			SetRow(*rotation, 2, {m.m[0][2] / scl.z, m.m[1][2] / scl.z, m.m[2][2] / scl.z});
+			SetZ(*rotation, vz/scl.z);
 		else
-			SetRow(*rotation, 2, {0.f, 0.f, 1.f});
+			SetZ(*rotation, {0.f, 0.f, 1.f});
 	}
 }
 

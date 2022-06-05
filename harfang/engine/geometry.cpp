@@ -2,7 +2,6 @@
 
 #include "engine/geometry.h"
 #include "engine/file_format.h"
-#include "engine/mikktspace.h"
 
 #include "foundation/file.h"
 #include "foundation/file_rw_interface.h"
@@ -11,6 +10,8 @@
 #include "foundation/math.h"
 #include "foundation/pack_float.h"
 #include "foundation/time.h"
+
+#include "mikktspace.h"
 
 #include <bgfx/bgfx.h>
 
@@ -109,7 +110,7 @@ std::vector<VertexToVertex> ComputeVertexToVertex(const Geometry &geo, const std
 
 					if (insert) {
 						if (vtx_vtx_count == __VertexToVertexTempListSize) {
-							error("Temporary list exceeded, vertex to vertex LUT corrupted");
+							warn("Temporary list exceeded, vertex to vertex LUT corrupted");
 							vtx_vtx_count = __VertexToVertexTempListSize - 1;
 						}
 
@@ -313,10 +314,10 @@ bool Validate(const Geometry &geo) {
 	int error_count = 0;
 
 	const auto validation_error = [&](const char *msg) {
-		error(msg);
+		warn(msg);
 
 		if (++error_count == 32) {
-			error("Too many errors in geometry, aborting validation");
+			warn("Too many errors in geometry, aborting validation");
 			return false;
 		}
 
@@ -371,17 +372,17 @@ Geometry LoadGeometry(const Reader &ir, const Handle &h, const char *name) {
 	Geometry geo;
 
 	if (!ir.is_valid(h)) {
-		error(format("Cannot load model '%1', invalid file handle").arg(name));
+		warn(format("Cannot load model '%1', invalid file handle").arg(name));
 		return geo;
 	}
 
 	if (Read<uint32_t>(ir, h) != HarfangMagic) {
-		error(format("Cannot load model '%1', invalid magic marker").arg(name));
+		warn(format("Cannot load model '%1', invalid magic marker").arg(name));
 		return geo;
 	}
 
 	if (Read<uint8_t>(ir, h) != ModelMarker) {
-		error(format("Cannot load model '%1', invalid model marker").arg(name));
+		warn(format("Cannot load model '%1', invalid model marker").arg(name));
 		return geo;
 	}
 
@@ -392,7 +393,7 @@ Geometry LoadGeometry(const Reader &ir, const Handle &h, const char *name) {
 	*/
 	const auto version = Read<uint32_t>(ir, h);
 	if (version > 2) {
-		error(format("Cannot load model '%1', unsupported version").arg(name));
+		warn(format("Cannot load model '%1', unsupported version").arg(name));
 		return geo;
 	}
 

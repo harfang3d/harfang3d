@@ -165,21 +165,21 @@ Mat44 Inverse(const Mat44 &m) {
 	return out;
 }
 
-Vec4 GetRow(const Mat44 &m, unsigned int n) { return {m.m[0][n], m.m[1][n], m.m[2][n], m.m[3][n]}; }
-Vec4 GetColumn(const Mat44 &m, unsigned int n) { return {m.m[n][0], m.m[n][1], m.m[n][2], m.m[n][3]}; }
+Vec4 GetRow(const Mat44 &m, unsigned int n) { return {m.m[n][0], m.m[n][1], m.m[n][2], m.m[n][3]}; }
+Vec4 GetColumn(const Mat44 &m, unsigned int n) { return {m.m[0][n], m.m[1][n], m.m[2][n], m.m[3][n]}; }
 
 void SetRow(Mat44 &m, unsigned int n, const Vec4 &v) {
-	m.m[0][n] = v.x;
-	m.m[1][n] = v.y;
-	m.m[2][n] = v.z;
-	m.m[3][n] = v.w;
-}
-
-void SetColumn(Mat44 &m, unsigned int n, const Vec4 &v) {
 	m.m[n][0] = v.x;
 	m.m[n][1] = v.y;
 	m.m[n][2] = v.z;
 	m.m[n][3] = v.w;
+}
+
+void SetColumn(Mat44 &m, unsigned int n, const Vec4 &v) {
+	m.m[0][n] = v.x;
+	m.m[1][n] = v.y;
+	m.m[2][n] = v.z;
+	m.m[3][n] = v.w;
 }
 
 //

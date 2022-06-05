@@ -22,6 +22,7 @@ File OpenWrite(const char *path);
 File OpenWriteText(const char *path);
 File OpenAppendText(const char *path);
 File OpenTemp(const char *tmplt);
+/// Close a file handle.
 bool Close(File file);
 
 bool IsValid(File file);
@@ -63,9 +64,12 @@ template <typename T> T Read(File file) {
 
 template <typename T> bool Write(File file, const T &v) { return Write(file, &v, sizeof(T)) == sizeof(T); }
 
+/// Copy a file on the local filesystem.
 bool CopyFile(const char *src, const char *dst);
 
+/// Return the content of a file on the local filesystem as a string.
 std::string FileToString(const char *path, bool silent = false);
+/// Write a string as a file on the local filesystem.
 bool StringToFile(const char *path, const char *str);
 
 Data FileToData(const char *path, bool silent = false);

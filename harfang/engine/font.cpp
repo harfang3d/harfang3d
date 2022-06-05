@@ -21,14 +21,14 @@ static Font LoadFont(const ReadProvider &ip, const Reader &ir, const char *name,
 	ScopedReadHandle h(ip, name);
 
 	if (!ir.is_valid(h)) {
-		error(format("Failed to open '%1'").arg(name));
+		warn(format("Failed to open '%1'").arg(name));
 		return {};
 	}
 
 	const auto data = LoadData(ir, h);
 
 	if (data.Empty()) {
-		error(format("Failed to read data from '%1'").arg(name));
+		warn(format("Failed to read data from '%1'").arg(name));
 		return {};
 	}
 

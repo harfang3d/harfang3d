@@ -8,11 +8,11 @@
 
 namespace hg {
 
-/// \defgroup WindowSystemGroup Window System
-/// \{
+/// @defgroup WindowSystemGroup Window System
+/// @{
 
-/// \defgroup MonitorGroup Monitor
-/// \{
+/// @defgroup MonitorGroup Monitor
+/// @{
 
 /// Monitor
 struct Monitor;
@@ -36,9 +36,9 @@ struct MonitorMode {
 
 /// Return the monitor rect.
 iRect GetMonitorRect(const Monitor *monitor);
-/// Return @true if the monitor is set as primary.
+/// Return true if the monitor is set as primary.
 bool IsPrimaryMonitor(const Monitor *monitor);
-/// Return @true if the monitor is connected.
+/// Return true if the monitor is connected.
 bool IsMonitorConnected(const Monitor *monitor);
 /// Return monitor name.
 std::string GetMonitorName(const Monitor *monitor);
@@ -49,10 +49,10 @@ bool GetMonitorModes(const Monitor *monitor, std::vector<MonitorMode> &modes);
 /// Get a list of monitors connected to the system.
 std::vector<Monitor *> GetMonitors();
 
-/// \}
+/// @}
 
-/// \defgroup WindowGroup Window
-/// \{
+/// @defgroup WindowGroup Window
+/// @{
 
 /// Window visibility
 enum WindowVisibility { WV_Windowed, WV_Undecorated, WV_Fullscreen, WV_Hidden, WV_FullscreenMonitor1, WV_FullscreenMonitor2, WV_FullscreenMonitor3 };
@@ -122,7 +122,7 @@ extern Signal<void(const Window *)> new_window_signal;
 extern Signal<void(const Window *, bool)> window_focus_signal;
 extern Signal<bool(const Window *)> close_window_signal;
 extern Signal<void(const Window *)> destroy_window_signal;
-/// \}
+/// @}
 
 void ConnectWindowSystemSignals();
 void DisconnectWindowSystemSignals();
@@ -137,7 +137,7 @@ void SetWindowDropCallback(const Window *window, void (*cb)(const Window *window
 /// Called when a window needs to be refreshed.
 void SetWindowRefreshCallback(const Window *window, void (*cb)(const Window *window));
 
-/// \}
+/// @}
 
 struct Icon {
 	int width, height;

@@ -135,7 +135,7 @@ SceneBullet3Physics::~SceneBullet3Physics() { Clear(); }
 
 //
 void SceneBullet3Physics::SceneCreatePhysics(const Scene &scene, const Reader &ir, const ReadProvider &ip) {
-	const auto nodes = scene.GetNodes();
+	const auto nodes = scene.GetAllNodes();
 
 	for (auto &node : nodes)
 		if (!NodeHasBody(node.ref))
@@ -270,20 +270,13 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 	auto trs = node.GetTransform();
 	btTransform bt_trs = btTransform::getIdentity();
 	if (trs)
-		bt_trs = to_btTransform(Normalize(node.ComputeWorld())); // require most up-to-date world matrix
+		bt_trs = to_btTransform(node.ComputeWorld()); // require most up-to-date world matrix
 
 	if (!shapes.empty()) {
-		btCollisionShape *root_shape;
-
-		if (shapes.size() == 1) {
-			root_shape = *shapes.begin();
-		} else {
-			auto compound = new btCompoundShape;
-			for (size_t idx = 0; idx < node.GetCollisionCount(); ++idx) {
-				const auto col = node.GetCollision(idx);
-				compound->addChildShape(to_btTransform(col.GetLocalTransform()), shapes[idx]);
-			}
-			root_shape = compound;
+		auto root_shape = new btCompoundShape;
+		for (size_t idx = 0; idx < node.GetCollisionCount(); ++idx) {
+			const auto col = node.GetCollision(idx);
+			root_shape->addChildShape(to_btTransform(col.GetLocalTransform()), shapes[idx]);
 		}
 
 		root_shape->setUserIndex(node.ref.idx); // ref back to node
@@ -693,7 +686,7 @@ RaycastOut SceneBullet3Physics::RaycastFirstHit(const Scene &scene, const Vec3 &
 	RaycastOut out;
 
 	out.N = from_btVector3(trace.m_hitNormalWorld);
-	out.node = scene.GetNode(trace.m_collisionObject->getUserIndex());
+	out.node = scene.GetNode(scene.GetNodeRef(trace.m_collisionObject->getUserIndex()));
 	out.P = from_btVector3(trace.m_hitPointWorld);
 	out.t = Dot(out.P - world_p0, Normalize(world_p1 - world_p0));
 
@@ -743,7 +736,7 @@ std::vector<RaycastOut> SceneBullet3Physics::RaycastAllHits(const Scene &scene, 
 
 	for (int i = 0; i < trace.m_hitNormalWorld.size(); ++i) {
 		outs[i].N = from_btVector3(trace.m_hitNormalWorld[i]);
-		outs[i].node = scene.GetNode(trace.m_collisionObjects[i]->getUserIndex());
+		outs[i].node = scene.GetNode(scene.GetNodeRef(trace.m_collisionObjects[i]->getUserIndex()));
 		outs[i].P = from_btVector3(trace.m_hitPointWorld[i]);
 		outs[i].t = Dot(outs[i].P - world_p0, Normalize(world_p1 - world_p0));
 	}
@@ -784,7 +777,7 @@ btCollisionShape *SceneBullet3Physics::LoadCollisionTree(const Reader &ir, const
 
 	collision_trees[name] = collision;
 	if (!collision)
-		error(format("Failed to load Bullet3 collision tree '%1'").arg(name));
+		warn(format("Failed to load Bullet3 collision tree '%1'").arg(name));
 
 	return collision;
 }

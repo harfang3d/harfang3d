@@ -9,6 +9,7 @@ namespace hg {
 NLOHMANN_JSON_SERIALIZE_ENUM(LightType, {{LT_Point, "point"}, {LT_Spot, "spot"}, {LT_Linear, "linear"}});
 NLOHMANN_JSON_SERIALIZE_ENUM(LightShadowType, {{LST_None, "none"}, {LST_Map, "map"}});
 NLOHMANN_JSON_SERIALIZE_ENUM(AnimLoopMode, {{ALM_Once, "none"}, {ALM_Infinite, "infinite"}, {ALM_Loop, "loop"}});
+NLOHMANN_JSON_SERIALIZE_ENUM(ProbeType, {{PT_Sphere, "sphere"}, {PT_Cube, "cube"}});
 
 inline void to_json(json &j, const Vec2 &v) { j = {v.x, v.y}; }
 inline void from_json(const json &j, Vec2 &v) { v = {j.at(0), j.at(1)}; }

@@ -11,16 +11,20 @@
 
 namespace hg {
 
+/// Convert an angle in degrees to the engine unit system.
 template <typename T> constexpr T Deg(T v) {
 	static_assert(std::is_floating_point<T>::value, "Expected floating point type");
 	return v / T(180) * T(3.1415926535);
 }
+/// Convert an angle in radians to the engine unit system.
 template <typename T> constexpr T Rad(T v) {
 	static_assert(std::is_floating_point<T>::value, "Expected floating point type");
 	return v;
 }
 
+/// Convert an angle in degrees to radians.
 template <typename T> constexpr T DegreeToRadian(T v) { return v * (3.1415926535f / 180.f); }
+/// Convert an angle in radians to degrees.
 template <typename T> constexpr T RadianToDegree(T v) { return v * (180.f / 3.1415926535f); }
 
 template <typename T> constexpr T Sec(T v) { return v; }

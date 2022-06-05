@@ -167,7 +167,7 @@ size_t UUDecode(const void *in, size_t len, void *out, size_t max) {
 size_t yEncode(const void *in, size_t len, void *out, size_t max, int line_len) {
 	const auto *p_in = reinterpret_cast<const uint8_t *>(in);
 	if (line_len <= 0)
-		__ERR__(error("Invalid line-feed size for yEncoding"), 0);
+		__ERR__(warn("Invalid line-feed size for yEncoding"), 0);
 
 	size_t olen = 0;
 	auto cchr = line_len;

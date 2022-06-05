@@ -30,6 +30,7 @@ SAO CreateSAOFromAssets(const char *path, bgfx::BackbufferRatio::Enum ratio);
 SAO CreateSAOFromFile(const char *path, bgfx::BackbufferRatio::Enum ratio);
 SAO CreateSAOFromAssets(const char *path, bgfx::BackbufferRatio::Enum ratio);
 
+/// Destroy an ambient occlusion post process object and its resources.
 void DestroySAO(SAO &sao);
 
 /// @note input depth buffer must be in linear depth

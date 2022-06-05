@@ -225,12 +225,6 @@ size_t Scene::GarbageCollect() {
 	// stats
 	const auto t_total = time_now() - t_start;
 
-	if (total_removed > 0)
-		debug(format("Scene garbage collection report: %1 components destroyed in %2 passes, took %3 ms")
-				  .arg(total_removed)
-				  .arg(pass_count)
-				  .arg(time_to_ms_f(t_total)));
-
 	return total_removed;
 }
 
@@ -239,12 +233,19 @@ ViewState Scene::ComputeCameraViewState(NodeRef ref, const Vec2 &aspect_ratio) c
 	if (const auto node_ = GetNode_(ref)) {
 		const auto trs_ref = node_->components[NCI_Transform];
 
-		if (IsValidTransformRef(trs_ref))
+		if (IsValidTransformRef(trs_ref)) {
 			if (auto cam_ = GetComponent_(cameras, node_->components[NCI_Camera])) {
 				const auto &world = transform_worlds[trs_ref.idx];
 				return cam_->ortho ? ComputeOrthographicViewState(world, cam_->size, cam_->zrange.znear, cam_->zrange.zfar, aspect_ratio)
 								   : ComputePerspectiveViewState(world, cam_->fov, cam_->zrange.znear, cam_->zrange.zfar, aspect_ratio);
+			} else {
+				warn("Invalid node camera");
 			}
+		} else {
+			warn("Invalid node transform");
+		}
+	} else {
+		warn("Invalid node");
 	}
 	return {};
 }
@@ -402,7 +403,7 @@ std::vector<Node> Scene::GetLights() const {
 	for (auto i = nodes.first(); i != generational_vector_list<Node_>::invalid_idx; i = nodes.next(i)) {
 		const auto &node = nodes[i];
 		if (IsValidLightRef(node.components[NCI_Light]) && IsValidTransformRef(node.components[NCI_Transform]))
-			lights.push_back(GetNode(i));
+			lights.push_back(GetNode(GetNodeRef(i)));
 	}
 
 	return lights;
@@ -461,8 +462,10 @@ void Scene::DestroyNode(NodeRef ref) { nodes.remove_ref(ref); }
 
 //
 void Scene::EnableNode_(NodeRef ref, bool through_instance) {
-	if (!nodes.is_valid(ref))
+	if (!nodes.is_valid(ref)) {
+		warn("Invalid node reference");
 		return;
+	}
 
 	nodes[ref.idx].flags &= through_instance ? ~NF_InstanceDisabled : ~NF_Disabled;
 
@@ -477,8 +480,10 @@ void Scene::EnableNode_(NodeRef ref, bool through_instance) {
 }
 
 void Scene::DisableNode_(NodeRef ref, bool through_instance) {
-	if (!nodes.is_valid(ref))
+	if (!nodes.is_valid(ref)) {
+		warn("Invalid node reference");
 		return;
+	}
 
 	nodes[ref.idx].flags |= through_instance ? NF_InstanceDisabled : NF_Disabled;
 
@@ -695,24 +700,32 @@ std::vector<Node> Scene::GetNodeChildren(NodeRef ref) const {
 std::string Scene::GetNodeName(NodeRef ref) const {
 	if (auto node_ = GetNode_(ref))
 		return node_->name;
+
+	warn("Invalid node");
 	return {};
 }
 
 void Scene::SetNodeName(NodeRef ref, const std::string &v) {
 	if (auto node_ = GetNode_(ref))
 		node_->name = v;
+	else
+		warn("Invalid node");
 }
 
 //
 uint32_t Scene::GetNodeFlags(NodeRef ref) const {
 	if (auto node_ = GetNode_(ref))
 		return node_->flags;
+
+	warn("Invalid node");
 	return 0;
 }
 
 void Scene::SetNodeFlags(NodeRef ref, uint32_t flags) {
 	if (auto node_ = GetNode_(ref))
 		node_->flags = flags;
+	else
+		warn("Invalid node");
 }
 
 //
@@ -721,6 +734,8 @@ ComponentRef Scene::GetNodeTransformRef(NodeRef ref) const { return GetNodeCompo
 void Scene::SetNodeTransform(NodeRef ref, ComponentRef cref) {
 	if (auto node_ = this->GetNode_(ref))
 		node_->components[NCI_Transform] = cref;
+	else
+		warn("Invalid node");
 }
 
 //
@@ -729,9 +744,15 @@ Mat4 Scene::GetNodeWorldMatrix(NodeRef ref) const {
 		const auto trs_ref = node_->components[NCI_Transform];
 
 		if (transforms.is_valid(trs_ref)) {
-			__ASSERT__(transform_worlds.size() > trs_ref.idx);
-			return transform_worlds[trs_ref.idx];
+			if (trs_ref.idx < transform_worlds.size())
+				return transform_worlds[trs_ref.idx];
+
+			warn("Invalid node transform index");
+		} else {
+			warn("Invalid node transform");
 		}
+	} else {
+		warn("Invalid node");
 	}
 	return Mat4::Identity;
 }
@@ -741,10 +762,17 @@ void Scene::SetNodeWorldMatrix(NodeRef ref, const Mat4 &world) {
 		const auto trs_ref = node_->components[NCI_Transform];
 
 		if (transforms.is_valid(trs_ref)) {
-			__ASSERT__(transform_worlds.size() > trs_ref.idx);
-			transform_worlds[trs_ref.idx] = world;
-			transform_worlds_updated[trs_ref.idx] = true;
+			if (trs_ref.idx < transform_worlds.size()) {
+				transform_worlds[trs_ref.idx] = world;
+				transform_worlds_updated[trs_ref.idx] = true;
+			} else {
+				warn("Invalid node transform index");
+			}
+		} else {
+			warn("Invalid node transform");
 		}
+	} else {
+		warn("Invalid node");
 	}
 }
 
@@ -761,7 +789,11 @@ Mat4 Scene::ComputeNodeWorldMatrix(NodeRef ref) const {
 				mtx = ComputeNodeWorldMatrix(trs.parent) * mtx;
 
 			return mtx;
+		} else {
+			warn("Invalid node transform");
 		}
+	} else {
+		warn("Invalid node");
 	}
 	return Mat4::Identity;
 }
@@ -772,6 +804,8 @@ ComponentRef Scene::GetNodeCameraRef(NodeRef ref) const { return GetNodeComponen
 void Scene::SetNodeCamera(NodeRef ref, ComponentRef cref) {
 	if (auto node_ = this->GetNode_(ref))
 		node_->components[NCI_Camera] = cref;
+	else
+		warn("Invalid node");
 }
 
 //
@@ -780,6 +814,8 @@ ComponentRef Scene::GetNodeObjectRef(NodeRef ref) const { return GetNodeComponen
 void Scene::SetNodeObject(NodeRef ref, ComponentRef cref) {
 	if (auto node_ = this->GetNode_(ref))
 		node_->components[NCI_Object] = cref;
+	else
+		warn("Invalid node");
 }
 
 //
@@ -788,6 +824,8 @@ ComponentRef Scene::GetNodeLightRef(NodeRef ref) const { return GetNodeComponent
 void Scene::SetNodeLight(NodeRef ref, ComponentRef cref) {
 	if (auto node_ = this->GetNode_(ref))
 		node_->components[NCI_Light] = cref;
+	else
+		warn("Invalid node");
 }
 
 //
@@ -796,6 +834,8 @@ ComponentRef Scene::GetNodeRigidBodyRef(NodeRef ref) const { return GetNodeCompo
 void Scene::SetNodeRigidBody(NodeRef ref, ComponentRef cref) {
 	if (auto node_ = this->GetNode_(ref))
 		node_->components[NCI_RigidBody] = cref;
+	else
+		warn("Invalid node");
 }
 
 ComponentRef Scene::GetNodeCollisionRef(NodeRef ref, size_t idx) const {
@@ -812,6 +852,8 @@ void Scene::SetNodeCollision(NodeRef ref, size_t idx, const Collision &collision
 	if (nodes.is_valid(ref)) {
 		node_collisions[ref].resize(idx + 1);
 		node_collisions[ref][idx] = collision.ref;
+	} else {
+		warn("Invalid node");
 	}
 }
 
@@ -824,6 +866,8 @@ void Scene::RemoveNodeCollision(NodeRef ref, ComponentRef cref) {
 				collisions[slot_idx] = invalid_gen_ref;
 
 		_ResizeComponents(collisions);
+	} else {
+		warn("Invalid node");
 	}
 }
 
@@ -836,6 +880,8 @@ void Scene::RemoveNodeCollision(NodeRef ref, size_t slot_idx) {
 				collisions[slot_idx] = invalid_gen_ref;
 
 		_ResizeComponents(collisions);
+	} else {
+		warn("Invalid node");
 	}
 }
 
@@ -847,67 +893,91 @@ void Scene::DestroyRigidBody(ComponentRef ref) { rigid_bodies.remove_ref(ref); }
 void Scene::SetRigidBodyType(ComponentRef ref, RigidBodyType type) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		rb->type = type;
+	else
+		warn("Invalid rigid body");
 }
 
 RigidBodyType Scene::GetRigidBodyType(ComponentRef ref) const {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		return rb->type;
+
+	warn("Invalid rigid body");
 	return RBT_Dynamic;
 }
 
 float Scene::GetRigidBodyLinearDamping(ComponentRef ref) const {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		return unpack_float<uint8_t>(rb->linear_damping);
+
+	warn("Invalid rigid body");
 	return 0.f;
 }
 
 void Scene::SetRigidBodyLinearDamping(ComponentRef ref, float damping) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		rb->linear_damping = pack_float<uint8_t>(damping);
+	else
+		warn("Invalid rigid body");
 }
 
 float Scene::GetRigidBodyAngularDamping(ComponentRef ref) const {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		return unpack_float<uint8_t>(rb->angular_damping);
+
+	warn("Invalid rigid body");
 	return {};
 }
 
 void Scene::SetRigidBodyAngularDamping(ComponentRef ref, float damping) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		rb->angular_damping = pack_float<uint8_t>(damping);
+	else
+		warn("Invalid rigid body");
 }
 
 float Scene::GetRigidBodyRestitution(ComponentRef ref) const {
 	if (const auto rb = GetComponent_(rigid_bodies, ref))
 		return unpack_float<uint8_t>(rb->restitution);
+
+	warn("Invalid rigid body");
 	return 0.f;
 }
 
 void Scene::SetRigidBodyRestitution(ComponentRef ref, float restitution) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		rb->restitution = pack_float<uint8_t>(restitution);
+	else
+		warn("Invalid rigid body");
 }
 
 float Scene::GetRigidBodyFriction(ComponentRef ref) const {
 	if (const auto rb = GetComponent_(rigid_bodies, ref))
 		return unpack_float<uint8_t>(rb->friction);
+
+	warn("Invalid rigid body");
 	return 0.5f;
 }
 
 void Scene::SetRigidBodyFriction(ComponentRef ref, float friction) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		rb->friction = pack_float<uint8_t>(friction);
+	else
+		warn("Invalid rigid body");
 }
 
 float Scene::GetRigidBodyRollingFriction(ComponentRef ref) const {
 	if (const auto rb = GetComponent_(rigid_bodies, ref))
 		return unpack_float<uint8_t>(rb->rolling_friction);
+
+	warn("Invalid rigid body");
 	return 0.f;
 }
 
 void Scene::SetRigidBodyRollingFriction(ComponentRef ref, float rolling_friction) {
 	if (auto rb = GetComponent_(rigid_bodies, ref))
 		rb->rolling_friction = pack_float<uint8_t>(rolling_friction);
+	else
+		warn("Invalid rigid body");
 }
 
 //
@@ -917,77 +987,135 @@ void Scene::DestroyCollision(ComponentRef ref) { collisions.remove_ref(ref); }
 void Scene::SetCollisionType(ComponentRef ref, CollisionType type) {
 	if (auto col = GetComponent_(collisions, ref))
 		col->type = type;
+	else
+		warn("Invalid collision");
 }
 
 CollisionType Scene::GetCollisionType(ComponentRef ref) const {
 	if (const auto col = GetComponent_(collisions, ref))
 		return col->type;
+
+	warn("Invalid collision");
 	return CT_Sphere;
 }
 
-void Scene::SetCollisionLocalTransform(ComponentRef ref, Mat4 m) {
+void Scene::SetCollisionLocalTransform(ComponentRef ref, const Mat4 &m) {
 	if (auto col = GetComponent_(collisions, ref))
-		col->m = m;
+		Decompose(m, &col->trs.pos, &col->trs.rot, nullptr); // scale is the shape size, scaling collision shapes is NOT supported
+	else
+		warn("Invalid collision");
 }
 
 Mat4 Scene::GetCollisionLocalTransform(ComponentRef ref) const {
 	if (const auto col = GetComponent_(collisions, ref))
-		return col->m;
+		return TransformationMat4(col->trs.pos, col->trs.rot, Vec3::One); // scale is shape size, scaling collision shapes is NOT supported
+
+	warn("Invalid collision");
 	return Mat4::Identity;
+}
+
+Vec3 Scene::GetCollisionPosition(ComponentRef ref) const {
+	if (const auto col = GetComponent_(collisions, ref))
+		return col->trs.pos;
+
+	warn("Invalid collision");
+	return {};
+}
+
+void Scene::SetCollisionPosition(ComponentRef ref, const Vec3 &pos) {
+	if (auto col = GetComponent_(collisions, ref))
+		col->trs.pos = pos;
+	else
+		warn("Invalid collision");
+}
+
+Vec3 Scene::GetCollisionRotation(ComponentRef ref) const {
+	if (const auto col = GetComponent_(collisions, ref))
+		return col->trs.rot;
+
+	warn("Invalid collision");
+	return {};
+}
+
+void Scene::SetCollisionRotation(ComponentRef ref, const Vec3 &rot) {
+	if (auto col = GetComponent_(collisions, ref))
+		col->trs.rot = rot;
+	else
+		warn("Invalid collision");
 }
 
 void Scene::SetCollisionMass(ComponentRef ref, float mass) {
 	if (auto col = GetComponent_(collisions, ref))
 		col->mass = mass;
+	else
+		warn("Invalid collision");
 }
 
 float Scene::GetCollisionMass(ComponentRef ref) const {
 	if (const auto col = GetComponent_(collisions, ref))
 		return col->mass;
+
+	warn("Invalid collision");
 	return 0.f;
 }
 
 void Scene::SetCollisionSize(ComponentRef ref, const Vec3 &size) {
 	if (auto col = GetComponent_(collisions, ref))
-		col->size = size;
+		col->trs.scl = size;
+	else
+		warn("Invalid collision");
 }
 
 Vec3 Scene::GetCollisionSize(ComponentRef ref) const {
 	if (const auto col = GetComponent_(collisions, ref))
-		return col->size;
+		return col->trs.scl;
+
+	warn("Invalid collision");
 	return {-1.f, -1.f, -1.f};
 }
 
 void Scene::SetCollisionRadius(ComponentRef ref, float radius) {
 	if (auto col = GetComponent_(collisions, ref))
-		col->size.x = radius;
+		col->trs.scl.x = radius;
+	else
+		warn("Invalid collision");
 }
 
 float Scene::GetCollisionRadius(ComponentRef ref) const {
 	if (const auto col = GetComponent_(collisions, ref))
-		return col->size.x;
+		return col->trs.scl.x;
+
+	warn("Invalid collision");
 	return -1.f;
 }
 
 void Scene::SetCollisionHeight(ComponentRef ref, float height) {
 	if (auto col = GetComponent_(collisions, ref))
-		col->size.y = height;
+		col->trs.scl.y = height;
+	else
+		warn("Invalid collision");
 }
 
 float Scene::GetCollisionHeight(ComponentRef ref) const {
 	if (const auto col = GetComponent_(collisions, ref))
-		return col->size.y;
+		return col->trs.scl.y;
+
+	warn("Invalid collision");
 	return -1.f;
 }
 
 void Scene::SetCollisionResource(ComponentRef ref, const std::string &path) {
 	if (auto col = GetComponent_(collisions, ref))
 		col->resource_path = path;
+	else
+		warn("Invalid collision");
 }
 
 std::string Scene::GetCollisionResource(ComponentRef ref) {
 	if (auto col = GetComponent_(collisions, ref))
 		return col->resource_path;
+
+	warn("Invalid collision");
 	return {};
 }
 
@@ -1032,6 +1160,15 @@ Collision Scene::CreateCylinderCollision(float radius, float height, float mass)
 	return col;
 }
 
+Collision Scene::CreateConeCollision(float radius, float height, float mass) {
+	auto col = CreateCollision();
+	SetCollisionType(col.ref, CT_Cone);
+	SetCollisionRadius(col.ref, radius);
+	SetCollisionHeight(col.ref, height);
+	SetCollisionMass(col.ref, mass);
+	return col;
+}
+
 Collision Scene::CreateMeshCollision(const std::string &path, float mass) {
 	auto col = CreateCollision();
 	SetCollisionType(col.ref, CT_Mesh);
@@ -1055,40 +1192,77 @@ void Scene::DestroyInstance(ComponentRef ref) { instances.remove_ref(ref); }
 void Scene::SetInstancePath(ComponentRef ref, const std::string &path) {
 	if (instances.is_valid(ref))
 		instances[ref.idx].name = path;
+	else
+		warn("Invalid instance");
 }
 
-std::string Scene::GetInstancePath(ComponentRef ref) const { return instances.is_valid(ref) ? instances[ref.idx].name : std::string{}; }
+std::string Scene::GetInstancePath(ComponentRef ref) const {
+	if (instances.is_valid(ref))
+		return instances[ref.idx].name;
+
+	warn("Invalid instance");
+	return {};
+}
 
 void Scene::SetOnInstantiateAnim(ComponentRef ref, const std::string &anim) {
 	if (instances.is_valid(ref))
 		instances[ref.idx].anim = anim;
+	else
+		warn("Invalid instance");
 }
 
 void Scene::SetOnInstantiateAnimLoopMode(ComponentRef ref, AnimLoopMode loop_mode) {
 	if (instances.is_valid(ref))
 		instances[ref.idx].loop_mode = loop_mode;
+	else
+		warn("Invalid instance");
 }
 
 void Scene::ClearOnInstantiateAnim(ComponentRef ref) {
 	if (instances.is_valid(ref))
 		instances[ref.idx].anim.clear();
+	else
+		warn("Invalid instance");
 }
 
-std::string Scene::GetOnInstantiateAnim(ComponentRef ref) { return instances.is_valid(ref) ? instances[ref.idx].anim : std::string(); }
-AnimLoopMode Scene::GetOnInstantiateAnimLoopMode(ComponentRef ref) { return instances.is_valid(ref) ? instances[ref.idx].loop_mode : ALM_Once; }
+std::string Scene::GetOnInstantiateAnim(ComponentRef ref) {
+	if (instances.is_valid(ref))
+		return instances[ref.idx].anim;
+
+	warn("Invalid instance");
+	return {};
+}
+
+AnimLoopMode Scene::GetOnInstantiateAnimLoopMode(ComponentRef ref) {
+	if (instances.is_valid(ref))
+		return instances[ref.idx].loop_mode;
+
+	warn("Invalid instance");
+	return {};
+}
 
 ScenePlayAnimRef Scene::GetOnInstantiatePlayAnimRef(ComponentRef ref) {
-	return instances.is_valid(ref) ? instances[ref.idx].play_anim_ref : InvalidScenePlayAnimRef;
+	if (instances.is_valid(ref))
+		return instances[ref.idx].play_anim_ref;
+
+	warn("Invalid instance");
+	return InvalidScenePlayAnimRef;
 }
 
 Instance Scene::GetNodeInstance(NodeRef ref) const {
 	const auto cref = GetNodeInstanceRef(ref);
-	return cref == InvalidComponentRef ? Instance{} : Instance{scene_ref, cref};
+	if (cref != InvalidComponentRef)
+		return {scene_ref, cref};
+
+	warn("Invalid node instance");
+	return {};
 }
 
 ComponentRef Scene::GetNodeInstanceRef(NodeRef ref) const {
 	const auto i = node_instance.find(ref);
-	return i == std::end(node_instance) ? InvalidComponentRef : i->second;
+	if (i != std::end(node_instance))
+		return i->second;
+	return InvalidComponentRef;
 }
 
 void Scene::SetNodeInstance(NodeRef ref, ComponentRef cref) {
@@ -1115,6 +1289,8 @@ void Scene::NodeDestroyInstance(NodeRef ref) {
 	if (i != std::end(node_instance_view)) {
 		DestroyViewContent(i->second);
 		node_instance_view.erase(i);
+	} else {
+		warn("Invalid node instance view");
 	}
 }
 
@@ -1219,7 +1395,7 @@ const SceneView &Scene::GetNodeInstanceSceneView(NodeRef ref) const {
 	static SceneView dummy_view;
 	const auto i = node_instance_view.find(ref);
 	if (i == std::end(node_instance_view)) {
-		debug(format("No instance scene view on node (%1:%2)").arg(ref.idx).arg(ref.gen));
+		warn(format("No instance scene view on node (%1:%2)").arg(ref.idx).arg(ref.gen).c_str());
 		return dummy_view;
 	}
 	return i->second;
@@ -1337,11 +1513,15 @@ void Scene::DestroyScript(ComponentRef ref) { scripts.remove_ref(ref); }
 void Scene::SetScriptPath(ComponentRef ref, const std::string &path) {
 	if (auto s = GetComponent_(scripts, ref))
 		s->path = path;
+	else
+		warn("Invalid script");
 }
 
 std::string Scene::GetScriptPath(ComponentRef ref) const {
 	if (const auto s = GetComponent_(scripts, ref))
 		return s->path;
+
+	warn("Invalid script");
 	return {};
 }
 
@@ -1349,6 +1529,8 @@ std::string Scene::GetScriptPath(ComponentRef ref) const {
 bool Scene::ScriptHasParam(ComponentRef ref, const std::string &name) const {
 	if (const auto s = GetComponent_(scripts, ref))
 		return s->params.find(name) != std::end(s->params);
+
+	warn("Invalid script");
 	return false;
 }
 
@@ -1357,14 +1539,20 @@ bool Scene::SetScriptParam(ComponentRef ref, const std::string &name, ScriptPara
 		s->params[name] = std::move(param);
 		return true;
 	}
+
+	warn("Invalid script");
 	return false;
 }
 
 ScriptParam Scene::GetScriptParam(ComponentRef ref, const std::string &name) const {
 	if (const auto s = GetComponent_(scripts, ref)) {
-		auto i = s->params.find(name);
+		const auto i = s->params.find(name);
 		if (i != std::end(s->params))
 			return i->second;
+		else
+			warn(format("Invalid script parameter '%1'").arg(name).c_str());
+	} else {
+		warn("Invalid script");
 	}
 	return {SPT_Null};
 }
@@ -1374,12 +1562,19 @@ static std::map<std::string, ScriptParam> _empty_script_params;
 const std::map<std::string, ScriptParam> &Scene::GetScriptParams(ComponentRef ref) const {
 	if (const auto s = GetComponent_(scripts, ref))
 		return s->params;
+
+	warn("Invalid script");
 	return _empty_script_params;
 }
 
 //
 size_t Scene::GetNodeScriptCount(NodeRef ref) const {
-	auto i = nodes.is_valid(ref) ? node_scripts.find(ref) : std::end(node_scripts);
+	if (!nodes.is_valid(ref)) {
+		warn("Invalid node");
+		return 0;
+	}
+
+	const auto i = node_scripts.find(ref);
 	return i != std::end(node_scripts) ? i->second.size() : 0;
 }
 
@@ -1397,6 +1592,8 @@ void Scene::SetNodeScript(NodeRef ref, size_t idx, const Script &script) {
 	if (nodes.is_valid(ref)) {
 		node_scripts[ref].resize(idx + 1);
 		node_scripts[ref][idx] = script.ref;
+	} else {
+		warn("Invalid node");
 	}
 }
 
@@ -1409,6 +1606,8 @@ void Scene::RemoveNodeScript(NodeRef ref, ComponentRef cref) {
 				scripts[slot_idx] = invalid_gen_ref;
 
 		_ResizeComponents(scripts);
+	} else {
+		warn("Invalid node");
 	}
 }
 
@@ -1421,6 +1620,8 @@ void Scene::RemoveNodeScript(NodeRef ref, size_t slot_idx) {
 				scripts[slot_idx] = invalid_gen_ref;
 
 		_ResizeComponents(scripts);
+	} else {
+		warn("Invalid node");
 	}
 }
 
@@ -1667,16 +1868,15 @@ std::vector<NodeRef> DuplicateNodes(Scene &scene, const std::vector<NodeRef> &no
 	Data data;
 
 	if (!scene.SaveNodes_binary(g_data_writer, DataWriteHandle(data), nodes, resources)) {
-		error("Failed to duplicate nodes, an error occurred while saving the node selection");
+		warn("Failed to duplicate nodes, an error occurred while saving the node selection");
 		return {};
 	}
 
-	debug(format("DuplicateNodes, %1 nodes serialized to %2 bytes").arg(nodes.size()).arg(data.GetSize()));
 	data.Rewind();
 
 	LoadSceneContext ctx;
 	if (!scene.LoadNodes_binary(g_data_reader, DataReadHandle(data), "DuplicateNodes", deps_ir, deps_ip, resources, pipeline, ctx)) {
-		error("Failed to duplicate nodes, an error occurred while loading the node selection");
+		warn("Failed to duplicate nodes, an error occurred while loading the node selection");
 		return {};
 	}
 
@@ -1692,6 +1892,7 @@ static std::vector<NodeRef> GetNodeAndchildren(const Scene &scene, const std::ve
 		for (auto child_ref : child_refs)
 			out.insert(child_ref);
 	}
+
 	return {std::begin(out), std::end(out)};
 }
 
@@ -1746,8 +1947,6 @@ Node SceneView::GetNode(const Scene &scene, const std::string &name) const {
 	for (const auto &ref : nodes)
 		if (scene.GetNodeName(ref) == name)
 			return scene.GetNode(ref);
-
-	debug(format("Node '%1' not found in scene").arg(name));
 	return {};
 }
 
@@ -1756,8 +1955,6 @@ SceneAnimRef SceneView::GetSceneAnim(const Scene &scene, const std::string &name
 		if (const auto anim = scene.GetSceneAnim(ref))
 			if (anim->name == name)
 				return ref;
-
-	debug(format("Animation '%1' not found in scene").arg(name));
 	return InvalidSceneAnimRef;
 }
 
@@ -1800,8 +1997,10 @@ const Anim *Scene::GetAnim(AnimRef ref) const { return anims.is_valid(ref) ? &an
 void Scene::DestroyAnim(AnimRef anim) { anims.remove_ref(anim); }
 
 BoundToSceneAnim Scene::BindSceneAnim(AnimRef anim_ref) const {
-	if (!anims.is_valid(anim_ref))
+	if (!anims.is_valid(anim_ref)) {
+		warn("Invalid animation");
 		return {};
+	}
 
 	const auto &anim = anims[anim_ref.idx];
 
@@ -1865,8 +2064,10 @@ static bool SplitMaterialPropertyName(const std::string &name, size_t &slot_idx,
 }
 
 BoundToNodeAnim Scene::BindNodeAnim(NodeRef ref, AnimRef anim_ref) const {
-	if (!anims.is_valid(anim_ref))
+	if (!anims.is_valid(anim_ref)) {
+		warn("Invalid animation");
 		return {};
+	}
 
 	const auto &anim = anims[anim_ref.idx];
 
@@ -1891,6 +2092,8 @@ BoundToNodeAnim Scene::BindNodeAnim(NodeRef ref, AnimRef anim_ref) const {
 			bound_anim.float_track[NFAT_LightDiffuseIntensity] = int8_t(i);
 		else if (t.target == "Light.SpecularIntensity")
 			bound_anim.float_track[NFAT_LightSpecularIntensity] = int8_t(i);
+		else if (t.target == "Camera.Fov")
+			bound_anim.float_track[NFAT_CameraFov] = int8_t(i);
 	}
 
 	std::fill(std::begin(bound_anim.vec3_track), std::end(bound_anim.vec3_track), -1);
@@ -1976,15 +2179,17 @@ void Scene::EvaluateBoundAnim(const BoundToNodeAnim &bound_anim, time_ns t) {
 		if (auto lgt = GetComponent_(lights, GetNodeComponentRef_<NCI_Light>(bound_anim.node))) {
 			if (bound_anim.color_track[NCAT_LightDiffuse] != -1)
 				Evaluate(anim.color_tracks[bound_anim.color_track[NCAT_LightDiffuse]], t, lgt->diffuse);
-
 			if (bound_anim.color_track[NCAT_LightSpecular] != -1)
 				Evaluate(anim.color_tracks[bound_anim.color_track[NCAT_LightSpecular]], t, lgt->specular);
-
 			if (bound_anim.float_track[NFAT_LightDiffuseIntensity] != -1)
 				Evaluate(anim.float_tracks[bound_anim.float_track[NFAT_LightDiffuseIntensity]], t, lgt->diffuse_intensity);
-
 			if (bound_anim.float_track[NFAT_LightSpecularIntensity] != -1)
 				Evaluate(anim.float_tracks[bound_anim.float_track[NFAT_LightSpecularIntensity]], t, lgt->specular_intensity);
+		}
+
+		if (auto cam = GetComponent_(cameras, GetNodeComponentRef_<NCI_Camera>(bound_anim.node))) {
+			if (bound_anim.float_track[NFAT_CameraFov] != -1)
+				Evaluate(anim.float_tracks[bound_anim.float_track[NFAT_CameraFov]], t, cam->fov);
 		}
 
 		if (auto obj = GetComponent_(objects, GetNodeComponentRef_<NCI_Object>(bound_anim.node))) {
@@ -2114,6 +2319,8 @@ SceneBoundAnim Scene::BindAnim(const SceneAnim &scene_anim) const {
 
 	if (anims.is_valid(scene_anim.scene_anim))
 		bound_anim.bound_scene_anim = BindSceneAnim(scene_anim.scene_anim);
+	else
+		warn("Invalid scene animation");
 
 	for (const auto &i : scene_anim.node_anims)
 		bound_anim.bound_node_anims.push_back(BindNodeAnim(i.node, i.anim));
@@ -2122,8 +2329,10 @@ SceneBoundAnim Scene::BindAnim(const SceneAnim &scene_anim) const {
 }
 
 SceneBoundAnim Scene::BindAnim(SceneAnimRef ref) const {
-	if (!scene_anims.is_valid(ref))
+	if (!scene_anims.is_valid(ref)) {
+		warn("Invalid scene animation reference");
 		return {};
+	}
 	return BindAnim(scene_anims[ref.idx]);
 }
 
@@ -2139,7 +2348,7 @@ const ScenePlayAnimRef InvalidScenePlayAnimRef;
 
 ScenePlayAnimRef Scene::PlayAnim(SceneAnimRef ref, AnimLoopMode loop_mode, Easing easing, time_ns t_start, time_ns t_end, bool paused, float t_scale) {
 	if (!scene_anims.is_valid(ref)) {
-		debug("Invalid scene animation reference passed to scene PlayAnim");
+		warn("Invalid scene animation reference");
 		return InvalidScenePlayAnimRef;
 	}
 
@@ -2220,8 +2429,11 @@ void Scene::UpdatePlayingAnims(time_ns dt) {
 //
 SceneAnimRef Scene::DuplicateSceneAnim(SceneAnimRef ref) {
 	const auto anim = GetSceneAnim(ref);
-	if (!anim)
+
+	if (!anim) {
+		warn("Invalid scene animation reference");
 		return InvalidSceneAnimRef;
+	}
 
 	SceneAnim out;
 
@@ -2273,10 +2485,10 @@ void Scene::SetValue(const std::string &key, const std::string &value) { key_val
 
 //
 bool GetAnimableNodePropertyBool(const Scene &scene, NodeRef ref, const std::string &name) {
-	if (const auto node = scene.GetNode(ref)) {
+	if (const auto node = scene.GetNode(ref))
 		if (name == "Enable")
 			return node.IsEnabled();
-	}
+
 	return false;
 }
 
@@ -2450,6 +2662,34 @@ void ReverseSceneAnim(Scene &scene, SceneAnim &scene_anim) {
 	for (auto node_anim : scene_anim.node_anims)
 		if (auto anim = scene.GetAnim(node_anim.anim))
 			ReverseAnim(*anim, scene_anim.t_start, scene_anim.t_end);
+}
+
+void QuantizeSceneAnim(Scene &scene, SceneAnim &scene_anim, time_ns t_step) {
+	scene_anim.t_start = (scene_anim.t_start / t_step) * t_step;
+	scene_anim.t_end = (scene_anim.t_end / t_step) * t_step;
+
+	if (auto anim = scene.GetAnim(scene_anim.scene_anim))
+		QuantizeAnim(*anim, t_step);
+
+	for (auto node_anim : scene_anim.node_anims)
+		if (auto anim = scene.GetAnim(node_anim.anim))
+			QuantizeAnim(*anim, t_step);
+}
+
+void DeleteEmptySceneAnims(Scene &scene, SceneAnim &scene_anim) {
+	if (auto anim = scene.GetAnim(scene_anim.scene_anim))
+		if (!AnimHasKeys(*anim))
+			scene_anim.scene_anim = InvalidAnimRef;
+
+	for (const auto &node_anim : scene_anim.node_anims)
+		scene_anim.node_anims.erase(std::remove_if(std::begin(scene_anim.node_anims), std::end(scene_anim.node_anims),
+										[&](const NodeAnim &node_anim) {
+											auto anim = scene.GetAnim(node_anim.anim);
+											if (!anim)
+												return true; // remove invalid anim ref
+											return AnimHasKeys(*anim) == false; // remove anim with no keys
+										}),
+			std::end(scene_anim.node_anims));
 }
 
 //

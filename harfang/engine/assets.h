@@ -12,19 +12,13 @@
 
 namespace hg {
 
+/// Mount a local filesystem folder as an assets source.
 bool AddAssetsFolder(const char *path);
 void RemoveAssetsFolder(const char *path);
 
+/// Mount an archive stored on the local filesystem as an assets source.
 bool AddAssetsPackage(const char *path);
 void RemoveAssetsPackage(const char *path);
-
-//
-enum AssetsSourceType { AssetsFolder, AssetsPackage };
-
-struct AssetsSource {
-	AssetsSourceType type;
-	std::string name;
-};
 
 //
 struct Asset {

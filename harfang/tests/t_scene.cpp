@@ -38,6 +38,24 @@
 
 using namespace hg;
 
+TEST(Scene, SceneRef) {
+	Transform trs;
+
+	{
+		Scene scene;
+
+		auto node = scene.CreateNode();
+		trs = node.GetTransform();
+
+		auto parent = trs.GetParentNode();
+		auto parent_trs = parent.GetTransform();
+
+		auto parent_pos = parent_trs.GetPos();
+	}
+
+	auto p = trs.GetPos();
+}
+
 #if 0
 TEST(Scene, RenderBuffers) {
 	InputInit();

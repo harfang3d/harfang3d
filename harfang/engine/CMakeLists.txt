@@ -20,7 +20,6 @@ set(HDRS
 	lua_object.h
 	load_save_scene_flags.h
 	meta.h
-	mikktspace.h
 	model_builder.h
 	motion_blur.h
 	node.h
@@ -39,8 +38,6 @@ set(HDRS
 	script_param.h
 	sranipal_api.h
 	ssgi.h
-	stb_image.h
-	stb_image_write.h
 	hiz.h
 	ssr.h
 	taa.h
@@ -78,7 +75,6 @@ set(SRCS
 	meta.cpp
 	model_builder.cpp
 	motion_blur.cpp
-	mikktspace.c
 	node.cpp
 	openvr_api.cpp
 	physics.cpp
@@ -103,6 +99,7 @@ set(SRCS
 	temporal_accumulation.cpp
 	wav_audio_stream.cpp
 	ogg_audio_stream.cpp
+	vertex.cpp
 	video_stream.cpp)
 
 if(HG_ENABLE_RECAST_DETOUR_API)
@@ -117,13 +114,13 @@ endif()
 
 add_library(engine STATIC ${SRCS} ${HDRS})
 
-target_link_libraries(engine PUBLIC bind_hg_lua script foundation platform bgfx imgui jsonhpp meshoptimizer PRIVATE stb_truetype stb_vorbis)
+target_link_libraries(engine PUBLIC bind_hg_lua script foundation platform bgfx imgui jsonhpp meshoptimizer PRIVATE stb_truetype stb_vorbis stb_image_write)
 
 if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Emscripten"))
 	target_link_libraries(engine PRIVATE OpenAL)
 endif()
 
-target_link_libraries(engine PRIVATE miniz)
+target_link_libraries(engine PRIVATE miniz mikktspace)
 
 if(HG_ENABLE_OPENVR_API)
 	target_link_libraries(engine PRIVATE OpenVR)

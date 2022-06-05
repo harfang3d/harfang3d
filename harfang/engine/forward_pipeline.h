@@ -24,6 +24,11 @@ static const int forward_light_count = 8;
 enum ForwardPipelineLightType { FPLT_None, FPLT_Point, FPLT_Spot, FPLT_Linear };
 enum ForwardPipelineShadowType { FPST_None, FPST_Map };
 
+/*!
+	Single light for the forward pipeline.
+	@note The complete lighting rig is passed as a ForwardPipelineLights.
+	@see PrepareForwardPipelineLights.
+*/
 struct ForwardPipelineLight { // 112B
 	ForwardPipelineLightType type;
 	ForwardPipelineShadowType shadow_type;
@@ -62,18 +67,27 @@ struct ForwardPipelineShadowData {
 	Mat44 spot_shadow_mtx; // slot 1: spot light
 };
 
-//
+/// Fog properties for the forward pipeline.
 struct ForwardPipelineFog {
 	float near{}, far{};
 	Color color{};
 };
 
-//
+/*!
+	Rendering pipeline implementing a forward rendering strategy.
+
+	The main characteristics of this pipeline are:
+	- Render in two passes: opaque display lists then transparent ones.
+	- Fixed 8 light slots supporting 1 linear light with PSSM shadow mapping, 1 spot with shadow mapping and up to 6 point lights with no shadow mapping.
+*/
 struct ForwardPipeline : Pipeline {
 	int shadow_map_resolution{1024};
 };
 
+/// Create a forward pipeline and its resources.
+/// @see DestroyForwardPipeline.
 ForwardPipeline CreateForwardPipeline(int shadow_map_resolution = 1024, bool spot_16bit_shadow_map = true);
+/// Destroy a forward pipeline object.
 inline void DestroyForwardPipeline(ForwardPipeline &pipeline) { DestroyPipeline(pipeline); }
 
 //
