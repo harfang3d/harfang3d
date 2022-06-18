@@ -71,7 +71,7 @@ The following screenshots were captured on a 1080GTX in 1080P running at 60FPS.
 # Download
 
 You can download the HARFANG binaries from the official website:
-https://www.harfang3d.com/download
+https://dev.harfang3d.com/releases
 
 <a name="section_3"></a>
 # Build the SDK
