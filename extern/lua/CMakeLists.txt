@@ -27,7 +27,9 @@ set(LUA_HDRS
 	src/lualib.h
 	src/lundump.h
 	src/lvm.h
-	src/lzio.h)
+	src/lzio.h
+	src/ljumptab.h
+	src/lopnames.h)
 
 set(SRC_CORE
 	src/lapi.c
@@ -54,16 +56,15 @@ set(SRC_CORE
 set(SRC_LIB
 	src/lauxlib.c
 	src/lbaselib.c
-	src/lbitlib.c
 	src/lcorolib.c
 	src/ldblib.c
 	src/liolib.c
 	src/lmathlib.c
+	src/loadlib.c
 	src/loslib.c
 	src/lstrlib.c
 	src/ltablib.c
 	src/lutf8lib.c
-	src/loadlib.c
 	src/linit.c)
 
 set(SRC_LUA src/lua.c)
