@@ -1,11 +1,25 @@
-Newton Dynamics
-glfw 3.3
-googletest 1.8.1
-imgui 1.70 WIP
-Lua 5.3.5
-openal-soft 1.19.1
-openvr 1.3.22
-stb_image 2.22
-stb_image_write 1.13
-stb_vorbis 1.16
-tiny-process-library 2.0.0
+bgfx                            3d4bd88 (02/12/2022)
+bimg                            663f724 (02/05/2022)
+bx                              ad018d4 (02/05/2022)
+bullet3                         ???
+cmft                            3b89802 (01/08/2020)
+emscripten                      2.0.30
+glfw                            3.3.7
+googletest                      1.11.0
+imgui                           1.87
+json                            3.10.5
+lua                             5.4.4
+meshoptimizer                   0.17
+miniz                           2.2.0
+openal-soft                     1.22.0
+openal-soft-hrtf                ???
+openvr                          1.16.8 
+recastnavigation                57610fa (10/21/2019)
+sranipal                        ???
+stb_image                       2.27
+stb_image_write                 1.16
+stb_truetype                    1.26
+stb_vorbis                      1.22
+tiny_gltf                       1a7c7d2 (03/14/2022)
+tiny-process-library            2.0.0 (archived)
+mikktspace                      1.0 (archived)

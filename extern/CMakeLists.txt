@@ -102,7 +102,6 @@ endif()
 add_library(miniz STATIC miniz/miniz.c miniz/miniz.h)
 set_target_properties(miniz PROPERTIES FOLDER "harfang/3rdparty")
 target_include_directories(miniz PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/miniz> )
-
 install_cppsdk_external_target(miniz)
 
 # bgfx
@@ -157,6 +156,13 @@ target_include_directories(stb_truetype PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT
 set_target_properties(stb_truetype PROPERTIES FOLDER "harfang/3rdparty")
 
 install_cppsdk_external_target(stb_truetype)
+
+# STB image write
+add_library(stb_image_write STATIC stb_image/stb_image_write.c stb_image/stb_image_write.h)
+target_include_directories(stb_image_write PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/stb_image>)
+set_target_properties(stb_image_write PROPERTIES FOLDER "harfang/3rdparty")
+
+install_cppsdk_external_target(stb_image_write)
 
 # Bullet 3
 if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
@@ -274,6 +280,7 @@ if(HG_ENABLE_OPENVR_API)
 		else()
 			set_target_properties(OpenVR PROPERTIES 
 				IMPORTED_LOCATION ${OPENVR_LIBRARY}
+				IMPORTED_NO_SONAME TRUE 
 				INTERFACE_INCLUDE_DIRECTORIES ${OPENVR_INCLUDE_PATH}
 			)
 		endif()
@@ -349,3 +356,9 @@ set(CMAKE_INSTALL_INCLUDEDIR ${CppSdkHeadersDestination}/extern)
 add_subdirectory(meshoptimizer EXCLUDE_FROM_ALL)
 set_target_properties(meshoptimizer PROPERTIES FOLDER "harfang/3rdparty")
 install_cppsdk_external_target(meshoptimizer)
+
+# mikktspace
+add_library(mikktspace STATIC mikktspace/mikktspace.c mikktspace/mikktspace.h)
+target_include_directories(mikktspace PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mikktspace>)
+set_target_properties(mikktspace PROPERTIES FOLDER "harfang/3rdparty")
+install_cppsdk_external_target(mikktspace)
