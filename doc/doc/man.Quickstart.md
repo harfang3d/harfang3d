@@ -8,7 +8,7 @@ Once you have a functioning installation of Harfang for your language of choice:
 Follow the following steps:
 
 1. Download the tutorials from Github [here](https://github.com/harfang3d/tutorials-hg2.git) and unzip them to your computer _(eg. in `d:/tutorials-hg2`)_.
-1. Download _assetc_ for your platform from [here](https://www.harfang3d.com/releases) to compile the tutorial resources.
+1. Download _assetc_ for your platform from [here](https://dev.harfang3d.com/releases) to compile the tutorial resources.
 1. Drag and drop the tutorial resources folder on the assetc executable **-OR-** execute assetc passing it the path to the tutorial resources folder _(eg. `assetc d:/tutorials-hg2/resources`)_.
 
 ![assetc drag & drop](/images/docs/${HG_VERSION}/assetc.gif)

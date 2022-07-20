@@ -7,4 +7,5 @@
 * François Gutherz
 * Emmanuel Julien
 * Eric Kernin
+* Elie Michel
 * Thomas "Scorpheus" Simonnet

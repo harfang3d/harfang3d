@@ -101,6 +101,10 @@ if(MSVC)
 	#add_compile_options(/Od /Zi /Zo)
 	add_link_options(/DEBUG)
 	#add_link_options(/LTCG)
+
+	# Don't forget to remove this as soon as CMake is fixed.
+	# Tells MSVC to update __cplusplus value, otherwise it will be stuck to 199711L and libraries like bx (if updated) won't compile anymore even if we set CMAKE_CXX_STANDARD to C++14.
+	add_compile_options(/Zc:__cplusplus)
 elseif(ANDROID)
 	add_compile_definitions(ANDROID)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")

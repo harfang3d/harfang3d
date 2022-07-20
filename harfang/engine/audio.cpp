@@ -386,6 +386,10 @@ static void ALChannelSetState(ALint src, const StereoSourceState &state, bool st
 	__AL_CALL(alSourcei(src, AL_LOOPING, !stream && state.repeat == SR_Loop ? AL_TRUE : AL_FALSE)); // [EJ20190512] looping is handled manually with streaming
 
 	__AL_CALL(alSource3f(src, AL_POSITION, state.panning, 0.f, sqrtf(1.f - state.panning * state.panning)));
+	const ALfloat o[6] = {0, 0, -1, 0, 1, 0};
+	__AL_CALL(alSourcefv(src, AL_ORIENTATION, o));
+	const ALfloat v[3] = {0, 0, 0};
+	__AL_CALL(alSourcefv(src, AL_VELOCITY, v));
 }
 
 static void ALChannelSetState(ALint src, const SpatializedSourceState &state, bool stream) {

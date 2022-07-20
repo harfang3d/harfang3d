@@ -714,7 +714,7 @@ static std::string Get_texconv_Format(const std::string &f) {
 	if (f == "BC5")
 		return "BC5_UNORM";
 	if (f == "BC6H")
-		return "BC6H_UF16";
+		return "BC6H_SF16";
 	if (f == "BC7")
 		return "BC7_UNORM";
 	return "";
@@ -743,6 +743,10 @@ static bool PreprocessTexture(const json &i_preprocess_texture, std::map<std::st
 							dependencies.insert(path); // swizzle from input texture
 						else
 							dependencies.insert(channel_v); // swizzle from foreign texture
+					} else if (v.is_object()) { // channel or texture path
+						const auto dep_path = v["path"].get<std::string>();
+						const auto channel_v = v["channel"].get<std::string>();
+						dependencies.insert(dep_path);
 					}
 				}
 			} else {
@@ -785,8 +789,8 @@ static bool PreprocessTexture(const json &i_preprocess_texture, std::map<std::st
 	// conform dependencies
 	for (auto i : picture_dependencies)
 		if (i.second.GetWidth() != out_width && i.second.GetHeight() != out_height) {
-			error(format("Cannot construct '%1' due to dependency '%2' with incompatible resolution").arg(path).arg(i.first));
-			return false;
+			// resize
+			picture_dependencies[i.first] = hg::Resize(i.second, out_width, out_height);
 		}
 
 	//
@@ -871,6 +875,35 @@ static bool PreprocessTexture(const json &i_preprocess_texture, std::map<std::st
 						in = in_pic.GetData() + channel_count;
 						in_stride = size_of(in_pic.GetFormat());
 					}
+
+					for (uint16_t y = 0; y < out_height; ++y)
+						for (uint16_t x = 0; x < out_width; ++x) {
+							*out = *in;
+							in += in_stride;
+							out += out_stride;
+						}
+
+				} else if (v.is_object()) { // channel and texture path
+
+					const auto dep_path = v["path"].get<std::string>();
+					auto &in_pic = picture_dependencies[dep_path];
+
+					const char *channel_names[] = {"R", "G", "B", "A"};
+					const auto input_channel_v = v["channel"].get<std::string>();
+					size_t input_channel = 5;
+					for (size_t c = 0; c < 4; ++c)
+						if (input_channel_v == channel_names[c]) {
+							input_channel = c;
+							break;
+						}
+
+					if (GetChannelCount(in_pic.GetFormat()) <= input_channel) {
+						error(format("Cannot construct '%1' due to '%2' missing %3 channel").arg(path).arg(dep_path).arg(input_channel));
+						return false;
+					}
+
+					uint8_t *in = in_pic.GetData() + input_channel;
+					size_t in_stride = size_of(in_pic.GetFormat());
 
 					for (uint16_t y = 0; y < out_height; ++y)
 						for (uint16_t x = 0; x < out_width; ++x) {
@@ -1097,6 +1130,28 @@ void Geometry(std::map<std::string, Hash> &hashes, const std::string &path) {
 }
 
 //
+void GatherShaderDependencies(const std::string &path, std::set<std::string> &deps, const std::string &base) {
+	const auto rel_path = base + path;
+
+	if (deps.find(rel_path) != std::end(deps))
+		return; // processed already, don't need no cyclic references
+
+	deps.insert(rel_path);
+	const auto src = hg::FileToString(FullInputPath(rel_path).c_str());
+
+	static std::regex include_regex("#include\\s*(?:\"|<)(.+)(?:\"|>)");
+
+	const auto base_path = hg::GetFilePath(rel_path); // #include directives are relative to the current source
+	for (std::sregex_iterator i = std::sregex_iterator(src.begin(), src.end(), include_regex); i != std::sregex_iterator(); ++i)
+		GatherShaderDependencies((*i)[1], deps, base_path); // recurse down the dependency tree
+}
+
+void GatherShaderDependencies(const std::set<std::string> &paths, std::set<std::string> &deps) {
+	for (const auto &path : paths)
+		GatherShaderDependencies(path, deps, "");
+}
+
+//
 static void BuildComputeShader(std::map<std::string, Hash> &hashes, const std::string &cs_path, const std::string &defines) {
 	ProfilerPerfSection perf("Command/ComputeShader");
 
@@ -1128,7 +1183,10 @@ static void BuildComputeShader(std::map<std::string, Hash> &hashes, const std::s
 	if (toolchain.shaderc.empty()) {
 		warn("    Skipping, no compiler found for compute resource");
 	} else {
-		if (NeedsCompilation(hashes, {cs_path}, {cs_path}, cs_build_ctx)) {
+		std::set<std::string> inputs;
+		GatherShaderDependencies({cs_path}, inputs);
+
+		if (NeedsCompilation(hashes, inputs, {cs_path}, cs_build_ctx)) {
 			if (!cs_profile.empty()) // GLES profile must be empty...
 				cs_profile = "-p " + cs_profile;
 
@@ -1194,7 +1252,10 @@ static void BuildShader(std::map<std::string, Hash> &hashes, const std::string &
 	if (toolchain.shaderc.empty()) {
 		warn("    Skipping, no compiler found for shader resource");
 	} else {
-		if (NeedsCompilation(hashes, {vs_path, varying_path}, {vs_name}, vs_build_ctx)) {
+		std::set<std::string> inputs;
+		GatherShaderDependencies({vs_path, varying_path}, inputs);
+
+		if (NeedsCompilation(hashes, inputs, {vs_name}, vs_build_ctx)) {
 			if (!vs_profile.empty()) // GLES profile must be empty...
 				vs_profile = "-p " + vs_profile;
 
@@ -1232,7 +1293,10 @@ static void BuildShader(std::map<std::string, Hash> &hashes, const std::string &
 	if (toolchain.shaderc.empty()) {
 		warn("    Skipping, no compiler found for shader resource");
 	} else {
-		if (NeedsCompilation(hashes, {fs_path, varying_path}, {fs_name}, fs_build_ctx)) {
+		std::set<std::string> inputs;
+		GatherShaderDependencies({fs_path, varying_path}, inputs);
+
+		if (NeedsCompilation(hashes, inputs, {fs_name}, fs_build_ctx)) {
 			if (!fs_profile.empty())
 				fs_profile = "-p " + fs_profile;
 
@@ -1387,7 +1451,7 @@ static void LuaScript(std::map<std::string, Hash> &hashes, const std::string &pa
 			MkOutputTree(path);
 			CleanOutputs({path});
 
-			const auto cmd = format("%1 -o %3 -s %2").arg(toolchain.luac).arg(src).arg(dst);
+			const auto cmd = format("%1 -o \"%3\" -s \"%2\"").arg(toolchain.luac).arg(src).arg(dst);
 			PushAsyncProcessTask(path, cmd, cwd);
 		} else {
 			debug("  [O] Lua script up to date");
@@ -1418,7 +1482,7 @@ static void PathFinding(std::map<std::string, Hash> &hashes, const std::string &
 			MkOutputTree(path);
 			CleanOutputs({path});
 
-			const auto cmd = format("%1 %2 %3 -root %4").arg(toolchain.recastc).arg(src).arg(dst).arg(input_dir);
+			const auto cmd = format("%1 \"%2\" \"%3\" -root \"%4\"").arg(toolchain.recastc).arg(src).arg(dst).arg(input_dir);
 			PushAsyncProcessTask(path, cmd, GetCurrentWorkingDirectory());
 		} else {
 			debug("  [O] Pathfinding resource up to date");

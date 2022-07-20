@@ -96,9 +96,6 @@ const PipelineInfo &GetForwardPipelineInfo();
 //
 enum ForwardPipelineStage { FPS_AttributeBuffers, FPS_Basic, FPS_Advanced, FPS_DepthOnly };
 
-void SubmitModelToForwardPipeline(bgfx::ViewId view_id, const Model &mdl, const ForwardPipeline &pipeline, const PipelineProgram &prg, uint32_t prg_variant,
-	uint8_t pipeline_config_idx, const Color &ambient, const ForwardPipelineLights &lights, const ForwardPipelineFog &fog, const Mat4 &mtx);
-
 //
 enum ForwardPipelineShadowPass { FPSP_Slot0LinearSplit0, FPSP_Slot0LinearSplit1, FPSP_Slot0LinearSplit2, FPSP_Slot0LinearSplit3, FPSP_Slot1Spot, FPSP_Count };
 

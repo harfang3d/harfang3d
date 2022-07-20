@@ -221,6 +221,14 @@ bool SaveFileDialog(const std::string &title, const std::vector<hg::FileFilter> 
 		}
 		pFileSave->Release();
 	}
+
+	// ensure extension is present
+	const auto ext = hg::GetFileExtension(output);
+
+	if (ext.empty() && !filters.empty())
+		if (filters[0].pattern.size() > 2)
+			output += &filters[0].pattern[1];
+
 	return SUCCEEDED(hr);
 }
 

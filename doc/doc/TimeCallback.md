@@ -1,1 +1,1 @@
-A function taking a time value as parameter with no return value, see [man.UnitSystem].
+A function taking a time value as parameter with no return value, see [man.CoordinateAndUnitSystem].

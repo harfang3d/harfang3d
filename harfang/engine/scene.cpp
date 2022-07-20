@@ -31,6 +31,14 @@ Scene::~Scene() {
 }
 
 //
+void Scene::SetProbe(TextureRef irradiance, TextureRef radiance, TextureRef brdf) {
+	environment.probe = {};
+	environment.probe.irradiance_map = irradiance;
+	environment.probe.radiance_map = radiance;
+	environment.brdf_map = brdf;
+}
+
+//
 static void _ResizeComponents(std::vector<ComponentRef> &cs) {
 	ptrdiff_t i;
 	for (i = cs.size() - 1; i >= 0; --i)
@@ -2629,6 +2637,24 @@ void SetAnimableNodePropertyColor(Scene &scene, NodeRef ref, const std::string &
 		else if (name == "Light.Specular")
 			node.GetLight().SetSpecularColor(v);
 	}
+}
+
+//
+std::vector<hg::Material *> Scene::GetMaterialsWithName(const std::string &name) {
+	std::vector<hg::Material *> mats;
+	mats.reserve(objects.size() / 8); // guesstimate
+
+	for (auto ref = objects.first_ref(); objects.is_valid(ref); ref = objects.next_ref(ref)) {
+		auto &obj = objects[ref.idx];
+
+		const auto mat_count = obj.material_infos.size();
+
+		for (size_t i = 0; i < mat_count; ++i)
+			if (obj.material_infos[i].name == name)
+				mats.push_back(&obj.materials[i]);
+	}
+
+	return mats;
 }
 
 //

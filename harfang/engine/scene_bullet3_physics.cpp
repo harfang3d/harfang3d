@@ -257,7 +257,7 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 		} else if (type == CT_Capsule) {
 			shapes.push_back(new btCapsuleShape(size.x, size.y));
 		} else if (type == CT_Cylinder) {
-			shapes.push_back(new btCylinderShape(btVector3(size.x, size.y, size.z)));
+			shapes.push_back(new btCylinderShape(btVector3(size.x, size.y * 0.5f, size.z)));
 		} else if (type == CT_Mesh) {
 			if (auto tree = LoadCollisionTree(ir, ip, col.GetCollisionResource().c_str()))
 				shapes.push_back(tree);

@@ -61,18 +61,18 @@ This file is a JSON file listing the supported features and additional uniforms.
 
 The following features are supported and have the following effect on the compilation process.
 
-Feature | States | Preprocessor Directive | Uniform | Stage channel
+Feature | States | Preprocessor Directive | Uniform | Recommended channel
 ------- | ----------- | ---------------------- | ------- |--------------
 OptionalBaseColorOpacityMap | 2 | USE_BASE_COLOR_OPACITY_MAP=[1 or 0] | uBaseOpacityMap | 0
+OptionalDiffuseMap | 2 | USE_DIFFUSE_MAP=[1 or 0] | uDiffuseMap | 0
 OptionalOcclusionRoughnessMetalnessMap  | 2 | USE_OCCLUSION_ROUGHNESS_METALNESS_MAP=[1 or 0] | uOcclusionRoughnessMetalnessMap| 1
-OptionalDiffuseMap | 2 | USE_DIFFUSE_MAP=[1 or 0] | uDiffuseMap | 3
 OptionalSpecularMap | 2 | USE_SPECULAR_MAP=[1 or 0] | uSpecularMap | 1
+OptionalNormalMap | 2 | USE_NORMAL_MAP=[1 or 0] | uNormalMap | 2
 OptionalLightMap | 2 | USE_LIGHT_MAP=[1 or 0] | uLightMap | 3
 OptionalSelfMap | 2 | USE_SELF_MAP=[1 or 0] | uSelfMap | 4
 OptionalOpacityMap | 2 | USE_OPACITY_MAP=[1 or 0] | uOpacityMap | 5
 OptionalAmbientMap | 2 | USE_AMBIENT_MAP=[1 or 0] | uAmbientMap | 6
 OptionalReflectionMap | 2 | USE_REFLECTION_MAP=[1 or 0] | uReflectionMap | 7
-OptionalNormalMap | 2 | USE_NORMAL_MAP=[1 or 0] | uNormalMap | 2
 NormalMapInWorldSpace | 2 | NORMAL_MAP_IN_WORLD_SPACE=[1 or 0] | - | -
 DiffuseUV1 | 2 | DIFFUSE_UV_CHANNEL=[1 or 0] | - | -
 SpecularUV1 | 2 | SPECULAR_UV_CHANNEL=[1 or 0] | - | -

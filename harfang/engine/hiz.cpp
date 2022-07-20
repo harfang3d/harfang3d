@@ -35,8 +35,7 @@ static HiZ _CreateHiZ(
 	hiz.pyramid_infos.format = bgfx::TextureFormat::RG32F;
 
 	bgfx::TextureHandle handle = rb_factory.create_texture2d(
-		ratio, hiz.pyramid_infos.numMips > 0,
-		hiz.pyramid_infos.numLayers, hiz.pyramid_infos.format, BGFX_TEXTURE_COMPUTE_WRITE | flags);
+		ratio, hiz.pyramid_infos.numMips > 0, hiz.pyramid_infos.numLayers, hiz.pyramid_infos.format, BGFX_TEXTURE_COMPUTE_WRITE | flags);
 
 	hiz.pyramid = MakeTexture(handle, BGFX_TEXTURE_COMPUTE_WRITE | flags);
 	hiz.prg_copy = LoadComputeProgram(ir, ip, format("%1/shader/hiz_copy_cs.sc").arg(path));
@@ -66,10 +65,8 @@ void DestroyHiZ(HiZ &hiz) {
 	bgfx_Destroy(hiz.u_projection);
 }
 
-void ComputeHiZ(
-	bgfx::ViewId &view_id, const hg::iVec2 &fb_size, const iRect &rect, const Mat44 &proj, float z_thickness, const Texture &depth, HiZ &hiz) {
+void ComputeHiZ(bgfx::ViewId &view_id, const hg::iVec2 &fb_size, const iRect &rect, const Mat44 &proj, float z_thickness, const Texture &depth, HiZ &hiz) {
 	__ASSERT__(IsValid(hiz));
-
 
 	int div = 1;
 	switch (hiz.ratio) {
@@ -88,7 +85,8 @@ void ComputeHiZ(
 		default:
 			div = 1;
 			break;
-	};
+	}
+
 	auto width = fb_size.x;
 	auto height = fb_size.y;
 	bgfx::calcTextureSize(hiz.pyramid_infos, width / div, height / div, hiz.pyramid_infos.depth, hiz.pyramid_infos.cubeMap, hiz.pyramid_infos.numMips,

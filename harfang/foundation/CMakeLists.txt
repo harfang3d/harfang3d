@@ -164,6 +164,7 @@ set_property(TARGET foundation PROPERTY PUBLIC_HEADER "${HDRS}")
 set_target_properties(foundation PROPERTIES FOLDER "harfang")
 
 if(NOT WIN32)
+	find_package(uuid REQUIRED)
 	target_link_libraries(foundation PUBLIC uuid)
 else()
 	target_link_libraries(foundation PUBLIC Iphlpapi)

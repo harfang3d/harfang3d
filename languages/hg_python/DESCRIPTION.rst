@@ -13,7 +13,7 @@ See https://www.harfang3d.com/license for licensing terms.
 | **Quickstart**
 
 1. Download the tutorials https://github.com/harfang3d/tutorials-hg2 and unzip them to your computer (eg. *d:/tutorials-hg2*).
-2. To compile the tutorial resources, download **assetc** for your platform: https://www.harfang3d.com/releases/
+2. To compile the tutorial resources, download **assetc** for your platform: https://dev.harfang3d.com/releases/
 3. Drag and drop the tutorial resources folder on the **`assetc** executable -OR- execute **assetc** passing it the path to the tutorial resources folder (eg. *assetc d:/tutorials-hg2/resources*).
 
 .. image:: https://raw.githubusercontent.com/harfang3d/image-storage/main/tutorials/assetc.gif
