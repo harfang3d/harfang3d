@@ -1,3 +1,49 @@
+# [3.2.3] - 2022-08-13
+
+This minor release brings several fixes to the rendering, physics, engine, foundation and tools.
+
+### Framework integration and source code maintenance
+
+- Added a CMake option to force MSVC to use updated __cplusplus macro.
+- Build fixes for GCC 12.
+
+### Toolchain
+
+- Added a way to select the input channel from an input texture within a `construct` when processing textures in **Assetc**.
+- Changed  `BC6H_UF16` into `BC6H_SF16` to produce a valid DDS from a HDR file.
+- **Assetc** now parses the shaders to check their dependencies for any modification and triggers a rebuild if needed.
+- Properly quote **Luac** and **Recastc** invocations to support space in arguments.
+
+### Binding
+
+- Fixed `ImGuiMouseButton` enums (`ImGuiMouseButton_Left`, `ImGuiMouseButton_Right`, `ImGuiMouseButton_Middle`).
+- Added a `SetProbe` function to set the radiance and irradiance map to a scene.
+- :warning: Deprecated `SubmitModelToForwardPipeline`.
+
+### Engine
+
+- Added `GetMaterialsWithName`.
+- Added `GetFullPathAsset`
+- Added `get_log_level`, `get_log_detailed` functions.
+- Fixed the ray/cone intersection.
+- Ensure an extension is specified before returning output path from `SaveFileDialog`.
+- Fixed the reserved texture units used by the **AAA** pipeline (see https://dev.harfang3d.com/docs/3.2.3/man.pipelineshader/). As a consequence, the `core\` folder will need to be updated if your project is using the **Forward** or **AAA** rendering pipelines.
+- Fixed a nasty issue in forward pipeline texture table.
+- :warning: Deprecated `UpdateForwardPipelineAO` and `UT_AmbientOcclusion`.
+
+### Physics
+
+- Fixed #14, Bullet uses half extend for cylinders.
+
+### Audio
+
+- Fixed #13, properly reset OpenAL source velocity when starting a stereo sound.
+
+### Documentation
+
+- Fixed a dead link in the API documentation.
+- URLs updates (Quickstart, Wheel description, Readme file).
+
 # [3.2.2] - 2022-06-03
 
 This minor release brings several fixes, a better implementation of the AAA rendering pipeline including probe reprojection and a more stable screen space raytracer.<br>
