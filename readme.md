@@ -56,6 +56,12 @@ Physics API
 Audio API
 * Play/stream WAV/OGG formats
 * 3D audio spatialization
+
+Languages supported
+* C++
+* Python _(3.2+)_
+* Lua _(5.3)_
+* Go _(1+, experimental)_
 <a name="subsection_1b"></a>
 ## Screenshots
 
@@ -84,6 +90,7 @@ https://dev.harfang3d.com/releases
 * CPython 3.2+
 * Go 1+ _(for Harfang Go module)_
 * Doxygen _(for Harfang C++ SDK documentation)_
+* Autodesk FBX SDK _(for FBX Converter)_
 
 ### Windows
 * Visual Studio 2019 _(C++ compiler and IDE)_
