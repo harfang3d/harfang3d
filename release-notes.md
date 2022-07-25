@@ -1,4 +1,4 @@
-# [3.2.3] - 2022-08-13
+# [3.2.3] - 2022-07-13
 
 This minor release brings several fixes to the rendering, physics, engine, foundation and tools.
 
