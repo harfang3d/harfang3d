@@ -17,5 +17,7 @@ void set_log_hook(void (*on_log)(const char *msg, int mask, const char *details,
 void set_log_level(int log_level);
 /// Enable detailed log output.
 void set_log_detailed(bool is_detailed);
+int get_log_level();
+bool get_log_detailed();
 
 } // namespace hg

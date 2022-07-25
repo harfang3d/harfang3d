@@ -133,6 +133,17 @@ static bool Package_file_is_EOF(Asset_ &asset) { return asset.pkg_file.cursor >=
 //
 static generational_vector_list<Asset_> assets;
 
+std::string FindAssetPath(const char *name) {
+	std::lock_guard<std::mutex> lock(assets_mutex);
+
+	for (auto &p : assets_folders) {
+		const auto asset_path = hg::PathJoin({p, name});
+		if (IsFile(asset_path.c_str()))
+			return asset_path;
+	}
+	return "";
+}
+
 Asset OpenAsset(const char *name, bool silent) {
 	std::lock_guard<std::mutex> lock(assets_mutex);
 

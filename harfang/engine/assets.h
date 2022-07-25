@@ -25,6 +25,7 @@ struct Asset {
 	gen_ref ref;
 };
 
+std::string FindAssetPath(const char *name);
 Asset OpenAsset(const char *name, bool silent = false);
 void Close(Asset asset);
 

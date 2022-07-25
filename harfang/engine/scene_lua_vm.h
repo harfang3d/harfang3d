@@ -65,7 +65,7 @@ public:
 	/// Return the value of a script variable.
 	LuaObject GetScriptValue(ComponentRef script, const std::string &name) const;
 	/// Set the value of a script variable.
-	bool SetScriptValue(ComponentRef script, const std::string &name, const LuaObject &value);
+	bool SetScriptValue(ComponentRef script, const std::string &name, const LuaObject &value, bool notify = true);
 
 	/// Return the VM lua state.
 	lua_State *GetL() const { return L; }

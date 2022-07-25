@@ -129,6 +129,7 @@ TEST(BGFX, RenderModelNoPipeline) {
 }
 
 //
+/*
 TEST(BGFX, SubmitModelToForwardPipeline) {
 	InputInit();
 
@@ -192,6 +193,7 @@ TEST(BGFX, SubmitModelToForwardPipeline) {
 	RenderShutdown();
 	DestroyWindow(window);
 }
+*/
 
 //
 TEST(BGFX, AddModelToSceneAndSubmitToForwardPipeline) {

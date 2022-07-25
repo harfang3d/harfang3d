@@ -15,6 +15,7 @@
 
 #include "stb_image.h"
 #include "stb_image_write.h"
+#include "stb_image_resize.h"
 
 namespace hg {
 
@@ -143,7 +144,13 @@ void Picture::Clear() {
 
 // TODO EJ implement these
 Picture Crop(const Picture &picture, uint16_t width, uint16_t height) { return picture; }
-Picture Resize(const Picture &picture, uint16_t width, uint16_t height) { return picture; }
+Picture Resize(const Picture &picture, uint16_t width, uint16_t height) {
+	Picture pic(width, height, picture.GetFormat());
+	stbir_resize_uint8(picture.GetData(), picture.GetWidth(), picture.GetHeight(), picture.GetWidth() * size_of(picture.GetFormat()), 
+		pic.GetData(), pic.GetWidth(),	pic.GetHeight(), pic.GetWidth() * size_of(pic.GetFormat()), size_of(pic.GetFormat()));
+	
+	return pic;
+}
 
 //
 Color GetPixelRGBA(const Picture &pic, uint16_t x, uint16_t y) {

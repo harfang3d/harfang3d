@@ -355,6 +355,8 @@ public:
 	Object GetNodeObject(NodeRef ref) const { return {scene_ref, GetNodeObjectRef(ref)}; }
 	void SetNodeObject(NodeRef ref, const Object &v) { SetNodeObject(ref, v.ref); }
 
+	std::vector<hg::Material *> GetMaterialsWithName(const std::string &name);
+
 	// light component
 	Light CreateLight();
 	void DestroyLight(ComponentRef ref);
@@ -583,6 +585,8 @@ public:
 	};
 
 	Environment environment{};
+
+	void SetProbe(TextureRef irradiance, TextureRef radiance, TextureRef brdf);
 
 	// scene state
 	Node GetCurrentCamera() const { return {scene_ref, current_camera}; }

@@ -1300,6 +1300,8 @@ def bind_scene(gen):
 
 	gen.bind_member(scene, 'hg::Scene::Environment environment')
 
+	gen.bind_method(scene, 'SetProbe', 'void', ['hg::TextureRef irradiance', 'hg::TextureRef radiance', 'hg::TextureRef brdf'])
+
 	#
 	gen.bind_method(scene, 'GetCurrentCamera', 'hg::Node', [])
 	gen.bind_method(scene, 'SetCurrentCamera', 'void', ['const hg::Node &camera'])
@@ -1698,13 +1700,13 @@ static void __LuaVM_DestroyScripts(hg::SceneLuaVM *vm, const std::vector<hg::Scr
 static hg::LuaObject __LuaVM_GetScriptEnv(hg::SceneLuaVM *vm, const hg::Script &script) { return vm->GetScriptEnv(script.ref); }
 
 static hg::LuaObject __LuaVM_GetScriptValue(hg::SceneLuaVM *vm, const hg::Script &script, const std::string &name) { return vm->GetScriptValue(script.ref, name); }
-static bool __LuaVM_SetScriptValue(hg::SceneLuaVM *vm, const hg::Script &script, const std::string &name, const hg::LuaObject &value) { return vm->SetScriptValue(script.ref, name, value); }
+static bool __LuaVM_SetScriptValue(hg::SceneLuaVM *vm, const hg::Script &script, const std::string &name, const hg::LuaObject &value, bool notify = true) { return vm->SetScriptValue(script.ref, name, value, notify); }
 ''')
 
 	gen.bind_method(vm, 'GetScriptEnv', 'hg::LuaObject', ['const hg::Script &script'], {'route': route_lambda('__LuaVM_GetScriptEnv')})
 
 	gen.bind_method(vm, 'GetScriptValue', 'hg::LuaObject', ['const hg::Script &script', 'const std::string &name'], {'route': route_lambda('__LuaVM_GetScriptValue')})
-	gen.bind_method(vm, 'SetScriptValue', 'bool', ['const hg::Script &script', 'const std::string &name', 'const hg::LuaObject &value'], {'route': route_lambda('__LuaVM_SetScriptValue')})
+	gen.bind_method(vm, 'SetScriptValue', 'bool', ['const hg::Script &script', 'const std::string &name', 'const hg::LuaObject &value', '?bool notify'], {'route': route_lambda('__LuaVM_SetScriptValue')})
 
 	gen.bind_method_overloads(vm, 'Call', expand_std_vector_proto(gen, [
 		('bool', ['const hg::Script &script', 'const std::string &function', 'const std::vector<hg::LuaObject> &args', 'std::vector<hg::LuaObject> *ret_vals'], {'arg_out': ['ret_vals']})
@@ -2658,8 +2660,8 @@ def bind_forward_pipeline(gen):
 	gen.end_class(fog)
 
 	# submit model to forward pipeline stage
-	gen.bind_function('hg::SubmitModelToForwardPipeline', 'void', ['bgfx::ViewId &view_id', 'const hg::Model &mdl', 'const hg::ForwardPipeline &pipeline', 'const hg::PipelineProgram &prg', 'uint32_t prg_variant',
-	'uint8_t pipeline_stage', 'const hg::Color &ambient', 'const hg::ForwardPipelineLights &lights', 'const hg::ForwardPipelineFog &fog', 'const hg::Mat4 &mtx'], {'arg_in_out': ['view_id']})
+	#gen.bind_function('hg::SubmitModelToForwardPipeline', 'void', ['bgfx::ViewId &view_id', 'const hg::Model &mdl', 'const hg::ForwardPipeline &pipeline', 'const hg::PipelineProgram &prg', 'uint32_t prg_variant',
+	#'uint8_t pipeline_stage', 'const hg::Color &ambient', 'const hg::ForwardPipelineLights &lights', 'const hg::ForwardPipelineFog &fog', 'const hg::Mat4 &mtx'], {'arg_in_out': ['view_id']})
 	
 def bind_file(gen):
 	gen.add_include('foundation/file.h')
@@ -3609,11 +3611,10 @@ def bind_imgui(gen):
 
 	gen.bind_named_enum('ImGuiCond', ['ImGuiCond_Always', 'ImGuiCond_Once', 'ImGuiCond_FirstUseEver', 'ImGuiCond_Appearing'], 'int', namespace='')
 
-	gen.bind_named_enum('ImGuiMouseButton', [
-		'ImGuiPopupFlags_None',
-		'ImGuiPopupFlags_MouseButtonLeft', 'ImGuiPopupFlags_MouseButtonRight', 'ImGuiPopupFlags_MouseButtonMiddle',
-		'ImGuiPopupFlags_NoOpenOverExistingPopup', 'ImGuiPopupFlags_NoOpenOverItems',
-		'ImGuiPopupFlags_AnyPopupId', 'ImGuiPopupFlags_AnyPopupLevel', 'ImGuiPopupFlags_AnyPopup'
+	gen.bind_named_enum('ImGuiMouseButton', [		
+		'ImGuiMouseButton_Left',
+		'ImGuiMouseButton_Right',
+		'ImGuiMouseButton_Middle',
 	], 'int', namespace='')
 
 	gen.bind_named_enum('ImGuiHoveredFlags', [

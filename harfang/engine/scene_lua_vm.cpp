@@ -178,13 +178,17 @@ LuaObject SceneLuaVM::GetScriptValue(ComponentRef ref, const std::string &name) 
 	return i == std::end(lua_scripts) ? LuaObject{} : Get(i->second, name);
 }
 
-bool SceneLuaVM::SetScriptValue(ComponentRef ref, const std::string &name, const LuaObject &v) {
+bool SceneLuaVM::SetScriptValue(ComponentRef ref, const std::string &name, const LuaObject &v, bool notify) {
 	auto i = lua_scripts.find(ref);
 
 	if (i == std::end(lua_scripts))
 		return false;
 
 	SetForeign(i->second, name, v);
+
+	if (notify)
+		Call(ref, "OnSetScriptValue", {MakeLuaObj(L, name)});
+
 	return true;
 }
 
@@ -312,8 +316,10 @@ std::vector<ComponentRef> SceneLuaVM::GarbageCollect(const Scene &scene) const {
 void SceneLuaVM::DestroyScripts(const std::vector<ComponentRef> &scripts) {
 	for (auto ref : scripts) {
 		auto i = lua_scripts.find(ref);
-		if (i != std::end(lua_scripts))
+		if (i != std::end(lua_scripts)) {
+			Call(ref, "OnDestroy", {});
 			lua_scripts.erase(i);
+		}
 	}
 }
 

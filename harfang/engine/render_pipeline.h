@@ -400,7 +400,8 @@ void SetMaterialSkinning(Material &m, bool enable);
 bool GetMaterialAlphaCut(const Material &m);
 void SetMaterialAlphaCut(Material &m, bool enable);
 
-/// Compute a render state to control subsequent render calls culling mode, blending mode, Z mask, etc... The same render state can be used by different render calls.
+/// Compute a render state to control subsequent render calls culling mode, blending mode, Z mask, etc... The same render state can be used by different render
+/// calls.
 /// @see DrawLines, DrawTriangles and DrawModel.
 RenderState ComputeRenderState(BlendMode blend, bool write_z, bool write_r = true, bool write_g = true, bool write_b = true, bool write_a = true);
 RenderState ComputeRenderState(BlendMode blend, DepthTest test = DT_Less, FaceCulling culling = FC_Clockwise, bool write_z = true, bool write_r = true,
@@ -526,7 +527,8 @@ TextureRef LoadTextureFromAssets(const char *path, uint64_t flags, PipelineResou
 
 /// Capture a texture content to a Picture. Return the frame counter at which the capture will be complete.
 /// A Picture object can be accessed by the CPU.
-/// This function is asynchronous and its result will not be available until the returned frame counter is equal or greater to the frame counter returned by Frame.
+/// This function is asynchronous and its result will not be available until the returned frame counter is equal or greater to the frame counter returned by
+/// Frame.
 uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t, Picture &pic);
 
 MaterialRef LoadMaterialRef(const Reader &ir, const Handle &h, const char *path, const Reader &deps_ir, const ReadProvider &deps_ip,

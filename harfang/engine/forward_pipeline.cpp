@@ -64,7 +64,6 @@ enum ForwardPipelineUniformTexture {
 	UT_BrdfMap,
 	UT_NoiseMap,
 
-	UT_AmbientOcclusion,
 	UT_LinearShadowMap,
 	UT_SpotShadowMap,
 
@@ -176,7 +175,7 @@ void UpdateForwardPipelineProbe(
 }
 
 void UpdateForwardPipelineNoise(ForwardPipeline &pipeline, Texture noise) { pipeline.uniform_textures[UT_NoiseMap].texture = noise; }
-void UpdateForwardPipelineAO(ForwardPipeline &pipeline, Texture ao) { pipeline.uniform_textures[UT_AmbientOcclusion].texture = ao; }
+void UpdateForwardPipelineAO(ForwardPipeline &pipeline, Texture ao) { /*pipeline.uniform_textures[UT_AmbientOcclusion].texture = ao;*/ }
 
 //
 static float backbuffer_ratio[bgfx::BackbufferRatio::Count] = {1.f, 2.f, 4.f, 8.f, 16.f, 0.5f};
@@ -204,19 +203,6 @@ void UpdateForwardPipelineAAA(ForwardPipeline &pipeline, Texture ssgi, Texture s
 }
 
 //
-void SubmitModelToForwardPipeline(bgfx::ViewId view_id, const Model &mdl, const ForwardPipeline &pipeline, const PipelineProgram &prg, uint32_t prg_variant,
-	uint8_t pipeline_stage, const Color &ambient, const ForwardPipelineLights &lights, const ForwardPipelineFog &fog, const Mat4 &mtx) {
-	const auto _mtx = to_bgfx(mtx);
-	/*
-		const auto pipeline_set_draw_env = [&](int mat_idx) {
-			UpdateForwardPipelineUniforms(pipeline.uniforms, ambient, lights, fog);
-			set_draw_env(mat_idx);
-		};
-
-		RenderModel(view_id, mdl, prg.variants[prg_variant][pipeline_stage], pipeline_set_draw_env, mtx);
-	*/
-}
-
 static Mat4 ComputeCropMatrix() {
 	const bgfx::Caps *caps = bgfx::getCaps();
 	const float sy = caps->originBottomLeft ? 0.5f : -0.5f;
@@ -494,13 +480,12 @@ ForwardPipeline CreateForwardPipeline(int shadow_map_resolution, bool spot_16bit
 	__ASSERT__(pipeline.uniform_values.size() == UV_Count);
 
 	pipeline.uniform_textures = {
-		MakeUniformSetTexture("uIrradianceMap", {}, 7),
-		MakeUniformSetTexture("uRadianceMap", {}, 8),
-		MakeUniformSetTexture("uSSIrradianceMap", {}, 9),
-		MakeUniformSetTexture("uSSRadianceMap", {}, 10),
-		MakeUniformSetTexture("uBrdfMap", {}, 11),
-		MakeUniformSetTexture("uNoiseMap", {}, 12),
-		MakeUniformSetTexture("uAmbientOcclusion", {}, 13),
+		MakeUniformSetTexture("uIrradianceMap", {}, 8),
+		MakeUniformSetTexture("uRadianceMap", {}, 9),
+		MakeUniformSetTexture("uSSIrradianceMap", {}, 10),
+		MakeUniformSetTexture("uSSRadianceMap", {}, 11),
+		MakeUniformSetTexture("uBrdfMap", {}, 12),
+		MakeUniformSetTexture("uNoiseMap", {}, 13),
 		MakeUniformSetTexture("uLinearShadowMap", {BGFX_TEXTURE_RT | BGFX_SAMPLER_COMPARE_LEQUAL, pipeline.textures["linear_shadow_map"]}, 14),
 		MakeUniformSetTexture("uSpotShadowMap", {BGFX_TEXTURE_RT | BGFX_SAMPLER_COMPARE_LEQUAL, pipeline.textures["spot_shadow_map"]}, 15),
 	};

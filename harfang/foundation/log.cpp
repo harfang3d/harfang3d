@@ -15,6 +15,9 @@ static bool log_is_detailed = false;
 
 void set_log_level(int level) { log_level = level; }
 void set_log_detailed(bool is_detailed) { log_is_detailed = is_detailed; }
+int get_log_level() { return log_level; }
+bool get_log_detailed() { return log_is_detailed; }
+
 
 //
 static void default_log_hook(const char *msg, int mask, const char *details, void *user) {

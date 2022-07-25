@@ -156,7 +156,7 @@ bool LineIntersectCone(const Vec3 &a, const Vec3 &v, const Vec3 &c, const Vec3 &
 		if (((t0 < h0) || (t0 > h1)) && ((t1 < h0) || (t1 > h1))) {
 			return false;
 		}
-	} else if (dvac > h) {
+	} else if (ddac > h) {
 		return false;
 	}
 

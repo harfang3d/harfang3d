@@ -9,6 +9,7 @@
 #include <cctype>
 #include <locale>
 #include <sstream>
+#include <memory>
 
 #include <codecvt>
 

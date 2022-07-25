@@ -118,16 +118,6 @@ static void CallScriptDetachFromNode(SceneLuaVM &vm, Node &node, const Script &s
 //
 static size_t SceneScriptsDestroyGarbageCall(SceneLuaVM &vm, Scene &scene) {
 	const auto garbage = vm.GarbageCollect(scene);
-
-	for (auto s : garbage) {
-		auto env = vm.GetScriptEnv(s);
-
-		if (auto on_destroy = Get(env, "OnDestroy")) {
-			on_destroy.Push();
-			hg_lua_OnDestroy(env.L(), -1);
-		}
-	}
-
 	vm.DestroyScripts(garbage);
 	return garbage.size();
 }
