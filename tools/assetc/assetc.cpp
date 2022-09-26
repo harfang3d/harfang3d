@@ -1507,7 +1507,7 @@ struct AssetConfig {
 };
 
 static AssetType GetAssetFileType(std::string path, const std::vector<std::string> &all_files, std::vector<std::string> &out_files) {
-	static const std::set<std::string> texture_exts = {"bmp", "exr", "gif", "jpg", "hdr", "png", "psd", "tga"};
+	static const std::set<std::string> texture_exts = {"bmp", "exr", "gif", "jpg", "jpeg", "hdr", "png", "psd", "tga"};
 	static const std::set<std::string> ignored_exts = {"tmp"};
 
 	const auto ext = tolower(GetFileExtension(path));

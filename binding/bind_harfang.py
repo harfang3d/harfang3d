@@ -600,6 +600,7 @@ def bind_platform(gen):
 	
 	# hg::FileFilter
 	file_filter = gen.begin_class('hg::FileFilter')
+	gen.bind_constructor(file_filter, [])
 	gen.bind_members(file_filter, ['std::string name', 'std::string pattern'])
 	gen.end_class(file_filter)
 
@@ -1574,7 +1575,7 @@ def bind_bullet3_physics(gen):
 
 	gen.bind_method(bullet, 'StepSimulation', 'void', ['hg::time_ns display_dt', '?hg::time_ns step_dt', '?int max_step'])
 
-	gen.bind_method(bullet, 'CollectCollisionEvents', 'void', ['const hg::Scene &scene', 'hg::NodePairContacts &node_pair_contacts'])
+	gen.bind_method(bullet, 'CollectCollisionEvents', 'void', ['const hg::Scene &scene', 'hg::NodePairContacts &node_pair_contacts'], {'arg_out': ['node_pair_contacts']})
 
 	gen.bind_method(bullet, 'SyncTransformsFromScene', 'void', ['const hg::Scene &scene'])
 	gen.bind_method(bullet, 'SyncTransformsToScene', 'void', ['hg::Scene &scene'])
@@ -4388,6 +4389,11 @@ def bind(gen):
 
 	if not gen.embedded:
 		insert_non_embedded_setup_free_code(gen)
+
+	if gen.get_language() == 'Go':
+		gen.set_compilation_directives("// #cgo linux pkg-config: gtk+-3.0\n" \
+										"// #cgo linux LDFLAGS: -L${SRCDIR}/linux -lhg_go -lharfang -lm -lstdc++ -Wl,--no-as-needed -ldl -lGL -lXrandr -lXext -lX11 -lglib-2.0\n" \
+										"// #cgo windows LDFLAGS: -L${SRCDIR}/windows -lhg_go -lharfang -lGdi32 -lDbghelp -lshell32 -loleaut32 -luuid -lcomdlg32 -lOle32 -lWinmm -lstdc++\n")
 
 	void_ptr = gen.bind_ptr('void *', bound_name='VoidPointer')
 	gen.insert_binding_code('static void * _int_to_VoidPointer(intptr_t ptr) { return reinterpret_cast<void *>(ptr); }')

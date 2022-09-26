@@ -12,10 +12,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #else
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #endif
+#include <sys/stat.h>
 
 #include <cstdio>
 #include <mutex>
@@ -216,7 +216,12 @@ FileInfo GetFileInfo(const char *path) {
 	if (stat(path, &info) != 0)
 		return {false, 0, 0, 0};
 #endif
+
+#if defined __CYGWIN__
+	return {S_ISREG(info.st_mode) ? true : false, size_t(info.st_size), time_ns(info.st_ctime), time_ns(info.st_mtime)};
+#else
 	return {info.st_mode & S_IFREG ? true : false, size_t(info.st_size), time_ns(info.st_ctime), time_ns(info.st_mtime)};
+#endif
 }
 
 //
@@ -231,8 +236,11 @@ bool IsFile(const char *path) {
 	if (stat(path, &info) != 0)
 		return false;
 #endif
-
+#if defined __CYGWIN__
+	if (S_ISREG(info.st_mode))
+#else
 	if (info.st_mode & S_IFREG)
+#endif
 		return true;
 	return false;
 }

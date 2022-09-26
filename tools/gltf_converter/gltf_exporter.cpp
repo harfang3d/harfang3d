@@ -917,6 +917,49 @@ static const size_t ExportObject(Model &model, const hg::Object &object, const C
 	return id_mesh;
 }
 
+static size_t ExportCamera(Model& model, const hg::Camera& cam) {
+	Camera gltf_camera;
+
+	if (cam.GetIsOrthographic()) {
+		gltf_camera.type = "orthographic";
+		gltf_camera.orthographic.znear = cam.GetZNear();
+		gltf_camera.orthographic.zfar = cam.GetZFar();
+	} else {
+		gltf_camera.type = "perspective";
+		gltf_camera.perspective.znear = cam.GetZNear();
+		gltf_camera.perspective.zfar = cam.GetZFar();
+		gltf_camera.perspective.yfov = (double)cam.GetFov();
+	}
+
+	model.cameras.push_back(gltf_camera);
+	return model.cameras.size() - 1;
+}
+
+static int ExportLight(Model &model, const hg::Light &light) {
+	Light gltf_light;
+
+	gltf_light.color.push_back(light.GetDiffuseColor().r);
+	gltf_light.color.push_back(light.GetDiffuseColor().g);
+	gltf_light.color.push_back(light.GetDiffuseColor().b);
+	gltf_light.intensity = light.GetDiffuseIntensity();
+
+	gltf_light.spot.innerConeAngle = light.GetInnerAngle();
+	gltf_light.spot.outerConeAngle = light.GetOuterAngle();
+
+	gltf_light.range = light.GetRadius();
+
+	if (light.GetType() == hg::LT_Point) {
+		gltf_light.type = "point";
+	} else if (light.GetType() == hg::LT_Linear) {
+		gltf_light.type = "directional";
+	} else if (light.GetType() == hg::LT_Spot) {
+		gltf_light.type = "spot";
+	}
+
+	model.lights.push_back(gltf_light);
+	return model.lights.size() - 1;
+}
+
 //
 static const int ExportNode(Model &model, const hg::NodeRef nodeRef, const std::vector<hg::NodeRef> &children, const hg::NodesChildren &nodes_children,
 	const hg::Scene &scene, const Config &config, hg::PipelineResources &resources) {
@@ -957,12 +1000,19 @@ static const int ExportNode(Model &model, const hg::NodeRef nodeRef, const std::
 		n.scale.push_back(s.y);
 		n.scale.push_back(s.z);
 	}
-
-	/*
+		
 	// is it a camera
-	if (gltf_node.camera >= 0)
-	ExportCamera(model, gltf_node, node, scene, config, resources);
-	*/
+	if (node.HasCamera()) {
+		n.camera = ExportCamera(model, node.GetCamera());
+	}
+
+	// is it a light
+	if (node.HasLight()) {
+		if (std::find(model.extensionsUsed.begin(), model.extensionsUsed.end(), "KHR_lights_punctual") == model.extensionsUsed.end())
+			model.extensionsUsed.push_back("KHR_lights_punctual");
+		n.extensions["KHR_lights_punctual"] = Value({{"light", Value(ExportLight(model, node.GetLight()))}});
+	}
+
 	//
 	if (node.HasObject()) {
 		auto id_mesh = ExportObject(model, node.GetObject(), config, resources);

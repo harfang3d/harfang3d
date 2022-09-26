@@ -85,7 +85,11 @@ if (WIN32)
 	target_compile_definitions(liblua PUBLIC _CRT_SECURE_NO_WARNINGS)
 endif()
 
+if(HG_BUILD_HARFANG_STATIC)
+add_library(libluadll STATIC ${SRC_CORE} ${SRC_LIB})
+else()		
 add_library(libluadll SHARED ${SRC_CORE} ${SRC_LIB})
+endif()
 target_include_directories(libluadll 
 	PUBLIC
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
@@ -96,7 +100,7 @@ if(WIN32)
 elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	target_compile_definitions(libluadll PUBLIC LUA_USE_LINUX)
 endif()
-set_target_properties(libluadll PROPERTIES OUTPUT_NAME lua53)
+set_target_properties(libluadll PROPERTIES OUTPUT_NAME lua54)
 
 if(NOT WIN32)
 	set(EXE_LIBS m readline dl)

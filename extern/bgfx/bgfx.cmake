@@ -12,7 +12,7 @@ set( BGFX_SRCS
 	bgfx/src/renderer_d3d12.cpp   bgfx/src/topology.cpp
 	bgfx/src/renderer_d3d9.cpp    bgfx/src/vertexlayout.cpp
 	bgfx/src/renderer_nvn.cpp     bgfx/src/renderer_webgpu.cpp
-	bgfx/src/renderer_agc.cpp
+	bgfx/src/glcontext_html5.cpp  bgfx/src/renderer_agc.cpp
 )
 
 set( BGFX_HDRS
@@ -35,6 +35,7 @@ set( BGFX_HDRS
 	bgfx/src/glcontext_glx.h     bgfx/src/vs_clear.bin.h
 	bgfx/src/glcontext_nsgl.h    bgfx/src/vs_debugfont.bin.h
 	bgfx/src/glcontext_wgl.h     bgfx/src/renderer_webgpu.h
+	bgfx/src/glcontext_html5.h
 
 	bgfx/include/bgfx/bgfx.h     bgfx/include/bgfx/embedded_shader.h
 	bgfx/include/bgfx/defines.h  bgfx/include/bgfx/platform.h
@@ -46,6 +47,7 @@ add_library( bgfx ${BGFX_SRCS} ${BGFX_HDRS} )
 set_property( TARGET bgfx PROPERTY PUBLIC_HEADER
 	${CMAKE_CURRENT_SOURCE_DIR}/bgfx/include/bgfx/bgfx.h
 	${CMAKE_CURRENT_SOURCE_DIR}/bgfx/include/bgfx/defines.h
+	${CMAKE_CURRENT_SOURCE_DIR}/bgfx/include/bgfx/platform.h
 )
 target_include_directories( bgfx 
 	PRIVATE
@@ -56,6 +58,8 @@ target_include_directories( bgfx
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bgfx/include>
 )
 
+target_compile_definitions( bgfx PRIVATE BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION=1 )
+target_compile_definitions( bgfx PRIVATE BGFX_GL_CONFIG_BLIT_EMULATION=1 )
 if( MSVC )
 	target_compile_definitions( bgfx PRIVATE "_CRT_SECURE_NO_WARNINGS" )
 endif()

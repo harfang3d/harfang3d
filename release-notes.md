@@ -1,3 +1,53 @@
+# [3.2.4] - 2022-09-27
+
+This minor release provides minor corrections and fixes to specific issues:
+ - Fixed the OpenGL support of the rendering pipeline (see https://github.com/harfang3d/harfang-core-package).
+ - Improved the support of the Go language (see https://pkg.go.dev/github.com/harfang3d/harfang-go).
+ - Improved the Emscripten build.
+
+### Framework integration and source code maintenance
+
+- Ongoing effort to support the WASM / Emscripten target.
+  - Added a series of flags improve the compilation to WASM.
+  - Updated the SDL calls to support the latest inputs/windows system.
+  - :warning: Audio is disabled for now.
+
+### Binding / Golang support
+
+- Proper package of the Go binding.
+- Added a _mingw_ build stage for the Windows lib part of HARFANG.
+- Added a cmake flag `HG_BUILD_HARFANG_STATIC` to build HAFANG in static mode.
+- Added a Go directive (based on FabGen merge request https://github.com/ejulien/FABGen/pull/60).
+- Removed the non-mingw Go build from the Windows target.
+- Updated cmake to build HARFANG Go as a monolithic lib.
+- Reinstated the script support (to embed Lua in a Go project).
+- The support for the _OpenVR_ API was (temporarily) removed.
+
+### Toolchain
+
+- **GLTF importer:**
+  - support for camera and lights (:warning: experimental)
+    - support for _point_, _directional_ and _spot_ types.
+    - support for the diffuse color and intensity (specular is not supported by the GLTF standard).
+  - Fixed a mislabelled _usage_.
+- **Assetc:** added `jpeg` to the textures checklist.
+- Fix #16 (lua53.dll should be lua54.dll).
+
+### Binding
+
+- Added a constructor to `FileFilter`.
+- Fixed the arg out for `CollectCollisionEvents` to return a `NodePairContacts` properly.
+
+### Physics
+
+- Improved the ability of a node to change its collision shape component multiple times during runtime.
+- Fix #17 Capsule / Cone model fix.
+
+### Documentation
+
+- Fixed a mention to `ViewMode` enums in the manual.
+- Fixed the reference to 3 physics functions in the manual, `Bullet3Physics`, `SyncTransformsFromScene` and `SyncTransformsToScene`.
+
 # [3.2.3] - 2022-07-13
 
 This minor release brings several fixes to the rendering, physics, engine, foundation and tools.

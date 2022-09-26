@@ -10,6 +10,7 @@
 #include "engine/ogg_audio_stream.h"
 #include "engine/wav_audio_stream.h"
 
+#ifndef EMSCRIPTEN
 #include <AL/alc.h>
 #include <AL/alext.h>
 
@@ -624,3 +625,4 @@ void StopAllSources() {
 }
 
 } // namespace hg
+#endif

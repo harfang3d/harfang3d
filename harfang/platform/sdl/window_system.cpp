@@ -1,6 +1,7 @@
 // HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include "platform/window_system.h"
+#include "foundation/format.h"
 #include "foundation/log.h"
 #include <SDL.h>
 #include <iostream>
@@ -8,174 +9,170 @@
 namespace hg {
 
 //-- Monitor
-struct Monitor::Impl {
+
+struct Monitor {
 	std::string id;
 	iRect rect;
 	bool primary;
 };
 
-Monitor::Monitor() : impl_(new Monitor::Impl()) {}
-Monitor::~Monitor() = default;
-Monitor::Monitor(const Monitor &m) : impl_(new Monitor::Impl(*m.impl_)) {}
-Monitor::Monitor(Monitor &&) noexcept = default;
-Monitor &Monitor::operator=(const Monitor &m) {
-	if (this != &m) {
-		impl_.reset(new Monitor::Impl(*m.impl_));
-	}
-	return *this;
-}
-Monitor &Monitor::operator=(Monitor &&) noexcept = default;
-
-std::vector<Monitor> GetMonitors() {
-	std::vector<Monitor> monitors;
+std::vector<Monitor *> GetMonitors() {
+	std::vector<Monitor *> monitors;
 	return monitors;
 }
 
-iRect GetMonitorRect(const Monitor &m) { return m.impl_->rect; }
+iRect GetMonitorRect(const Monitor *m) { return m->rect; }
 
-bool IsPrimaryMonitor(const Monitor &m) { return m.impl_->primary; }
+bool IsPrimaryMonitor(const Monitor *m) { return m->primary; }
 // TODO Return true if the monitor is connected.
-bool IsMonitorConnected(const Monitor &monitor) { return true; }
+bool IsMonitorConnected(const Monitor *monitor) { return true; }
 // TODO Return monitor name.
-std::string GetMonitorName(const Monitor &monitor) { return "TODO IN SDL"; }
+std::string GetMonitorName(const Monitor *monitor) { return "TODO IN SDL"; }
 // TODO Return monitor size in millimeters.
-iVec2 GetMonitorSizeMM(const Monitor &monitor) { return iVec2(0, 0); }
+hg::iVec2 GetMonitorSizeMM(const Monitor *monitor) { return hg::iVec2(0, 0); }
 // TODO Get the list of screen modes for a given monitor.
-bool GetMonitorModes(const Monitor &monitor, std::vector<MonitorMode> &modes) { return true; }
+bool GetMonitorModes(const Monitor *monitor, std::vector<MonitorMode> &modes) { return true; }
 
 //-- Window
 //
-struct SDLWindow {
+struct Window {
 	SDL_Window *w{0};
 	bool is_foreign{false};
 };
 
-void WindowSystemInit() { SDL_Init(SDL_INIT_VIDEO); }
+static Window *window_in_focus;
 
-Window NewWindow(int width, int height, int bpp, Window::Visibility visibility) {
+Signal<void(const Window *)> new_window_signal;
+Signal<void(const Window *, bool)> window_focus_signal;
+Signal<bool(const Window *)> close_window_signal;
+Signal<void(const Window *)> destroy_window_signal;
 
-	Window w;
-	static_assert(sizeof(SDLWindow) <= sizeof(Window), "Window OS object size exceeds generic object size");
-	auto data = reinterpret_cast<SDLWindow *>(w.data.data());
+void WindowSystemInit() {
+	SDL_Init(SDL_INIT_VIDEO);
 
-	uint window_flag = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+	// DISABLE ALL TEXT KEYBOARD
+	SDL_EventState(SDL_TEXTINPUT, SDL_DISABLE);
+	SDL_EventState(SDL_KEYDOWN, SDL_DISABLE);
+	SDL_EventState(SDL_KEYUP, SDL_DISABLE);
+}
+
+Window *NewWindow(int width, int height, int bpp, WindowVisibility visibility) {
+
+	Window *w = new Window();
+
+	int window_flag = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN;
 
 	switch (visibility) {
-		case Window::Fullscreen:
+		case WV_Fullscreen:
 			window_flag |= SDL_WINDOW_FULLSCREEN;
 			break;
 
-		case Window::Undecorated:
+		case WV_Undecorated:
 			window_flag |= SDL_WINDOW_BORDERLESS;
 			break;
 
 		default:
-		case Window::Windowed:
+		case WV_Windowed:
 			break;
 	}
 
-	data->w = SDL_CreateWindow("Harfang", 0, 0, width, height, window_flag);
-
-	SetWindowTitle(w, "Harfang");
+	w->w = SDL_CreateWindow(nullptr, 0, 0, width, height, window_flag);
 	UpdateWindow(w);
 
-	debug(format("NewWindow: %1").arg((void *)data->w));
+	debug(format("NewWindow: %1").arg((void *)w->w));
 	return w;
 }
 
-Window NewWindowFrom(void *handle) {
-	Window w;
-	auto data = reinterpret_cast<SDLWindow *>(w.data.data());
+Window *NewWindow(const char *title, int width, int height, int bpp, WindowVisibility visibility) {
+	auto win = NewWindow(width, height, bpp, visibility);
+	SetWindowTitle(win, title);
+	return win;
+}
 
-	data->is_foreign = true;
-	data->w = reinterpret_cast<SDL_Window *>(handle);
+Window *NewWindowFrom(void *handle) {
+	Window *w = new Window();
 
-	SDL_CreateWindowFrom(data->w);
+	w->is_foreign = true;
+	w->w = reinterpret_cast<SDL_Window *>(handle);
+
+	SDL_CreateWindowFrom(w->w);
 	return w;
 }
 
 // TODO Create a new fullscreen window on a specified monitor.
-Window NewFullscreenWindow(const Monitor &monitor, int mode_index, MonitorRotation rotation) { return NewWindow(512, 512, 32, Window::Windowed); }
+Window *NewFullscreenWindow(const Monitor *monitor, int mode_index, MonitorRotation rotation) { return NewWindow(512, 512, 32, WV_Windowed); }
 
 void *GetDisplay() { return nullptr; }
 
-void *GetWindowHandle(const Window &w) { return reinterpret_cast<void *>(reinterpret_cast<const SDLWindow *>(w.data.data())->w); }
+static const char *canvas_name = "canvas";
+void *GetWindowHandle(const Window *w) {
+	return (void *)canvas_name;
+	// return reinterpret_cast<void *>(w->w);
+}
 
-Window GetWindowInFocus() { return g_window_system.get().window_in_focus; }
+Window *GetWindowInFocus() { return window_in_focus; }
 
-bool DestroyWindow(Window &w) {
-	auto data = reinterpret_cast<SDLWindow *>(w.data.data());
-
-	debug(format("DestroyWindow: %1").arg((void *)data->w));
-	g_window_system.get().window_focus_signal.Emit(w, false);
-	SDL_DestroyWindow(data->w);
-	data->w = 0;
+bool DestroyWindow(Window *w) {
+	debug(format("DestroyWindow: %1").arg((void *)w->w));
+	window_focus_signal.Emit(w, false);
+	SDL_DestroyWindow(w->w);
+	w->w = 0;
+	delete w;
 
 	return true;
 }
 
 //
-bool UpdateWindow(const Window &w) {
+bool UpdateWindow(const Window *w) {
 
-	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
-
-	if (SDL_GetWindowFlags(data->w) & SDL_WINDOW_INPUT_FOCUS) {
+	if (SDL_GetWindowFlags(w->w) & SDL_WINDOW_INPUT_FOCUS) {
 		// in focus
-		if (!(g_window_system.get().window_in_focus == w)) {
+		if (!(window_in_focus == w)) {
 
-			g_window_system.get().window_in_focus = w;
-			g_window_system.get().window_focus_signal.Emit(w, true);
+			window_in_focus = (Window *)w;
+			window_focus_signal.Emit(w, true);
 		}
-	} else if (g_window_system.get().window_in_focus == w) {
+	} else if (window_in_focus == w) {
 		// not in focus
-		g_window_system.get().window_in_focus = Window(); // blank window
-		g_window_system.get().window_focus_signal.Emit(w, false);
+		window_in_focus = new Window(); // blank window
+		window_focus_signal.Emit(w, false);
 	}
 	return true;
 }
 
 //
-bool GetWindowClientSize(const Window &w, int &width, int &height) {
-	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
-	SDL_GetWindowSize(data->w, &width, &height);
+bool GetWindowClientSize(const Window *w, int &width, int &height) {
+	if (!w)
+		return false;
+	SDL_GetWindowSize(w->w, &width, &height);
 	return true;
 }
 
-bool SetWindowClientSize(const Window &w, int width, int height) {
-	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
-	SDL_SetWindowSize(data->w, width, height);
+bool SetWindowClientSize(Window *w, int width, int height) {
+	if (!w)
+		return false;
+	SDL_SetWindowSize(w->w, width, height);
 	return true;
 }
 
-bool GetWindowTitle(const Window &w, std::string &title) {
-	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
-	return true;
-}
+bool GetWindowTitle(const Window *w, std::string &title) { return true; }
 
-bool SetWindowTitle(const Window &w, const std::string &title) {
-	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
-	return true;
-}
+bool SetWindowTitle(Window *w, const std::string &title) { return true; }
 
-bool WindowHasFocus(const Window &w) {
-	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
-	return true;
-}
+bool WindowHasFocus(const Window *w) { return true; }
 
-bool SetWindowPos(const Window &w, const iVec2 &v) {
-	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
-	SDL_SetWindowPosition(data->w, v.x, v.y);
+bool SetWindowPos(const Window *w, const hg::iVec2 &v) {
+	SDL_SetWindowPosition(w->w, v.x, v.y);
 	UpdateWindow(w); // process messages on the spot
 	return true;
 }
 
-iVec2 GetWindowPos(const Window &w) {
-	auto data = reinterpret_cast<const SDLWindow *>(w.data.data());
+hg::iVec2 GetWindowPos(const Window *w) {
 
 	UpdateWindow(w);
 
-	iVec2 pos;
-	SDL_GetWindowPosition(data->w, &pos.x, &pos.y);
+	hg::iVec2 pos;
+	SDL_GetWindowPosition(w->w, &pos.x, &pos.y);
 	return pos;
 }
 

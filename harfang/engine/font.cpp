@@ -179,7 +179,10 @@ static void DrawText(bgfx::ViewId view_id, const Font &font, const std::vector<u
 		const auto &glyph = j->second;
 
 		stbtt_aligned_quad quad;
-		stbtt_packedchar pc = {glyph.pc.box.sx, glyph.pc.box.sy, glyph.pc.box.ex, glyph.pc.box.ey, glyph.pc.offsets[0].x, glyph.pc.offsets[0].y,
+		stbtt_packedchar pc = {(unsigned short)glyph.pc.box.sx, (unsigned short)glyph.pc.box.sy, (unsigned short)glyph.pc.box.ex,
+			(unsigned short)glyph.pc.box.ey,
+			glyph.pc.offsets[0].x,
+			glyph.pc.offsets[0].y,
 			glyph.pc.advance, glyph.pc.offsets[1].x, glyph.pc.offsets[1].y};
 		stbtt_GetPackedQuad(&pc, font.resolution, font.resolution, 0, &pos.x, &pos.y, &quad, 1);
 
