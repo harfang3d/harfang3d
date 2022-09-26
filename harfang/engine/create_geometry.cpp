@@ -188,22 +188,23 @@ Model CreateConeModel(const bgfx::VertexLayout &decl, float radius, float height
 		subdiv_x = 3;
 	}
 
+	const float z = height / 2.f;
 	std::vector<VtxIdxType> ref(subdiv_x + 2);
 	for (int i = 0; i < subdiv_x; i++) {
 		float t = 2.f * Pi * i / static_cast<float>(subdiv_x);
 		float cs = Cos(t);
 		float sn = Sin(t);
 		float x = radius * cs, y = radius * sn;
-		ref[i + 1] = builder.AddVertex({{x, 0, y}, {cs, 0.f, sn}});
+		ref[i + 1] = builder.AddVertex({{x, -z, y}, {cs, 0.f, sn}});
 	}
 	ref[subdiv_x + 1] = ref[0];
 
-	ref[0] = builder.AddVertex({{0, height, 0}, {0, 1, 0}});
+	ref[0] = builder.AddVertex({{0, z, 0}, {0, 1, 0}});
 	builder.AddPolygon(ref);
 
 	std::reverse(ref.begin() + 1, ref.end());
 
-	ref[0] = builder.AddVertex({{0, 0, 0}, {0, -1, 0}});
+	ref[0] = builder.AddVertex({{0, -z, 0}, {0, -1, 0}});
 	builder.AddPolygon(ref);
 
 	builder.EndList(0);
@@ -217,14 +218,14 @@ Model CreateCapsuleModel(const bgfx::VertexLayout &decl, float radius, float hei
 	if (subdiv_y < 1)
 		subdiv_y = 1;
 
-	if (height < (2.f * radius))
+	if (height <= 0.f)
 		return CreateSphereModel(decl, radius, subdiv_x, subdiv_y);
 
 	ModelBuilder builder;
 
 	// cylinder
 	std::vector<VtxIdxType> ref(subdiv_x * 2);
-	const float z = height / 2.f - radius;
+	const float z = height / 2.f;
 	for (int i = 0; i < subdiv_x; i++) {
 		float t = 2.f * Pi * i / static_cast<float>(subdiv_x);
 		float cs = Cos(t);
@@ -245,8 +246,8 @@ Model CreateCapsuleModel(const bgfx::VertexLayout &decl, float radius, float hei
 		b0 = c0;
 	}
 
-	VtxIdxType top = builder.AddVertex({{0.f, height / 2.f, 0.f}, {0.f, 1.f, 0.f}});
-	VtxIdxType bottom = builder.AddVertex({{0.f, -height / 2.f, 0.f}, {0.f, -1.f, 0.f}});
+	VtxIdxType top = builder.AddVertex({{0.f, height / 2.f + radius, 0.f}, {0.f, 1.f, 0.f}});
+	VtxIdxType bottom = builder.AddVertex({{0.f, -height / 2.f - radius, 0.f}, {0.f, -1.f, 0.f}});
 
 	std::vector<VtxIdxType> fan(2 + subdiv_x);
 

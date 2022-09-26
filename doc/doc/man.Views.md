@@ -33,9 +33,9 @@ Views with no queued draw commands are skipped. If you need to force the process
 Draw commands queued on a view are processed according to the view mode, they are executed:
 
 - In submission order if the view mode is [VM_Sequential].
-- In ascending depth order if the view mode is [VM_Ascending].
-- In descending depth order if the view mode is [VM_Descending].
+- In ascending depth order if the view mode is [VM_DepthAscending].
+- In descending depth order if the view mode is [VM_DepthDescending].
 
-When the view mode is [VM_Ascending] or [VM_Descending], the depth value used to sort draw commands is derived from the draw call *depth* parameter.
+When the view mode is [VM_DepthAscending] or [VM_DepthDescending], the depth value used to sort draw commands is derived from the draw call *depth* parameter.
 
 When no depth is specified, 0 is implied.

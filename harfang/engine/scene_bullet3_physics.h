@@ -18,7 +18,7 @@ class Scene;
 
 //
 struct Bullet3Node {
-	btRigidBody *body{};
+	btRigidBody *body{nullptr};
 	Vec3 scl{Vec3::One};
 	Mat4 ref_mtx{Mat4::Identity};
 };

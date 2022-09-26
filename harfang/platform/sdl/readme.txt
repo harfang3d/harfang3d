@@ -1,2 +1,2 @@
-SDL based input system module for the GS framework.
+SDL based input system module for the Harfang framework.
 Emmanuel Julien 2013

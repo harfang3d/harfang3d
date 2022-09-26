@@ -21,9 +21,11 @@ list( APPEND SPIRV_OPT_SRCS
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/opcode.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/operand.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/parsed_operand.cpp
+	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/pch_source.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/print.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/software_version.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/spirv_endian.cpp
+	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/spirv_fuzzer_options.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/spirv_optimizer_options.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/spirv_reducer_options.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/spirv_target_env.cpp
@@ -34,6 +36,7 @@ list( APPEND SPIRV_OPT_SRCS
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/util/bit_vector.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/util/parse_number.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/util/string_utils.cpp
+	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/util/timer.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/val/basic_block.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/val/construct.cpp
 	${CMAKE_CURRENT_LIST_DIR}/bgfx/3rdparty/spirv-tools/source/val/function.cpp

@@ -230,6 +230,7 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 	auto &_node = nodes[node.ref];
 
 	if (_node.body) {
+		world->removeRigidBody(_node.body);
 		__DeleteRigidBody(_node.body);
 		_node.body = nullptr;
 	}
@@ -261,6 +262,8 @@ void SceneBullet3Physics::NodeCreatePhysics(const Node &node, const Reader &ir, 
 		} else if (type == CT_Mesh) {
 			if (auto tree = LoadCollisionTree(ir, ip, col.GetCollisionResource().c_str()))
 				shapes.push_back(tree);
+		} else {
+			error(format("Collision Type not implemented: %1").arg(type));
 		}
 
 		shapes.back()->setUserIndex(node.ref.idx); // ref back to node

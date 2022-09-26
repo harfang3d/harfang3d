@@ -735,7 +735,7 @@ static hg::Material ExportMaterial(const Model &model, const Material &gltf_mat,
 	hg::debug(hg::format("    - Using pipeline shader '%1'").arg(shader));
 	mat.program = resources.programs.Add(shader.c_str(), {});
 
-	// FinalizeMaterial(mat, fbx_material->GetName(), geo_name);
+	// FinalizeMaterial(mat, gltf_material->GetName(), geo_name);
 	return mat;
 }
 
@@ -1313,7 +1313,6 @@ static void ExportObject(const Model &model, const Node &gltf_node, hg::Node &no
 
 static void ExportCamera(const Model &model, const Node &gltf_node, hg::Node &node, hg::Scene &scene, const Config &config, hg::PipelineResources &resources) {
 	auto camera = scene.CreateCamera();
-	node.SetCamera(camera);
 
 	auto gltf_camera = model.cameras[gltf_node.camera];
 
@@ -1327,6 +1326,31 @@ static void ExportCamera(const Model &model, const Node &gltf_node, hg::Node &no
 		camera.SetZFar(gltf_camera.orthographic.zfar);
 		camera.SetIsOrthographic(true);
 	}
+	node.SetCamera(camera);
+}
+
+static void ExportLight(const Model &model, const size_t &id_light, hg::Node &node, hg::Scene &scene, const Config &config, hg::PipelineResources &resources) {
+	auto light = scene.CreateLight();
+
+	auto gltf_light = model.lights[id_light];
+
+	light.SetDiffuseColor(hg::Color(gltf_light.color[0], gltf_light.color[1], gltf_light.color[2]));
+	light.SetDiffuseIntensity(gltf_light.intensity);
+
+	light.SetInnerAngle(gltf_light.spot.innerConeAngle);
+	light.SetOuterAngle(gltf_light.spot.outerConeAngle);
+
+	light.SetRadius(gltf_light.range);
+
+	if (gltf_light.type == "point") {
+		light.SetType(hg::LT_Point);
+	} else if (gltf_light.type == "directional") {
+		light.SetType(hg::LT_Linear);
+	} else if (gltf_light.type == "spot") {
+		light.SetType(hg::LT_Spot);
+	}
+
+	node.SetLight(light);
 }
 
 //
@@ -1377,6 +1401,15 @@ static hg::Node ExportNode(const Model &model, const int &gltf_id_node, hg::Scen
 	// is it a camera
 	if (gltf_node.camera >= 0)
 		ExportCamera(model, gltf_node, node, scene, config, resources);
+
+	// is it a light
+	auto KHR_lights_punctual = gltf_node.extensions.find("KHR_lights_punctual");
+	if (KHR_lights_punctual != gltf_node.extensions.end()) {
+		if (KHR_lights_punctual->second.Has("light")) {
+			auto id_light = KHR_lights_punctual->second.Get("light").Get<int>();
+			ExportLight(model, id_light, node, scene, config, resources);
+		}
+	}
 
 	// is it a mesh
 	if (gltf_node.mesh >= 0 || gltf_node.skin >= 0) {
@@ -1610,7 +1643,7 @@ int main(int argc, const char **argv) {
 			{"-shader", "Material pipeline shader [default=core/shader/pbr.hps]", true},
 		},
 		{
-			{"input", "Input FBX file to convert"},
+			{"input", "Input GLTF file to convert"},
 		},
 		{
 			{"-o", "-out"},

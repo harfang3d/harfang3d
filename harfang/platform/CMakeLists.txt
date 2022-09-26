@@ -66,8 +66,10 @@ else()
 		)
 	elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 		list(APPEND SRCS
-			sdl/input_system.cpp
+			sdl/input_system_sdl.cpp
+			sdl/input_system_sdl.h
 			sdl/window_system.cpp
+			sdl/platform_sdl.cpp
 		)
 	else()
 		list(APPEND SRCS
@@ -91,7 +93,7 @@ elseif(ANDROID)
 	target_include_directories(platform PRIVATE ${ANDROID_NDK}/sources/android/native_app_glue)
 	target_link_libraries(platform foundation android log)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-	target_link_libraries(platform foundation GL drm dl)
+	target_link_libraries(platform foundation GL dl)
 else()
 	target_include_directories(platform PUBLIC ${GLFW_INCLUDE_DIRS})
 	target_link_libraries(platform foundation glfw)

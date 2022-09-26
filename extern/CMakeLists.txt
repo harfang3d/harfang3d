@@ -71,7 +71,11 @@ if(HG_USE_GLFW)
 
 	if(HG_REBUILD_GLFW)
 		# build it from sources
-		set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
+		if(HG_BUILD_HARFANG_STATIC)
+			set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+		else()		
+			set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
+		endif()
 		set(GLFW_INSTALL OFF CACHE BOOL "")
 		set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "")
 		set(GLFW_BUILD_TESTS OFF CACHE BOOL "")
@@ -121,7 +125,7 @@ install_cppsdk_external_target(nvtt)
 install_cppsdk_external_target(pvrtc)
 
 # Lua
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT (CMAKE_SYSTEM_NAME STREQUAL "Emscripten"))
 	# lua links against libreadline but does not check for its availability.
 	find_package(readline REQUIRED)
 endif()
@@ -204,6 +208,7 @@ if(HG_BUILD_CPP_SDK)
 endif()
 
 # OpenAL soft
+if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Emscripten"))
 message("Configuring OpenAL soft")
 
 set(ALSOFT_UTILS OFF CACHE BOOL "OpenAL soft: Build and install utility programs")
@@ -224,6 +229,8 @@ list(REMOVE_ITEM OpenAL_include_dirs "$<INSTALL_INTERFACE:include>")
 set_property(TARGET OpenAL PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OpenAL_include_dirs})
 
 install_cppsdk_external_target(OpenAL)
+
+endif()
 
 # json.hpp
 add_library(jsonhpp INTERFACE)
@@ -334,6 +341,7 @@ if(HG_ENABLE_RECAST_DETOUR_API)
 endif()
 
 # CMFT
+if(NOT MINGW)
 add_executable(cmft
 	cmft/src/cmft/common/stb_image.cpp
 	cmft/src/cmft/common/print.cpp
@@ -350,12 +358,22 @@ if(UNIX)
 	target_compile_definitions(cmft PRIVATE linux)
 	target_link_libraries(cmft pthread dl)
 endif()
+endif()
 
 # meshoptimizer
 set(CMAKE_INSTALL_INCLUDEDIR ${CppSdkHeadersDestination}/extern)
 add_subdirectory(meshoptimizer EXCLUDE_FROM_ALL)
 set_target_properties(meshoptimizer PROPERTIES FOLDER "harfang/3rdparty")
 install_cppsdk_external_target(meshoptimizer)
+
+# meshoptimizer: in emscripten remove some compile options flag
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	get_target_property(_target_cxx_flags meshoptimizer COMPILE_OPTIONS)
+	if(_target_cxx_flags)
+		list(REMOVE_ITEM _target_cxx_flags -Wall -Wextra -Wshadow -Werror)	
+		set_target_properties(meshoptimizer PROPERTIES COMPILE_OPTIONS "${_target_cxx_flags}")
+	endif()
+endif()
 
 # mikktspace
 add_library(mikktspace STATIC mikktspace/mikktspace.c mikktspace/mikktspace.h)

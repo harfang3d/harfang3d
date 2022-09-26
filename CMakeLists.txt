@@ -27,6 +27,7 @@ option(HG_ENABLE_ASAN "Harfang: Enable ASAN" OFF)
 # -----------------------------------------------------------------------------
 # Build options
 # -----------------------------------------------------------------------------
+option(HG_BUILD_HARFANG_STATIC "Harfang: Build Harfang static" OFF)
 option(HG_BUILD_ASSIMP_CONVERTER "Harfang: Build Assimp converter" ON)
 option(HG_BUILD_FBX_CONVERTER "Harfang: Build FBX converter" ON)
 option(HG_BUILD_GLTF_EXPORTER "Harfang: Build GLTF exporter" ON)
@@ -74,7 +75,7 @@ endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 	message(STATUS "! Disabling GLFW since building for Emscripten")
-	set(HG_USE_GLFW OFF FORCE)
+	set(HG_USE_GLFW OFF CACHE BOOL "Harfang: Use GLFW backend" FORCE)
 endif()
 
 if(HG_ENABLE_SRANIPAL_API AND MSVC)
@@ -105,18 +106,20 @@ if(MSVC)
 	# Don't forget to remove this as soon as CMake is fixed.
 	# Tells MSVC to update __cplusplus value, otherwise it will be stuck to 199711L and libraries like bx (if updated) won't compile anymore even if we set CMAKE_CXX_STANDARD to C++14.
 	add_compile_options(/Zc:__cplusplus)
+elseif(MINGW)
+	add_compile_options(-fpermissive -lstdc++ -lstdc++fs)
 elseif(ANDROID)
 	add_compile_definitions(ANDROID)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 	message(STATUS "Emscripten sets")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --bind -fPIC -DEMSCRIPTEN -s USE_SDL=2 -s USE_WEBGL2=1 -s FULL_ES3=1 -s ALLOW_MEMORY_GROWTH=1 -s OFFSCREENCANVAS_SUPPORT=1 -s LLD_REPORT_UNDEFINED -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1 -s FORCE_FILESYSTEM=1 -DBGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION=30")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --bind -fPIC -DEMSCRIPTEN -s USE_SDL=2 -s USE_WEBGL2=1 -s FULL_ES3=1 -s ALLOW_MEMORY_GROWTH=1 -s OFFSCREENCANVAS_SUPPORT=1 -s LLD_REPORT_UNDEFINED -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1 -s FORCE_FILESYSTEM=1 -DBGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION=30")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --bind -fPIC -DEMSCRIPTEN -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s USE_WEBGL2=1 -s FULL_ES3=1 -s ALLOW_MEMORY_GROWTH=1 -s OFFSCREENCANVAS_SUPPORT=1 -s LLD_REPORT_UNDEFINED -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1 -s FORCE_FILESYSTEM=1 -DBGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION=30")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --bind -fPIC -DEMSCRIPTEN -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s USE_WEBGL2=1 -s FULL_ES3=1 -s ALLOW_MEMORY_GROWTH=1 -s OFFSCREENCANVAS_SUPPORT=1 -s LLD_REPORT_UNDEFINED -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1 -s FORCE_FILESYSTEM=1 -DBGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION=30")
 
 	# without pthread and with wasm
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -s WASM=1 -Oz -DNDEBUG -s DISABLE_EXCEPTION_CATCHING=0 -s FORCE_FILESYSTEM=1")
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -s WASM=1 -Oz -DNDEBUG -s DISABLE_EXCEPTION_CATCHING=0 -s FORCE_FILESYSTEM=1")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -s WASM=1 -O0 -DNDEBUG -g4 -s ASSERTIONS=2 -s DEMANGLE_SUPPORT=1 -s FORCE_FILESYSTEM=1")
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -s WASM=1 -O0 -DNDEBUG -g4 -s ASSERTIONS=2 -s DEMANGLE_SUPPORT=1 -s FORCE_FILESYSTEM=1")	
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -s STANDALONE_WASM=1 -s WASM=1 -Oz -DNDEBUG -s DISABLE_EXCEPTION_CATCHING=0 -s FORCE_FILESYSTEM=1")
+	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -s STANDALONE_WASM=1 -s WASM=1 -Oz -DNDEBUG -s DISABLE_EXCEPTION_CATCHING=0 -s FORCE_FILESYSTEM=1")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -s STANDALONE_WASM=1 -s WASM=1 -O0 -DNDEBUG -g4 -s ASSERTIONS=2 -s DEMANGLE_SUPPORT=1 -s FORCE_FILESYSTEM=1")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -s STANDALONE_WASM=1 -s WASM=1 -O0 -DNDEBUG -g4 -s ASSERTIONS=2 -s DEMANGLE_SUPPORT=1 -s FORCE_FILESYSTEM=1")	
 else()
 	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 	if(NOT APPLE)
@@ -293,14 +296,16 @@ function(install_cppsdk_dependencies Destination)
 		set(ComponentName ${Destination})
 	endif()
 
-	if(HG_USE_GLFW)
-		install(FILES $<TARGET_FILE:glfw> DESTINATION ${Destination} COMPONENT ${ComponentName})
-	endif()
+	if(NOT HG_BUILD_HARFANG_STATIC)
+		if(HG_USE_GLFW)
+			install(FILES $<TARGET_FILE:glfw> DESTINATION ${Destination} COMPONENT ${ComponentName})
+		endif()
 
-	install(FILES $<TARGET_FILE:libluadll> DESTINATION ${Destination} COMPONENT ${ComponentName})
-	if(HG_ENABLE_OPENVR_API)
-		get_target_property(OpenVRTargetFiles OpenVR IMPORTED_LOCATION)
-		install(FILES ${OpenVRTargetFiles} DESTINATION ${Destination} COMPONENT ${ComponentName})
+		install(FILES $<TARGET_FILE:libluadll> DESTINATION ${Destination} COMPONENT ${ComponentName})
+		if(HG_ENABLE_OPENVR_API)
+			get_target_property(OpenVRTargetFiles OpenVR IMPORTED_LOCATION)
+			install(FILES ${OpenVRTargetFiles} DESTINATION ${Destination} COMPONENT ${ComponentName})
+		endif()
 	endif()
 
 	if(HG_ENABLE_SRANIPAL_API)
@@ -407,7 +412,9 @@ message(STATUS "")
 # -----------------------------------------------------------------------------
 
 # [WARNING] Don't forget to add any new shared library target to this list!
-set(HG_SHARED_LIBRARY_TARGETS "hg::glfw;hg::libluadll")
+if(NOT HG_BUILD_HARFANG_STATIC)
+	set(HG_SHARED_LIBRARY_TARGETS "hg::glfw;hg::libluadll")
+endif()
 if(HG_ENABLE_OPENVR_API)
     list(APPEND HG_SHARED_LIBRARY_TARGETS OpenVR)
 	if(HG_ENABLE_SRANIPAL_API)
