@@ -10,9 +10,12 @@
 #include "engine/ogg_audio_stream.h"
 #include "engine/wav_audio_stream.h"
 
-#ifndef EMSCRIPTEN
 #include <AL/alc.h>
-#include <AL/alext.h>
+#if !defined(__EMSCRIPTEN__)
+    #include <AL/alext.h>
+#else
+    #include <AL/al.h>
+#endif
 
 #include <bx/bx.h>
 
@@ -625,4 +628,3 @@ void StopAllSources() {
 }
 
 } // namespace hg
-#endif
