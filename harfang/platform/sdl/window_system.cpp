@@ -110,7 +110,7 @@ Window * NewFullscreenWindow(const char *title, const Monitor *monitor, int mode
 
 void *GetDisplay() { return nullptr; }
 
-static const char *canvas_name = "canvas";
+static const char *canvas_name = "#canvas";
 void *GetWindowHandle(const Window *w) {
 	return (void *)canvas_name;
 	// return reinterpret_cast<void *>(w->w);
