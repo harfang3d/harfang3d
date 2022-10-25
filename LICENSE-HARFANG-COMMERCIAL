@@ -1,0 +1,617 @@
+﻿HARFANG® Commercial Licence GENERAL CONDITIONS OF USE AND LICENCE FOR HARFANG®
+SOFTWARE
+
+"COMMERCIAL Licence"
+
+The company NWNC HARFANG (hereinafter referred to as “NWNC”) is a simplified
+joint stock company with a capital of 4 300 000 Euros, registered at the Orleans
+Trade and Companies Register under the number 890 866 486, whose Head Office is
+located at 5 Rue de la Lionne, 45000 ORLEANS, FRANCE. The company’s e-mail
+address is contact@harfang3d.com and the telephone number is +33 238 772266.
+
+NWNC is dedicated to the creation of human-machine-interfaces for industry,
+research, private and defense sectors.
+
+In this context, the company has developed a real-time 3D engine (hereinafter
+referred to as “the SOFTWARE”), which is the subject of this Commercial Licence.
+
+NWNC shall make the SOFTWARE available to users (hereinafter referred to as “the
+USER” or “the USERS”) via this Commercial Licence.
+
+The SOFTWARE is made available through the project hosting platform GITHUB
+within the framework of a private repository entitled “Harfang 3D”.
+
+A link to GITHUB can be found on the HARFANG website (hereinafter referred to as
+“the WEBSITE”).
+
+The WEBSITE is owned and published by NWNC. Mr. Francois GUTHERZ is the
+WEBSITE’s Publication Director.
+
+OVH Limited is the WEBSITE host, located at 3 Southwark Street, London, SE1 1RQ,
+United Kingdom.
+
+The purpose of these General Conditions is to clarify the conditions under which
+NWNC makes the SOFTWARE available to USERS under the terms of this Commercial
+Licence. 
+
+Article 1 – Definitions
+
+REQUEST: process by which the USER applies for this SOFTWARE Commercial Licence.
+
+CERTIFICATE OF COMPLIANCE: document released to the USER by NWNC, to inform the
+FINAL USER that the USER benefits properly from the terms of this Commercial
+Licence, entering into force on the same day as the COMMERCIALISATION
+DECLARATION.
+
+CONTRIBUTION: any original creation (or modification, addition, etc. of the
+SOFTWARE source code) for which the USER expects to own the copyright under
+applicable law.
+
+COMMERCIALISATION DECLARATION: declaration made by the USER to NWNC on the
+WEBSITE to inform it of the imminent COMMERCIAL USE of a FINAL PRODUCT.
+
+SOFTWARE: the SOFTWARE which is the subject of this Commercial Licence, in any
+version and/or language.
+
+FINAL PRODUCT: any software (software or hardware), equipment or product whose
+creation, design or production has been facilitated by or contains the SOFTWARE,
+including partially, either modified or unmodified, in the form of object code
+only, in the FINAL PRODUCT.
+
+WEBSITE: the WEBSITE accessible from www.harfang3d.com published by NWNC.
+
+DOWNLOADING: the process by which the SOFTWARE is installed.
+
+USER: any professional under the terms of French Consumer Code, who may have
+downloaded the SOFTWARE in source code through this Commercial Licence.
+
+FINAL USER: private individual or legal entity who may have acquired a FINAL
+PRODUCT from the USER.
+
+COMMERCIAL USE: refers to any use of the SOFTWARE within the framework of the
+USER’s professional activity, allowing him, her, their company or employer to
+directly or indirectly benefit from the creation, distribution and
+commercialisation of a FINAL PRODUCT. This COMMERCIAL USE requires a licence fee
+in favour of NWNC, in compliance with the tariff which entered into force on the
+same day as the COMMERCIALISATION DECLARATION.
+
+NON-COMMERCIAL USE: refers to the USER’s use of the SOFTWARE at the project
+stage of a FINAL PRODUCT for commercial purposes.
+
+Article 2 - General Principles
+
+The original version of these General Conditions is in French. The French text
+forms the sole legal basis and will prevail over any other version of the
+document.
+
+DOWNLOADING and using the SOFTWARE are subject to prior acceptance of these
+General Conditions.
+
+These General Conditions are systematically available and may be downloaded and
+printed by the USER prior to any Download.
+
+Any DOWNLOAD and subsequent usage implies full and unequivocal acceptance of
+these General Conditions.
+
+The General Conditions in force are those published on the WEBSITE and/or the
+Harfang 3D private repository on the GITHUB platform, on the day of DOWNLOAD, or
+the date on which the COMMERCIALISATION DECLARATION is received, or during any
+other later use of the SOFTWARE.
+
+The USER will be informed of any modification in the current conditions
+(especially when a new version is released). NWNC will send an invitation to
+accept the new General Conditions on the WEBSITE.
+
+A printed copy of the General Conditions in addition to any information sent by
+electronic means will be admissible in any legal proceedings concerning the
+application of these General Conditions in the same way and under the same
+conditions as any other document written and retained in paper format.
+
+The failure to exercise, at any time, a prerogative recognised by these General
+Conditions, or to enforce a stipulation in the convention of these General
+Conditions, cannot in any way be interpreted as either a modification of the
+Conditions or as an express or implied waiver of the right to exercise this
+prerogative in the future, or indeed the right to require the diligent
+performance of commitments outlined herein.
+
+In the event that any of the General Conditions should be regarded as illegal or
+non-binding by a judicial decision, the other provisions shall remain in force.
+
+These General Conditions are applicable while the USER is accessing and browsing
+the WEBSITE and throughout their use of the private repository on the GITHUB
+platform and the SOFTWARE.
+
+NWNC reserves the right to adapt and modify these General Conditions, its
+WEBSITE functionalities, the SOFTWARE and SOFTWARE operating rules at any time.
+Consequently, NWNC invites the USER to consult the General Conditions before
+each new DOWNLOAD or use of the SOFTWARE.
+
+Article 3 – Legal Age and Capacity
+
+The USER declares that he/she has the legal capacity to enter into this
+contract, the conditions of which are detailed below. This means that the USER
+is of legal age and is not under trusteeship or guardianship.
+
+Article 4 – Purpose of these General Conditions
+
+These General Conditions of Use and Licence to Use the SOFTWARE aim at defining
+the legal and financial conditions of the Commercial Licence awarded to the
+SOFTWARE USER.
+
+In addition, they govern the USER’s browsing and their USE of the WEBSITE.
+
+Article 5 – SOFTWARE Installation
+
+5.1. Pre-requisites for SOFTWARE installation
+
+In order to ensure optimal performance of the SOFTWARE, basic SOFTWARE
+components are required on the installation computer. These are available at:
+www.harfang3d.com/requirements.
+
+The USER is solely responsible for the configuration and good working order of
+his/her equipment, network access and software settings required for using the
+SOFTWARE.
+
+5.2. DOWNLOAD Methods
+
+After having accepted these General Terms and Conditions of Use by ticking the
+relevant box, the USER will be able to download the SOFTWARE in source code
+format using a fork carried out from the GITHUB platform via the “Harfang 3D”
+private repository.
+
+Beforehand, NWNC will request that the USER:
+
+if the latter already has a GITHUB account: enters their GITHUB username on the
+WEBSITE and accepts this agreement via a checkbox. The WEBSITE will communicate
+with GITHUB in order to register the USER as a member of the “Harfang 3D”
+private repository;
+
+if the latter does not have a GITHUB account: creates a GITHUB account and goes
+to the WEBSITE to consult the General Conditions of use and accept them via a
+checkbox. GITHUB will then be informed of the USER’s associate status to the
+“Harfang 3D” private repository.
+
+In all cases, GITHUB and NWNC will send an e-mail to the USER’s chosen address,
+informing the USER that he/she has been added to HARFANG’s private repository.
+It will also contain the link that will allow the USER to access the repository.
+
+The USER may then consult and download the SOFTWARE source code from NWNC’s
+private repository on GITHUB. Any DOWNLOAD shall be understood as an order.
+
+NWNC offers USERS a free DOWNLOAD of the SOFTWARE. The USER will only be charged
+for the SOFTWARE when it is intended for COMMERCIAL USE, in which case he/she
+will be charged a licence fee (see Article 8 below).
+
+Article 6 – NWNC Intellectual Property Rights
+
+The USER has no intellectual or industrial property rights over the SOFTWARE,
+WEBSITE, trademarks, copyrights, patent, domain names, knowledge or any other
+intellectual property rights of NWNC.
+
+Any use in any way by the USER of any trademark or brand name belonging to NWNC,
+is strictly forbidden without the specific authorisation of NWNC and is subject
+to penalties, within the limits detailed in Article 7 below.
+
+The SOFTWARE, content and structure of the WEBSITE are all reserved under
+copyright.
+
+The USER undertakes to respect legal and intellectual property notices stated in
+the SOFTWARE.
+
+Failure to comply with this article will, by right, lead to the termination of
+the Commercial Licence and these General Conditions by NWNC.
+
+Article 7 – SOFTWARE LICENCE
+
+This Commercial Licence does not grant the USER with any intellectual property
+rights on the SOFTWARE, which remains the entire and exclusive property of NWNC.
+
+The USER will not be granted with any other right in excess of those granted
+hereunder.
+
+7.1 General Information
+
+NWNC will grant USERS with a personal, non-exclusive, single-user, revocable,
+non-transferrable and non-sub-licensable licence to:
+
+    use in accordance with its related SOFTWARE;
+    install, store, use or reproduce the SOFTWARE in a permanent or temporary manner, run the SOFTWARE and its associated libraries in order to create a FINAL PRODUCT and/or incorporate it into Object Code in the FINAL PRODUCT;
+    translate, adapt, repair, correct or modify the SOFTWARE and reproduce any resulting software. USERS may export it or merge it with other software in order to create a FINAL PRODUCT and/or incorporate the SOFTWARE in Object Code format into the FINAL PRODUCT;
+    make a back-up copy of the SOFTWARE.
+
+It is stipulated that the FINAL USER may only acquire the SOFTWARE in Object
+Code format through the USER. This must be inseparable from the FINAL PRODUCT.
+
+USERS are not authorised to:
+
+    use the SOFTWARE for any purposes other than those described herein;
+    produce a FINAL PRODUCT which would compete with the SOFTWARE;
+    sell, hire, sub-contract, sub-licence, lend, share or transfer this Commercial Licence;
+    sell, hire or sub-licence the SOFTWARE in its present state;
+    remove or violate patents, copyright, trademarks or all other intellectual and industrial property rights in the SOFTWARE;
+    incorporate a code involving a change in SOFTWARE licence into the FINAL PRODUCT.
+    In any event, the SOFTWARE may not be used for purposes and/or uses which are illicit and/or contrary to morality.
+
+7.2 LICENCE on USER CONTRIBUTIONS to HARFANG
+
+NWNC will provide the USER with the SOFTWARE source code so that the latter may
+produce a FINAL PRODUCT.
+
+In this respect, the USER shall retain all of his/her rights on CONTRIBUTIONS
+made to the SOFTWARE, but grants an irrevocable, non-exclusive, transferable,
+free licence to NWNC, for public use. This Licence is valid for the duration of
+the rights over CONTRIBUTIONS. NWNC may reproduce, distribute and represent
+these CONTRIBUTIONS and use, sell and incorporate them into its SOFTWARE or
+other software. It may also sell and sub-licence them, once these CONTRIBUTIONS
+are made public via the private repository on GITHUB.
+
+The USER guarantees that he/she holds all the necessary rights and
+authorisations over the CONTRIBUTIONS and for signing this Commercial Licence
+agreement.
+
+NWNC retains full discretion for the use or integration of the various
+CONTRIBUTIONS which will be made public by USERS to improve the initial version
+of the SOFTWARE.
+
+7.3 NWNC’s Credit Notice
+
+The USER agrees to quote the name of the SOFTWARE and its author NWNC in legal
+notices, credits, intellectual property clauses and documents and/or in the
+FINAL PRODUCT intended for the FINAL USER, in order to respect the moral rights
+of NWNC with regard to the SOFTWARE.
+
+7.4 Territory
+
+The LICENCE granted to the USER may be used anywhere in the world.
+
+7.5 Validity and termination of the LICENCE
+
+This Commercial Licence takes effect on the date when the SOFTWARE is first
+downloaded, branched or cloned and will remain in effect for the entire duration
+of SOFTWARE use by the USER.
+
+NWNC may terminate the Commercial Licence at any time if the USER does not
+respect the terms detailed in this document.
+
+The USER may terminate the Commercial Licence by ceasing to use the SOFTWARE or
+by contacting NWNC at the following address: contact@harfang3d.com.
+
+In this case, if need be, the USER shall be entitled to a refund of all or part
+of the amount already paid for COMMERCIAL USE of the SOFTWARE.
+
+Upon termination, the USER undertakes to discontinue use of the SOFTWARE and to
+destroy any copies and CONTRIBUTIONS which he/she may benefit from on their
+computer or device.
+
+Article 8 - COMMERCIAL USE of the SOFTWARE
+
+8.1 COMMERCIALISATION DECLARATION
+
+USERS who wish to use the SOFTWARE for COMMERCIAL PURPOSES should, prior to 
+placing a FINAL PRODUCT on the market, complete a COMMERCIALISATION DECLARATION 
+for NWNC by sending an email to contact@harfang3d.com.
+
+Companies must pay the appropriate rates for the COMMERCIALISATION DECLARATION,
+which can be consulted by sending an email to contact@harfang3d.com.
+
+The USER will be charged for any COMMERCIAL USE of the SOFTWARE in compliance
+with NWNC’s rates which entered into force on the same day as the
+COMMERCIALISATION DECLARATION.
+
+Any COMMERCIAL USE of the SOFTWARE must be paid for.
+
+8.2 CERTIFICATE OF COMPLIANCE
+
+Following the COMMERCIALISATION DECLARATION, NWNC will issue a CERTIFICATE OF
+COMPLIANCE for the USER.
+
+The CERTIFICATE OF COMPLIANCE informs the FINAL USER of the lawfulness of the
+licence granted to the USER.
+
+Moreover, this CERTIFICATE OF COMPLIANCE will allow the FINAL USER to use the
+FINAL PRODUCT lawfully with regard to NWNC.
+
+The USER may affix a certification number to the FINAL PRODUCT.
+
+The certification number will be freely available to the FINAL USER by sending
+an email to contact@harfang3d.com.
+
+The USER consequently agrees to cite the CERTIFICATE OF COMPLIANCE and specify
+how the FINAL USER may access it on the FINAL PRODUCT or in the General
+Conditions of Use and/or Sale.
+
+8.3 Communication - Publicity
+
+In addition, the USER specifically authorises NWNC to include the USER’s
+trademarks, commercial names, logos and any other distinctive symbols that the
+latter may own, as well as photographs and videos associated with the FINAL
+PRODUCT, for publicity and communication purposes relating to the SOFTWARE, on
+its internet website or any other communications medium that NWNC might choose.
+
+However, if the USER does not wish to grant authorisation to NWNC for use of the
+trademarks and visual artwork associated with their FINAL PRODUCT, he/she may
+specify this to NWNC by ticking the appropriate box in the COMMERCIALISATION
+DECLARATION.
+
+Article 9 – Price
+
+The Commercial Licence’s financial conditions for the SOFTWARE are as follows:
+
+9.1 NON-COMMERCIAL USE
+
+The Licence is free for all NON-COMMERCIAL USE of the SOFTWARE.
+
+9.2 COMMERCIAL USE
+
+Any COMMERCIAL USE of the SOFTWARE will be invoiced to the USER at the rates in
+force on the date of the COMMERCIALISATION DECLARATION.
+
+The prices set by NWNC remain firm and non-revisable while they are valid, as is
+specified on the WEBSITE or NWNC quotation.
+
+Prices both excluding and including taxes are listed in Euros. In this case,
+they take into account the VAT rate applicable on the date of the
+COMMERCIALISATION DECLARATION. Any change in applicable rates may be reflected
+in the price.
+
+USERS undertake to provide a Statement of Turnover, certified as accurate by a
+chartered accountant, as part of the turnover declaration for the FINAL PRODUCT
+that they may be required to complete on an annual basis for the payment of
+licence fees and the Commercial Licence.
+
+It shall be stated that in the absence of a COMMERCIALISATION DECLARATION that
+complies with the provisions of Article 8.1 above, the current price and the
+start date for the payment of licence fees shall be the date on which the FINAL
+PRODUCT is put on the market.
+
+Article 10 – Payment
+
+10.1. Methods of Payment
+
+Invoices must be paid in Euros to NWNC’s Headquarters by the date specified on
+the invoice.
+
+The cost is payable by cheque, credit/debit card and/or by bank transfer.
+
+The transaction is deemed to have taken place on the date on which the amount
+payable to NWNC is received.
+
+NWNC shall make every effort to ensure that the banking data conveyed remains
+confidential and secure.
+
+10.2. Transaction Security
+
+In order to improve the security of transactions made online, the WEBSITE uses
+PAYPAL, an online payment system which uses all the resources possible to ensure
+that the data conveyed remains secure and confidential within an online payment
+solution.
+
+To benefit from the SSL secured online payment method, the USER must use
+browsers that are compatible with these systems.
+
+10.3. Late Payment
+
+Any sum that remains unpaid by the due date will lead, by right and without
+further formalities in accordance with Article L.441-6 of the French Commercial
+Code, to (i) the application of late payment interest. This will be applied from
+the payment due date until it has been paid in full. The rate will be equal to
+the ECB interest rate on the refinancing operations, plus 10 percentage points.
+In such cases, the rate which is in effect from the 1st January of the year in
+question is applicable during the first semester. The rate in effect from the
+1st July of the corresponding year is applicable in the second semester; (ii)
+the payment of a fixed indemnity for the debt recovery fees as fixed by current
+regulations. This equates to a fixed fee of 40 Euros if the debt recovery costs
+are less than this amount. Above this amount, the debt recovery fee will equal
+the cost incurred to obtain the payment of the debt due.
+
+Moreover, in the event of a delay in payment or a total or partial absence of
+settlement, there is a possibility that NWNC may immediately suspend any
+existing contract. It may also render payable any unmatured debts owed by the
+USER to NWNC, for any reason whatsoever.
+
+Article 11 – Audit- Penalties
+
+NWNC may request that the USER carries out an audit on SOFTWARE use. NWNC will
+give the USER 30 days warning before the audit is requested.
+
+In the event that the USER refrains from completing the COMMERCIALISATION
+DECLARATION, as stipulated under Article 8.1, NWNC will have the right to claim
+the payment of a penalty of 10,000 (ten thousand) Euros, in addition to the
+amount due for COMMERCIAL USE of the SOFTWARE, in accordance with the pricing
+conditions in effect on the first day on which the FINAL PRODUCT is placed on
+the market.
+
+In the event that SOFTWARE use does not correspond to the licence fees paid or
+the Statement of Turnover produced, NWNC may request that the USER pays a fine
+of 20% of the charge corresponding to the actual use of the SOFTWARE in addition
+to the supplementary payment of the cost corresponding to the actual use of the
+SOFTWARE.
+
+If this fine, and/or the amount or additional cost related to SOFTWARE use
+remains unpaid, NWNC is legally entitled to withdraw the Licence granted to the
+USER 8 days after formal demand remaining unsuccessful, without prejudice to any
+other damages that they may claim.
+
+Article 12 – Personal Data Protection
+
+The USER will be required to provide NWNC with personal information when
+creating a user account, completing a COMMERCIALISATION DECLARATION or when
+communicating with NWNC.
+
+Mandatory data fields are marked with an asterisk, while others remain optional.
+
+NWNC will not pass USER data onto third parties.
+
+No transfer of personal data will take place between GITHUB and NWNC.
+
+Nevertheless, the USER is informed that the details it gives to GITHUB in order
+to subscribe to the platform (including but not limited to name, e-mail address
+and payment details), will be transferred to the GITHUB Company, the
+headquarters of which are located in the United States and which are subject to
+provisions in force to protect the data of European Union Citizens which have
+been transferred to the United States.
+
+NWNC reserves the right to pass all or some of the USER’s data onto its
+sub-contractors to meet service requirements. All information provided to NWNC
+or its sub-contractors during the service remains strictly confidential.
+
+The aim of collecting personal data is to enable NWNC to ensure that downloading
+SOFTWARE via the private repository GITHUB, Licence management, particularly
+with respect to COMMERCIAL USE, and commercial solicitation directed towards the
+USER, are conducted in compliance with the aforementioned provisions of the
+French Law on Computer Technology and Freedom.
+
+In accordance with Law No. 78-17 of 6 January 1978, pertaining to Information
+Technology, Files and Civil Liberties, modified by Law No.2004-801 of 6 August
+2004, the treatment of nominative information collected on the WEBSITE has been
+indicated in a declaration before the French Data Protection Authority (CNIL),
+under the number 1923950.
+
+NWNC undertakes to take all necessary precautions to ensure the security of data
+communicated by the USER and in particular, to prevent it from being modified,
+damaged or accessed by a third party.
+
+NWNC informs the USER that he/she possesses, in accordance with this law, the
+right to access, modify and oppose the data that they provide.
+
+The USER may exercise this right by sending an e-mail to contact@harfang3d.com,
+or a letter addressed to “NWNC Harfang, 5 rue de la Lionne, 45000 ORLEANS,
+France”. USERS must include their full details (name, address, telephone and fax
+number, e-mail address) and must specify the subject of their correspondence.
+
+USERS may also object to how their data will later be processed by NWNC to
+contact them regarding new promotional offers. USERS can also prevent their data
+from being passed to third parties or NWNC’s commercial partners.
+
+NWNC may wish to send e-mails to USERS, primarily intended to inform them about
+its services. It is possible to refuse to receive these informative e-mails, by
+sending an e-mail or letter to the addresses listed above and which can also be
+found in the body of the e-mail received.
+
+Similarly, NWNC may receive certain data, which may be gathered using cookies.
+
+A “cookie” is a small text file which contains user-specific information about
+the visitor to the WEBSITE. It is stored on the user’s hard drive and may only
+be read by the server and browser that provided it.
+
+NWNC only makes use of session cookies and authentication to optimise USER
+experience while consulting the WEBSITE, with respect to the French Law on
+Computer Technology and Freedom dated 6 January 1978.
+
+Article 13 – Confidentiality
+
+The Parties reciprocally commit to a general confidentiality obligation relating
+to all oral or written information, in any form whatsoever, held in the context
+of the Licence. Information which is generally known to the public or which may
+become known to the public without any fault or failure by the USER is excluded
+from this.
+
+Therefore, the Parties undertake:
+
+    to keep any confidential information strictly secret. In particular, they shall never directly or indirectly disclose or communicate all or part of this confidential information to anyone in any way, without prior written authorisation from the other Party.
+    not to use all or part of the confidential information for activities or purposes other than for fulfilling the contract;
+    not to copy or imitate all or part of the confidential information;
+    to return all confidential information to the other Party on request.
+
+The Parties agree to take all necessary measures to ensure that this
+confidentiality obligation is respected for the whole duration of the contract
+and after it has been terminated. They shall also vouch for this obligation
+being respected by their employees.
+
+This obligation is an obligation of results.
+
+Each Party authorises the other to use their name in commercial references where
+they may be required to cite or edit it.
+
+Moreover, the USER should respect NWNC’s credit, as described in Article 7.4
+above.
+
+Article 14 – Warranty and Liability
+
+14.1 – General terms
+
+The USER declares, by accepting these General Conditions and the Licence, that
+the SOFTWARE offered by NWNC meets his/her expectations and requirements.
+
+The USER uses the SOFTWARE at his/her own risk.
+
+The SOFTWARE is provided “as is” without warranty of any kind, whether regarding
+the results, production or design of the FINAL PRODUCT.
+
+NWNC makes no guarantee or conditions, either implicit or explicit, regarding
+the use of the SOFTWARE, including guarantees or conditions related to its
+market value, its suitability for a particular use or for counterfeiting.
+
+NWNC is under no obligation to provide support with respect to the use of the
+SOFTWARE. For further information, the USER may go to www.harfang3d.com/faq.
+
+NWNC does not accept liability in the event of loss or damage of the USER’s
+data, files, computer programmes, documentation and operating loss, or loss of
+productivity, earnings, profits, revenue, assets, savings, contracts, brand
+image, investment or time.
+
+As the SOFTWARE Licence offered to the USER is free, NWNC is exempt from any
+responsibility towards the USER.
+
+In the event that SOFTWARE use develops into COMMERCIAL USE, NWNC’s
+responsibility is limited to direct damages. It is explicitly excluded from any
+indirect damages. In particular, NWNC will not be held liable for immaterial or
+indirect loss under any circumstances, such as: production stoppages, operating
+loss, loss of profits or opportunity, commercial prejudice and any shortfalls.
+Any responsibility accepted by NWNC will be limited to the cost of the Licence.
+
+Finally, the USER undertakes to inform NWNC of any counterfeiting act by a third
+party of which it may become aware. If any copyright infringement prosecutions
+are brought against NWNC regarding the use or operation of the SOFTWARE, NWNC
+shall immediately inform the USER about it, who will in turn disclose any
+evidence it may have for the defence of NWNC.
+
+Article 15 – Reliability of Internet Network
+
+The USER is solely responsible for the use of the service.
+
+NWNC declines any responsibility and may not be held responsible for any damage
+or viruses that may affect computer hardware or any other equipment when using
+the SERVICE.
+
+NWNC may not be held responsible for connection delays or the reliability of
+data transferred by the Internet network.
+
+In view of the complexity of global networks, inequalities in sub-network
+capacity and influxes of USERS at certain times, NWNC shall not be held
+responsible for any interruptions or partial or total unavailability of the
+SERVICE, resulting in technical difficulties linked to the Internet Network
+(interruption, slow connection speeds, disconnection, etc.).
+
+Article 16 - Force majeure event
+
+NWNC will not be held responsible in the case of occurrence of a force majeure
+event under any circumstances.
+
+In view of NWNC’s obligations, events beyond its control which it cannot
+reasonably be expected to foresee are considered to be force majeure events. The
+occurrence of such events renders it more difficult and costly to carry out its
+obligations. Such events include, in particular but not only: war, riots,
+natural disasters, embargo, epidemic, disruption to transport and communication
+systems, acts of government, amendments to regulations applicable to the General
+Conditions or the SERVICE, internal or external strikes, internal or external
+breakdowns or failure, failure of the internet or telephone network, failure of
+GITHUB, and generally, any event which affects successful delivery of the
+SERVICE.
+
+Article 17 - Applicable Law - Jurisdiction
+
+These General Conditions and the Licence are subject to French Domestic Law,
+excluding any International Convention.
+
+In the event of a dispute regarding these General Conditions or the SOFTWARE,
+the parties will attempt wherever possible to resolve it amicably.
+
+In the event of failure, disputes between NWNC and USERS should be brought
+before the courts with jurisdiction in ORLEANS (45), France. This is where the
+Headquarters of NWNC are located and to which the Parties attribute
+jurisdiction. Exceptions may occur if another jurisdiction were to be designated
+by public policy rules. This is relevant for disputes regarding the validity,
+execution, interpretation, non-performance, interruption or termination of these
+General Conditions and Licence, even for summary proceedings and notwithstanding
+several bodies or Parties or the introduction of third parties.
