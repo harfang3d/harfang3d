@@ -12,6 +12,9 @@ void set_thread_name(const std::string &name) {}
 std::string get_thread_name(std::thread::id id) { return "Unsupported"; }
 
 bool set_thread_priority(std::thread::native_handle_type handle, unsigned int priority) {
+#if defined(__EMSCRIPTEN__)
+    return true;
+#else
 	if (!handle)
 		return false;
 
@@ -20,6 +23,7 @@ bool set_thread_priority(std::thread::native_handle_type handle, unsigned int pr
 	param.sched_priority = priority;
 
 	return pthread_setschedparam(handle, SCHED_OTHER, &param) == 0;
+#endif
 }
 
 bool set_thread_affinity(std::thread::native_handle_type handle, unsigned int mask) { return false; }
