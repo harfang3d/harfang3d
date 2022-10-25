@@ -19,6 +19,7 @@ HARFANG®3D is an all-in-one 3D visualization library usable in C++, Python, Lua
 4. [Using the C++ SDK](#section_4)
 5. [Version](#section_5)
 6. [License](#section_6)
+7. [Contributing](#section_7)
 
 <a name="section_1"></a>
 # About
@@ -240,6 +241,7 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
 Harfang is licensed under the GPLv3, LGPLv3 and a commercial license:<br>
 https://www.harfang3d.com/license
 
+<a name="section_7"></a>
 # Contributing
 ## Contributor License Agreement
 
@@ -252,6 +254,7 @@ You represent that the Contributions are Your original works of authorship, and 
 
 The [HARFANG3D organization](https://www.harfang3d.com/en_US/legal) acknowledges that, except as explicitly described in this Agreement, any Contribution which you provide is on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OR CONDITIONS OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 
+<a name="section_8"></a>
 # More screenshots...
 
 ![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sun_temple_aaa.png)
