@@ -100,11 +100,17 @@ Window *NewWindowFrom(void *handle) {
 }
 
 // TODO Create a new fullscreen window on a specified monitor.
-Window *NewFullscreenWindow(const Monitor *monitor, int mode_index, MonitorRotation rotation) { return NewWindow(512, 512, 32, WV_Windowed); }
+Window *NewFullscreenWindow(const Monitor *monitor, int mode_index, MonitorRotation rotation) {
+    return NewWindow(512, 512, 32, WV_Windowed);
+}
+Window * NewFullscreenWindow(const char *title, const Monitor *monitor, int mode_index, MonitorRotation rotation) {
+    return NewWindow(512, 512, 32, WV_Windowed);
+}
+
 
 void *GetDisplay() { return nullptr; }
 
-static const char *canvas_name = "canvas";
+static const char *canvas_name = "#canvas";
 void *GetWindowHandle(const Window *w) {
 	return (void *)canvas_name;
 	// return reinterpret_cast<void *>(w->w);
@@ -161,7 +167,7 @@ bool SetWindowTitle(Window *w, const std::string &title) { return true; }
 
 bool WindowHasFocus(const Window *w) { return true; }
 
-bool SetWindowPos(const Window *w, const hg::iVec2 &v) {
+bool SetWindowPos(Window *w, const hg::iVec2 &v) {
 	SDL_SetWindowPosition(w->w, v.x, v.y);
 	UpdateWindow(w); // process messages on the spot
 	return true;
@@ -176,7 +182,13 @@ hg::iVec2 GetWindowPos(const Window *w) {
 	return pos;
 }
 
+hg::Vec2 GetWindowContentScale(const Window *window) {
+    puts(__FILE__ "GetWindowContentScale");
+    return { 1, 1 };
+}
+
 void ShowCursor() { SDL_ShowCursor(SDL_ENABLE); }
 void HideCursor() { SDL_ShowCursor(SDL_DISABLE); }
+void WindowSystemShutdown() { }
 
 } // namespace hg
