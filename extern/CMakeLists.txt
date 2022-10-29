@@ -354,7 +354,9 @@ target_include_directories(cmft PRIVATE cmft/include cmft/dependency cmft/src/cm
 target_compile_definitions(cmft PRIVATE CMFT_ENABLE_INFO_MESSAGES=1)
 set_target_properties(cmft PROPERTIES FOLDER "harfang/tools")
 
-if(UNIX)
+if(APPLE)
+	target_link_libraries(cmft pthread dl)
+elseif(UNIX)
 	target_compile_definitions(cmft PRIVATE linux)
 	target_link_libraries(cmft pthread dl)
 endif()
