@@ -73,6 +73,8 @@ target_compile_definitions( bx
 	PUBLIC 
 		$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>
 		$<$<CONFIG:Release>:BX_CONFIG_DEBUG=0>
+		$<$<CONFIG:RelWithDebInfo>:BX_CONFIG_DEBUG=0>
+		$<$<CONFIG:MinSizeRel>:BX_CONFIG_DEBUG=0>
 )
 
 if( UNIX AND NOT APPLE )

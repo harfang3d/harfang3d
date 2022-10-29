@@ -19,7 +19,11 @@ add_library(hg_lua SHARED
 target_include_directories(hg_lua PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../extern/lua/src)
 target_link_libraries(hg_lua engine foundation platform)
 set_target_properties(hg_lua PROPERTIES OUTPUT_NAME "harfang" PREFIX "" DEBUG_POSTFIX "")
+if(APPLE)
+	set_target_properties(hg_lua PROPERTIES SUFFIX ".so")
+endif()
 set_target_properties(hg_lua PROPERTIES FOLDER "harfang/languages")
+
 add_dependencies(hg_lua lua)
 
 if(WIN32)

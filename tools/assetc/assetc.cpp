@@ -962,7 +962,7 @@ void Texture(std::map<std::string, Hash> &hashes, std::string path) {
 	}
 
 	//
-	if (api == "DX12" || api == "DX11" || api == "GL" || api == "GLES" || api == "VK") {
+	if (api == "DX12" || api == "DX11" || api == "GL" || api == "GLES" || api == "VK" || api == "MTL" ) {
 		const auto src = FullInputPath(in_path);
 
 		if (type == "Copy") {
@@ -1164,6 +1164,8 @@ static void BuildComputeShader(std::map<std::string, Hash> &hashes, const std::s
 		// no profile => essl
 	} else if (api == "VK") {
 		cs_profile = "spirv";
+	} else if (api == "MTL") {
+		cs_profile = "metal";
 	} else {
 		const json json_err = {{"type", "UnsupportedComputeAPI"}, {"api", api}};
 		log_error(json_err);
@@ -1231,6 +1233,8 @@ static void BuildShader(std::map<std::string, Hash> &hashes, const std::string &
 		// no profile => essl
 	} else if (api == "VK") {
 		vs_profile = fs_profile = "spirv";
+	} else if (api == "MTL") {
+		vs_profile = fs_profile = "metal";
 	} else {
 		const json json_err = {{"type", "UnsupportedShaderAPI"}, {"api", api}};
 		log_error(json_err);
