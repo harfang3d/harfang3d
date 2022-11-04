@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
 
+if( APPLE AND NOT XCODE )
+	set( CMAKE_CXX_FLAGS "-ObjC++" )
+endif()
+
 set( BGFX_SRCS
 	bgfx/src/bgfx.cpp             bgfx/src/renderer_gl.cpp
 	bgfx/src/debug_renderdoc.cpp  bgfx/src/renderer_gnm.cpp
@@ -14,6 +18,15 @@ set( BGFX_SRCS
 	bgfx/src/renderer_nvn.cpp     bgfx/src/renderer_webgpu.cpp
 	bgfx/src/glcontext_html5.cpp  bgfx/src/renderer_agc.cpp
 )
+
+if( APPLE )
+	set( BGFX_SRCS
+		${BGFX_SRCS}
+		bgfx/src/glcontext_eagl.mm
+		bgfx/src/glcontext_nsgl.mm
+		bgfx/src/renderer_mtl.mm
+	)
+endif()
 
 set( BGFX_HDRS
 	bgfx/src/bgfx_p.h            bgfx/src/glimports.h
@@ -105,6 +118,26 @@ if( UNIX AND NOT APPLE AND NOT EMSCRIPTEN )
 		find_package(EGL REQUIRED)
 		target_link_libraries( bgfx PUBLIC ${OPENGLES_LIBRARY} ${EGL_LIBRARIES} )
 	endif()
+endif()
+
+
+if( ${CMAKE_SYSTEM_NAME} MATCHES iOS|tvOS )
+	target_link_libraries (bgfx PUBLIC 
+		"-framework OpenGLES -framework Metal -framework UIKit -framework CoreGraphics -framework QuartzCore -framework IOKit -framework CoreFoundation")
+elseif( APPLE )
+	find_library( COCOA_LIBRARY Cocoa )
+	find_library( METAL_LIBRARY Metal )
+	find_library( QUARTZCORE_LIBRARY QuartzCore )
+	find_library( IOKIT_LIBRARY IOKit )
+	find_library( COREFOUNDATION_LIBRARY CoreFoundation )
+	mark_as_advanced( COCOA_LIBRARY )
+	mark_as_advanced( METAL_LIBRARY )
+	mark_as_advanced( QUARTZCORE_LIBRARY )
+	mark_as_advanced( IOKIT_LIBRARY )
+	mark_as_advanced( COREFOUNDATION_LIBRARY )
+	target_link_libraries( bgfx PUBLIC ${COCOA_LIBRARY} ${METAL_LIBRARY} ${QUARTZCORE_LIBRARY} ${IOKIT_LIBRARY} ${COREFOUNDATION_LIBRARY} )
+	target_link_libraries (bgfx PUBLIC 
+		"-framework OpenGL")
 endif()
 
 if( NOT ${OPENGL_VERSION} STREQUAL "" )

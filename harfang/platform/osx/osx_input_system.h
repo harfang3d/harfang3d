@@ -2,9 +2,7 @@
 
 #pragma once
 
-#include "input_system/input_system.h"
-#include "input_system/input_mouse.h"
-#include "input_system/input_keyboard.h"
+#include "../input_system.h"
 
 namespace gs {
 namespace input {

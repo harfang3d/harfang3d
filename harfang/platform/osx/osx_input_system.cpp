@@ -3,7 +3,8 @@
 #include "osx_input_system/osx_input_system.h"
 #include "osx_input_system/osx_input_keyboard.h"
 #include "osx_input_system/osx_input_mouse.h"
-#include "window_system/window_system.h"
+// #include "window_system/window_system.h"
+#include "window_system.h"
 #include "cstl/log.h"
 
 namespace gs {
