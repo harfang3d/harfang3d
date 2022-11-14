@@ -123,7 +123,7 @@ struct PipelineInfo {
 	std::vector<std::vector<std::string>> configs;
 };
 
-struct PipelineResources;
+class PipelineResources;
 
 //
 enum PipelineProgramFeature {
@@ -451,7 +451,8 @@ struct ModelLoad {
 	ModelRef ref;
 };
 
-struct PipelineResources {
+class PipelineResources {
+public:
 	PipelineResources() : programs(Destroy), textures(Destroy), materials(Destroy), models(Destroy) {}
 	~PipelineResources() { DestroyAll(); }
 
