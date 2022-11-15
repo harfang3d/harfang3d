@@ -37,6 +37,7 @@ Platforms supported
 * Win32 and Win64 Intel
 * Linux 64 Intel
 * Aarch 64 ARM
+* OS X Apple Silicon _(experimental)_
 
 Scene API
 * Node & component based
@@ -49,7 +50,8 @@ Rendering pipeline
 
 VR API
 * VR support via OpenVR/SteamVR with Eye tracking
-* Compatible with the HTC Vive/Vive Pro, Valve Index, Lenovo Explorer, Oculus Rift S
+* VR support via OpenXR 
+* Compatible with the HTC Vive/Vive Pro, Valve Index, Lenovo Explorer, Oculus Rift S, Meta Quest 2 (using _Oculus Link_)
 
 Physics API
 * Rigid bodies, collisions, mechanical constraints, ray casting
@@ -60,9 +62,9 @@ Audio API
 
 Languages supported
 * C++
-* Python _(3.2+)_
-* Lua _(5.3)_
-* Go _(1+, experimental)_
+* [Python _(3.2+)_](https://pypi.org/project/harfang/)
+* Lua _(5.4)_
+* [Go _(1+)_](https://pkg.go.dev/github.com/harfang3d/harfang-go/v3)
 <a name="subsection_1b"></a>
 ## Screenshots
 
