@@ -8,3 +8,4 @@ build
 *.egg-info
 dist
 commit_id
+*.DS_Store

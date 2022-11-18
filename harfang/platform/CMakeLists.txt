@@ -40,6 +40,10 @@ if(WIN32)
 elseif(APPLE)
 	list(APPEND SRCS
 		osx/platform.cpp
+		posix/crash_dump.cpp
+		posix/process.cpp
+		posix/shared_library.cpp
+		posix/thread.cpp
 	)
 else()
 	list(APPEND SRCS
