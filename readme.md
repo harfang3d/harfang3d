@@ -243,7 +243,7 @@ Harfang is licensed under the GPLv3, LGPLv3 and a commercial license:<br>
 https://www.harfang3d.com/license
 
 <a name="section_7"></a>
-# Contributing
+# Contribute
 ## Contributor License Agreement
 
 By contributing your code to HARFANG you grant the [HARFANG3D organization](https://www.harfang3d.com/en_US/legal) a non-exclusive, irrevocable, worldwide, royalty-free, sublicenseable, transferable license under all of Your relevant intellectual property rights (including copyright, patent, and any other rights), to use, copy, prepare derivative works of, distribute and publicly perform and display the Contributions on any licensing terms, including without limitation:
