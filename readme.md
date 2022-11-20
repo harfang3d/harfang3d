@@ -19,8 +19,8 @@ HARFANG®3D is an all-in-one 3D visualization library usable in C++, Python, Lua
 4. [Using the C++ SDK](#section_4)
 5. [Version](#section_5)
 6. [License](#section_6)
-7. [Support Harfang](#section_7)
-8. [Contributing](#section_8)
+7. [Contribute](#section_7)
+8. [Support Harfang](#section_8)
 
 <a name="section_1"></a>
 # About
@@ -243,17 +243,6 @@ Harfang is licensed under the GPLv3, LGPLv3 and a commercial license:<br>
 https://www.harfang3d.com/license
 
 <a name="section_7"></a>
-# How to support Harfang?
-
-There are numerous ways to help Harfang grow its community:
-
-* Give the repository a [Star :star:](https://github.com/harfang3d/harfang3d)
-* Follow us on [Twitter](https://twitter.com/harfang3dengine/)
-* Subscribe to Harfang [Youtube channel](https://www.youtube.com/c/HARFANG3D/videos)
-* Leave a Comment/Like on [Alternative To](https://alternativeto.net/software/harfang-3d/about/)
-* Purchase a license of [Harfang Studio](https://www.harfang3d.com/en_US/studio)
-
-<a name="section_8"></a>
 # Contributing
 ## Contributor License Agreement
 
@@ -265,6 +254,17 @@ You confirm that you are able to grant us these rights. You represent that You a
 You represent that the Contributions are Your original works of authorship, and to Your knowledge, no other person claims, or has the right to claim, any right in any invention or patent related to the Contributions. You also represent that You are not legally obligated, whether by entering into an agreement or otherwise, in any way that conflicts with the terms of this license.
 
 The [HARFANG3D organization](https://www.harfang3d.com/en_US/legal) acknowledges that, except as explicitly described in this Agreement, any Contribution which you provide is on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OR CONDITIONS OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+
+<a name="section_8"></a>
+# How to support Harfang?
+
+There are numerous ways to help Harfang grow its community:
+
+* Give the repository a [Star :star:](https://github.com/harfang3d/harfang3d)
+* Follow us on [Twitter](https://twitter.com/harfang3dengine/)
+* Subscribe to Harfang [Youtube channel](https://www.youtube.com/c/HARFANG3D/videos)
+* Leave a Comment/Like on [Alternative To](https://alternativeto.net/software/harfang-3d/about/)
+* Purchase a license of [Harfang Studio](https://www.harfang3d.com/en_US/studio)
 
 <a name="section_9"></a>
 # More screenshots...
