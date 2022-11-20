@@ -251,7 +251,7 @@ There are numerous ways to help Harfang grow its community:
 * Follow us on [Twitter](https://twitter.com/harfang3dengine/)
 * Subscribe to Harfang [Youtube channel](https://www.youtube.com/c/HARFANG3D/videos)
 * Leave a Comment/Like on [Alternative To](https://alternativeto.net/software/harfang-3d/about/)
-* Purchase a license of [Harfang Sutdio](https://www.harfang3d.com/en_US/studio)
+* Purchase a license of [Harfang Studio](https://www.harfang3d.com/en_US/studio)
 
 <a name="section_8"></a>
 # Contributing
