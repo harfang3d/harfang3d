@@ -261,10 +261,10 @@ The [HARFANG3D organization](https://www.harfang3d.com/en_US/legal) acknowledges
 There are numerous ways to help Harfang grow its community:
 
 * Give the repository a [Star :star:](https://github.com/harfang3d/harfang3d)
-* Follow us on [Twitter](https://twitter.com/harfang3dengine/)
-* Subscribe to Harfang [Youtube channel](https://www.youtube.com/c/HARFANG3D/videos)
-* Leave a Comment/Like on [Alternative To](https://alternativeto.net/software/harfang-3d/about/)
 * Purchase a license of [Harfang Studio](https://www.harfang3d.com/en_US/studio)
+* Subscribe to Harfang [Youtube channel](https://www.youtube.com/c/HARFANG3D/videos)
+* Follow us on [Twitter](https://twitter.com/harfang3dengine/)
+* Leave a Comment/Like on [Alternative To](https://alternativeto.net/software/harfang-3d/about/)
 
 <a name="section_9"></a>
 # More screenshots...
