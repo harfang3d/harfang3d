@@ -17,7 +17,7 @@
 
 - Explicit is better than implicit.
 - Solving problems you don't have creates problems you now have.
-- Absence of structure is more structured than bad structure.
+- The absence of structure is more structured than bad structure.
 - The only thing a program does is transforming data: data in -> transformed data out.
 	- Write the simplest program possible to do that.
 	- Store the minimum amount of state required to do that.
