@@ -480,6 +480,89 @@ static bgfx::FrameBufferHandle _OpenVREyeFrameBuffer_GetHandle(hg::OpenVREyeFram
 
 	gen.bind_function('hg::OpenVRGetFrameBufferSize', 'hg::tVec2<int>', [])
 
+	gen.bind_function('hg::OpenVRIsHMDMounted', 'bool', []);
+
+
+def bind_openxr(gen):
+	gen.add_include('engine/openxr_api.h')
+	
+	gen.bind_named_enum('hg::OpenXRExtensions', ['OXRExtensions_None', 'OXRExtensions_EyeGaze', 'OXRExtensions_Tracker', 'OXRExtensions_PassThrough', 'OXRExtensions_HandTracking', 'OXRExtensions_VARJO_QUADVIEWS', 'OXRExtensions_COMPOSITION_LAYER_DEPTH'])
+	gen.typedef('OpenXRExtensionsFlags', 'uint16_t')
+
+	gen.bind_function('hg::OpenXRInit', 'bool', ['?OpenXRExtensionsFlags ExtensionsFlagsEnable'])
+	gen.bind_function('hg::OpenXRShutdown', 'void', [])
+	
+	gen.insert_binding_code('''
+static bgfx::FrameBufferHandle _OpenXREyeFrameBuffer_GetHandle(hg::OpenXREyeFrameBuffer *s) { return s->fb; }
+''')
+
+	openxr_eye_fb = gen.begin_class('hg::OpenXREyeFrameBuffer')
+	gen.end_class(openxr_eye_fb)	
+	bind_std_vector(gen, openxr_eye_fb)
+	
+	openxr_frame_info = gen.begin_class('hg::OpenXRFrameInfo')
+	gen.bind_members(openxr_frame_info, ['std::vector<int> id_fbs'])
+	gen.end_class(openxr_frame_info)	
+	
+	gen.bind_named_enum('hg::OpenXRAA', ['OXRAA_None', 'OXRAA_MSAA2x', 'OXRAA_MSAA4x', 'OXRAA_MSAA8x', 'OXRAA_MSAA16x'])
+
+	gen.bind_function('hg::OpenXRCreateEyeFrameBuffer', 'std::vector<hg::OpenXREyeFrameBuffer>', ['?hg::OpenXRAA aa'])
+	gen.bind_function('hg::OpenXRDestroyEyeFrameBuffer', 'void', ['hg::OpenXREyeFrameBuffer &eye_fb'])
+	
+	gen.bind_function('hg::OpenXRGetInstanceInfo', 'std::string', [])
+	gen.bind_function('hg::OpenXRGetEyeGaze', 'bool', ['hg::Mat4 &eye_gaze'], {'arg_out': ['eye_gaze']})
+	gen.bind_function('hg::OpenXRGetHeadPose', 'bool', ['hg::Mat4 &head_pose'], {'arg_out': ['head_pose']})
+	
+	lib.stl.bind_function_T(gen, 'std::function<void(hg::Mat4*)>', 'update_controllersCallback')
+	lib.stl.bind_function_T(gen, 'std::function<uint16_t(hg::Rect<int>*, hg::ViewState*, uint16_t*, bgfx::FrameBufferHandle*)>', 'draw_sceneCallback')
+	gen.bind_function('hg::OpenXRSubmitSceneToForwardPipeline', 'hg::OpenXRFrameInfo', ['const hg::Mat4 &cam_offset', 'std::function<void(hg::Mat4*)> update_controllers', 'std::function<uint16_t(hg::Rect<int>*, hg::ViewState *, uint16_t* , bgfx::FrameBufferHandle*)> draw_scene', 'uint16_t& view_id', 'float z_near', 'float z_far'], {'arg_in_out': ['view_id']})
+	gen.bind_function('hg::OpenXRFinishSubmitFrameBuffer', 'void', ['const hg::OpenXRFrameInfo &frameInfo'])
+	
+	gen.bind_function('hg::OpenXRGetColorTexture', 'hg::Texture', ['const hg::OpenXREyeFrameBuffer &eye'])
+	gen.bind_function('hg::OpenXRGetDepthTexture', 'hg::Texture', ['const hg::OpenXREyeFrameBuffer &eye'])
+	
+	gen.bind_function('hg::OpenXRGetColorTextureFromId', 'hg::Texture', ['const std::vector<hg::OpenXREyeFrameBuffer> &eyes', 'const hg::OpenXRFrameInfo &frame_info', 'const int &index'])
+	gen.bind_function('hg::OpenXRGetDepthTextureFromId', 'hg::Texture', ['const std::vector<hg::OpenXREyeFrameBuffer> &eyes', 'const hg::OpenXRFrameInfo &frame_info', 'const int &index'])
+	
+	# hand joints	
+	gen.bind_named_enum('hg::HandsSide', ['LEFT', 'RIGHT', 'COUNT'])
+	
+	gen.bind_named_enum('hg::XrHandJoint', [		
+    'HAND_JOINT_PALM',
+    'HAND_JOINT_WRIST',
+    'HAND_JOINT_THUMB_METACARPAL',
+    'HAND_JOINT_THUMB_PROXIMAL',
+    'HAND_JOINT_THUMB_DISTAL',
+    'HAND_JOINT_THUMB_TIP',
+    'HAND_JOINT_INDEX_METACARPAL',
+    'HAND_JOINT_INDEX_PROXIMAL',
+    'HAND_JOINT_INDEX_INTERMEDIATE',
+    'HAND_JOINT_INDEX_DISTAL',
+    'HAND_JOINT_INDEX_TIP',
+    'HAND_JOINT_MIDDLE_METACARPAL',
+    'HAND_JOINT_MIDDLE_PROXIMAL',
+    'HAND_JOINT_MIDDLE_INTERMEDIATE',
+    'HAND_JOINT_MIDDLE_DISTAL',
+    'HAND_JOINT_MIDDLE_TIP',
+    'HAND_JOINT_RING_METACARPAL',
+    'HAND_JOINT_RING_PROXIMAL',
+    'HAND_JOINT_RING_INTERMEDIATE',
+    'HAND_JOINT_RING_DISTAL',
+    'HAND_JOINT_RING_TIP',
+    'HAND_JOINT_LITTLE_METACARPAL',
+    'HAND_JOINT_LITTLE_PROXIMAL',
+    'HAND_JOINT_LITTLE_INTERMEDIATE',
+    'HAND_JOINT_LITTLE_DISTAL',
+    'HAND_JOINT_LITTLE_TIP',
+	], prefix='XRHJ_')
+
+
+	gen.bind_function('hg::IsHandJointActive', 'bool', ['hg::HandsSide hand'])
+	gen.bind_function('hg::GetHandJointPose', 'hg::Mat4', ['hg::HandsSide hand', 'hg::XrHandJoint handJoint'])
+	gen.bind_function('hg::GetHandJointRadius', 'float', ['hg::HandsSide hand', 'hg::XrHandJoint handJoint'])
+	gen.bind_function('hg::GetHandJointLinearVelocity', 'hg::Vec3', ['hg::HandsSide hand', 'hg::XrHandJoint handJoint'])
+	gen.bind_function('hg::GetHandJointAngularVelocity', 'hg::Vec3', ['hg::HandsSide hand', 'hg::XrHandJoint handJoint'])
+		
 
 def bind_sranipal(gen):
 	gen.add_include('engine/sranipal_api.h')
@@ -639,7 +722,7 @@ def bind_projection(gen):
 	gen.bind_function('hg::ComputeAspectRatioY', 'hg::tVec2<float>', ['float width', 'float height'])
 	gen.bind_function('hg::Compute2DProjectionMatrix', 'hg::Mat44', ['float znear', 'float zfar', 'float res_x', 'float res_y', 'bool y_up'])
 
-	gen.bind_function('hg::ExtractZoomFactorFromProjectionMatrix', 'float', ['const hg::Mat44 &m'])
+	gen.bind_function('hg::ExtractZoomFactorFromProjectionMatrix', 'float', ['const hg::Mat44 &m', 'const hg::tVec2<float> &aspect_ratio'])
 	gen.bind_function('hg::ExtractZRangeFromPerspectiveProjectionMatrix', 'void', ['const hg::Mat44 &m', 'float &znear', 'float &zfar'], {'arg_out': ['znear', 'zfar']})
 	gen.bind_function('hg::ExtractZRangeFromOrthographicProjectionMatrix', 'void', ['const hg::Mat44 &m', 'float &znear', 'float &zfar'], {'arg_out': ['znear', 'zfar']})
 	gen.bind_function('hg::ExtractZRangeFromProjectionMatrix', 'void', ['const hg::Mat44 &m', 'float &znear', 'float &zfar'], {'arg_out': ['znear', 'zfar']})
@@ -729,6 +812,7 @@ def bind_window_system(gen):
 
 	gen.bind_function('hg::ShowCursor', 'void', [])
 	gen.bind_function('hg::HideCursor', 'void', [])
+	gen.bind_function('hg::DisableCursor', 'void', [])
 
 #
 def decl_get_set_method(gen, conv, type, method_suffix, var_name, features=[]):
@@ -1556,6 +1640,9 @@ def bind_bullet3_physics(gen):
 	node_node_contacts = gen.begin_class('hg::NodePairContacts')
 	gen.end_class(node_node_contacts)
 
+	constraint_6_dof = gen.begin_class('btGeneric6DofConstraint', noncopyable=True)
+	gen.end_class(constraint_6_dof)
+
 	bullet = gen.begin_class('hg::SceneBullet3Physics', noncopyable=True)
 
 	gen.bind_constructor(bullet, ['?int thread_count'])
@@ -1611,6 +1698,9 @@ def bind_bullet3_physics(gen):
 	gen.bind_method(bullet, 'NodeGetAngularFactor', 'hg::Vec3', ['const hg::Node &node'])
 	gen.bind_method(bullet, 'NodeSetAngularFactor', 'void', ['const hg::Node &node', 'const hg::Vec3 &k'])
 
+	gen.bind_method(bullet, 'Add6DofConstraint', 'btGeneric6DofConstraint*', ['const hg::Node &nodeA', 'const hg::Node &nodeB', 'const hg::Mat4 &anchorALocal', 'const hg::Mat4 &anchorBInLocalSpaceA'])
+	gen.bind_method(bullet, 'Remove6DofConstraint', 'void', ['btGeneric6DofConstraint* constraint6Dof'])
+	
 	#
 	gen.bind_method(bullet, 'NodeCollideWorld', 'hg::NodePairContacts', ['const hg::Node &node', 'const hg::Mat4 &world', '?int max_contact'])
 
@@ -1624,6 +1714,10 @@ def bind_bullet3_physics(gen):
 	#
 	gen.bind_method(bullet, 'RenderCollision', 'void', ['bgfx::ViewId view_id', 'const bgfx::VertexLayout &vtx_layout', 'bgfx::ProgramHandle prg', 'hg::RenderState render_state', 'uint32_t depth'])
 
+	#
+	lib.stl.bind_function_T(gen, 'std::function<void(hg::SceneBullet3Physics&, hg::time_ns)>', 'SceneBullet3PhysicsPreTickCallback')
+	gen.bind_method(bullet, 'SetPreTickCallback', 'void', ['const std::function<void(hg::SceneBullet3Physics&, hg::time_ns)>& cbk'])
+	
 	gen.end_class(bullet)
 
 
@@ -2283,7 +2377,7 @@ static void _SetViewTransform(bgfx::ViewId view_id, const hg::Mat4 &view, const 
 	gen.bind_function('hg::GetMaterialDepthTest', 'hg::DepthTest', ['const hg::Material &mat'])
 	gen.bind_function('hg::SetMaterialDepthTest', 'void', ['hg::Material &mat', 'hg::DepthTest test'])
 
-	gen.bind_named_enum('hg::BlendMode', ['BM_Additive', 'BM_Alpha', 'BM_Darken', 'BM_Lighten', 'BM_Multiply', 'BM_Opaque', 'BM_Screen', 'BM_LinearBurn', 'BM_Undefined'])
+	gen.bind_named_enum('hg::BlendMode', ['BM_Additive', 'BM_Alpha', 'BM_Darken', 'BM_Lighten', 'BM_Multiply', 'BM_Opaque', 'BM_Screen', 'BM_LinearBurn', 'BM_AlphaRGB_AddAlpha','BM_Undefined'])
 	gen.bind_function('hg::GetMaterialBlendMode', 'hg::BlendMode', ['const hg::Material &mat'])
 	gen.bind_function('hg::SetMaterialBlendMode', 'void', ['hg::Material &mat', 'hg::BlendMode mode'])
 
@@ -2950,7 +3044,6 @@ static const hg::Vec3 _CubicInterpolateImpl(const hg::Vec3& v0, const hg::Vec3& 
 		(['const hg::Vec3 &min', 'const hg::Vec3 &max'], [])
 	])
 
-	gen.bind_arithmetic_op(minmax, '*', 'hg::MinMax', ['const hg::Mat4 &m'])
 	gen.bind_comparison_ops(minmax, ['==', '!='], ['const hg::MinMax &minmax'])
 
 	gen.end_class(minmax)
@@ -3003,8 +3096,7 @@ static const hg::Vec3 _CubicInterpolateImpl(const hg::Vec3& v0, const hg::Vec3& 
 		])
 		gen.bind_arithmetic_op_overloads(vector2, '*', [
 			('hg::tVec2<%s>'%T, ['const hg::tVec2<%s> &v'%T], []),
-			('hg::tVec2<%s>'%T, ['const %s k'%T], []),
-			('hg::tVec2<%s>'%T, ['const hg::Mat3 &m'], [])
+			('hg::tVec2<%s>'%T, ['const %s k'%T], [])
 		])
 		gen.bind_inplace_arithmetic_ops_overloads(vector2, ['+=', '-=', '*=', '/='], [
 			(['const hg::tVec2<%s> &v'%T], []),
@@ -3251,7 +3343,8 @@ static const hg::Vec3 _CubicInterpolateImpl(const hg::Vec3& v0, const hg::Vec3& 
 		('hg::Mat4', ['const hg::Mat4 &m'], []),
 		('hg::Vec3', ['const hg::Vec3 &v'], []),
 		('hg::Vec4', ['const hg::Vec4 &v'], []),
-		('hg::Mat44', ['const hg::Mat44 &m'], [])
+		('hg::Mat44', ['const hg::Mat44 &m'], []),
+		('hg::MinMax', ['const hg::MinMax &minmax'], []),
 	])
 
 	gen.end_class(matrix4)
@@ -4402,7 +4495,7 @@ def bind(gen):
 	gen.typedef('bgfx::ViewId', 'uint16_t')
 
 	#bind_std_vector(gen, gen.get_conv('char'))
-	#bind_std_vector(gen, gen.get_conv('int'))
+	bind_std_vector(gen, gen.get_conv('int'))
 	#bind_std_vector(gen, gen.get_conv('int8_t'))
 	#bind_std_vector(gen, gen.get_conv('int16_t'))
 	#bind_std_vector(gen, gen.get_conv('int32_t'))
@@ -4448,6 +4541,7 @@ def bind(gen):
 	bind_extras(gen)
 	bind_audio(gen)
 	bind_openvr(gen)
+	bind_openxr(gen)
 	bind_sranipal(gen)
 	bind_vertex(gen)
 	bind_model_builder(gen)

@@ -46,6 +46,7 @@ template <typename T> tVec2<T> GetSize(const Rect<T> &r) { return {r.ex - r.sx, 
 
 //
 template <typename T> Rect<T> operator*(const Rect<T> &r, T v) { return {r.sx * v, r.sy * v, r.ex * v, r.ey * v}; }
+template <typename T> Rect<T> operator*(T v, const Rect<T> &r) { return r * v; }
 template <typename T> Rect<T> operator/(const Rect<T> &r, T v) { return {r.sx / v, r.sy / v, r.ex / v, r.ey / v}; }
 
 template <typename T> bool operator==(const Rect<T> &a, const Rect<T> &b) { return a.sx == b.sx && a.sy == b.sy && a.ex == b.ex && a.ey == b.ey; }

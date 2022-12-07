@@ -1,4 +1,4 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #if _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -8,9 +8,13 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <unistd.h>
+#if __linux__
+#include <linux/limits.h>
+#endif
 #endif
 
 #include "foundation/assert.h"
+#include "foundation/cext.h"
 #include "foundation/format.h"
 #include "foundation/path_tools.h"
 #include "foundation/string.h"
@@ -89,6 +93,14 @@ std::string PathJoin(const std::vector<std::string> &elements) {
 	return CleanPath(join(stripped_elements.begin(), stripped_elements.end(), "/"));
 }
 
+std::string PathJoin(const std::string &a, const std::string &b) {
+	return PathJoin({a,b});
+}
+
+std::string PathJoin(const std::string &a, const std::string &b, const std::string &c) {
+	return PathJoin({a,b,c});
+}
+
 //
 std::string CutFilePath(const std::string &path) {
 	if (path.empty())
@@ -112,12 +124,12 @@ std::string CutFileExtension(const std::string &path) {
 }
 
 std::string CutFileName(const std::string &path) {
-	if (path.empty())
-		return {};
-	for (auto n = path.length() - 1; n > 0; --n)
-		if (path[n] == '\\' || path[n] == '/' || path[n] == ':')
-			return slice(path, 0, n + 1);
-	return path;
+	if (!path.empty()) {
+		for (size_t n = path.length() - 1; n > 0; --n)
+			if (path[n] == '\\' || path[n] == '/' || path[n] == ':')
+				return slice(path, 0, n + 1);
+	}
+	return {};
 }
 
 //
@@ -133,7 +145,13 @@ std::string GetFileExtension(const std::string &path) {
 bool HasFileExtension(const std::string &path) { return !GetFileExtension(path).empty(); }
 
 //
-std::string SwapFileExtension(const std::string &path, const std::string &ext) { return CutFileExtension(path) + "." + ext; }
+//
+std::string SwapFileExtension(const std::string &path, const std::string &ext) {
+	if (ext.empty()) {
+		return path;
+	}
+	return CutFileExtension(path) + "." + ext;
+}
 
 //
 std::string FactorizePath(const std::string &path) {
@@ -214,26 +232,52 @@ std::string CleanFileName(const std::string &filename) {
 }
 
 //
+std::string GetAbsolutePath(const std::string path) {
+#if _WIN32
+	const std::wstring wpath = utf8_to_wchar(path);
+	DWORD len = GetFullPathNameW(wpath.c_str(), 0, NULL, NULL);
+	if (len == 0) {
+		return std::string();
+	}
+	std::wstring out(len-1, 0);
+	len = GetFullPathNameW(wpath.c_str(), len, &out[0], NULL);
+
+	return wchar_to_utf8(out);
+#else
+	std::string out(PATH_MAX, 0);
+	if (realpath(path.c_str(), &out[0]) == NULL) {
+		return std::string();
+	}
+
+	size_t len = strlen(out.c_str());
+	out.resize(len);
+	return out;
+#endif
+}
+
+//
 #if _WIN32
 
 std::string GetCurrentWorkingDirectory() {
-	WCHAR path[1024];
-	GetCurrentDirectoryW(1024 - 1, path); // poorly worded documentation makes it unclear if nBufferLength should account for the terminator or not...
-	return wchar_to_utf8(path);
+	std::array<WCHAR, 1024> cwd;
+	GetCurrentDirectoryW(1024 - 1, cwd.data()); // poorly worded documentation makes it unclear if nBufferLength should account for the terminator or not...
+	return wchar_to_utf8(cwd.data());
 }
 
 bool SetCurrentWorkingDirectory(const std::string &path) { return SetCurrentDirectoryW(utf8_to_wchar(path).c_str()) == TRUE; }
 
 std::string GetUserFolder() {
-	HRESULT res;
+	std::string res;
+
 	PWSTR path;
-	res = SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_DEFAULT, NULL, &path);
-	if (FAILED(res)) {
-		return {};
+	HRESULT hres = SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_DEFAULT, NULL, &path);
+
+	if (SUCCEEDED(hres)) {
+		res = wchar_to_utf8(path);
+		CoTaskMemFree(path);
 	}
-	std::string ret = wchar_to_utf8(path);
-	CoTaskMemFree(path);
-	return ret;
+
+	return res;
 }
 
 #else // POSIX

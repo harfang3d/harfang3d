@@ -1,4 +1,4 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include "foundation/data.h"
 #include "foundation/file.h"
@@ -41,39 +41,46 @@ Data &Data::operator=(Data &&data) {
 }
 */
 
-void Data::Reserve(size_t size) {
-	const auto new_capacity = (size / 8192 + 1) * 8192; // grow in 8KB increments
+bool Data::Reserve(size_t size) {
+	const size_t new_capacity = (size / 8192 + 1) * 8192; // grow in 8KB increments
 
 	if (new_capacity > capacity_) {
-		auto _data_ = new uint8_t[new_capacity];
+		uint8_t *tmp = new uint8_t[new_capacity];
 
-		if (data_)
-			std::copy(data_, data_ + size_, _data_);
+		if (!tmp) {
+			return false;
+		}
+		std::copy(data_, data_ + size_, tmp);
 
 		if (has_ownership)
 			delete[] data_;
 		has_ownership = true;
 
-		data_ = _data_;
+		data_ = tmp;
 		capacity_ = new_capacity;
 	}
+	return true;
 }
 
-void Data::Resize(size_t size) {
-	Reserve(size);
+bool Data::Resize(size_t size) {
+	if(!Reserve(size)) 
+		return false;
 
 	size_ = size;
 
 	if (size_ < cursor)
 		cursor = size_;
+	return true;
 }
 
-void Data::Skip(size_t count) {
-	Reserve(cursor + count);
+bool Data::Skip(size_t count) {
+	if(!Reserve(cursor + count))
+		return false;
 
 	cursor += count;
 	if (cursor > size_)
 		size_ = cursor;
+	return true;
 }
 
 size_t Data::Write(const void *data, size_t size) {
@@ -117,7 +124,7 @@ bool Read(Data &data, std::string &str) {
 		return false;
 
 	std::vector<char> s_(size_t(size) + 1);
-	if (!data.Read(s_.data(), size))
+	if (data.Read(s_.data(), size) != size)
 		return false;
 
 	if (size)

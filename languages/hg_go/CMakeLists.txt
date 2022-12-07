@@ -24,7 +24,7 @@ add_library(hg_go STATIC
 	${CMAKE_CURRENT_BINARY_DIR}/binding/wrapper.h
 	${CMAKE_CURRENT_BINARY_DIR}/binding/fabgen.h)
 
-target_link_libraries(hg_go PUBLIC script engine foundation platform)
+target_link_libraries(hg_go PUBLIC script engine foundation platform openxr)
 set_target_properties(hg_go PROPERTIES FOLDER "harfang/languages")
 
 

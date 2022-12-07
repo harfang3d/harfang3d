@@ -114,7 +114,7 @@ bool Node::GetMinMax(const PipelineResources &resources, MinMax &minmax) const {
 	}
 
 	const auto world = GetTransform().GetWorld();
-	minmax = minmax * world;
+	minmax = world * minmax;
 	return true;
 }
 

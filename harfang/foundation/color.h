@@ -1,8 +1,15 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #pragma once
 
 #include <cstdint>
+
+#include "foundation/math.h"
+#include "foundation/assert.h"
+
+#ifdef max
+#	undef max
+#endif
 
 namespace hg {
 
@@ -21,11 +28,8 @@ struct Color {
 	static const Color Purple;
 	static const Color Transparent;
 
-	Color() = default;
-	Color(float r_, float g_, float b_, float a_ = 1.f) : r(r_), g(g_), b(b_), a(a_) {}
-
-	inline bool operator==(const Color &v) const { return r == v.r && g == v.g && b == v.b && a == v.a; }
-	inline bool operator!=(const Color &v) const { return r != v.r || g != v.g || b != v.b || a != v.a; }
+	Color() : r(0.F), g(0.F), b(0.F), a(0.F) {}
+	Color(float r_, float g_, float b_, float a_ = 1.F) : r(r_), g(g_), b(b_), a(a_) {}
 
 	inline Color &operator+=(const Color &c) {
 		r += c.r;
@@ -92,11 +96,54 @@ struct Color {
 		return *this;
 	}
 
-	inline float operator[](int n) const { return (&r)[n]; }
-	inline float &operator[](int n) { return (&r)[n]; }
+	inline float operator[](int n) const {
+		__ASSERT__(n >= 0 && n <= 3);
+		float res;
+
+		if (n == 0) {
+			res = r;
+		} else if (n == 1) {
+			res = g;
+		} else if (n == 2) {
+			res = b;
+		} else if (n == 3) {
+			res = a;
+		} else {
+			res = std::numeric_limits<float>::max();
+		}
+
+		return res;
+	}
+
+	inline float &operator[](int n) {
+		__ASSERT__(n >= 0 && n <= 3);
+		float *res;
+
+		if (n == 0) {
+			res = &r;
+		} else if (n == 1) {
+			res = &g;
+		} else if (n == 2) {
+			res = &b;
+		} else if (n == 3) {
+			res = &a;
+		} else {
+			res = nullptr;
+		}
+
+		return *res;
+	}
 
 	float r, g, b, a;
 };
+
+inline bool operator==(const Color &a, const Color &b) {
+	return Equal(a.r, b.r) && Equal(a.g, b.g) && Equal(a.b, b.b) && Equal(a.a, b.a);
+}
+
+inline bool operator!=(const Color &a, const Color &b) {
+	return NotEqual(a.r, b.r) && NotEqual(a.g, b.g) && NotEqual(a.b, b.b) && NotEqual(a.a, b.a);
+}
 
 Color operator+(const Color &a, const Color &b);
 Color operator+(const Color &a, const float v);
@@ -104,6 +151,7 @@ Color operator-(const Color &a, const Color &b);
 Color operator-(const Color &a, const float v);
 Color operator*(const Color &a, const Color &b);
 Color operator*(const Color &a, const float v);
+Color operator*(const float v, const Color &a);
 Color operator/(const Color &a, const Color &b);
 Color operator/(const Color &a, const float v);
 
@@ -134,8 +182,8 @@ float Dist2(const Color &i, const Color &j);
 /// Vector distance.
 float Dist(const Color &i, const Color &j);
 
-/// Compare two colors with a configurable threshold.
-bool AlmostEqual(const Color &a, const Color &b, float epsilon);
+/// Compare two colors.
+bool AlmostEqual(const Color &a, const Color &b, const float epsilon = 0.00001F);
 
 /// Scale the chroma component of a color, return the result as a new color.
 Color ChromaScale(const Color &c, float k);

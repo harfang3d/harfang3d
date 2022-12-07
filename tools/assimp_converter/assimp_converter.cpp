@@ -292,15 +292,15 @@ static void ExportMotions(const aiScene *ai_scene, hg::Scene &scene, ExportMap &
 			float simplify_scale_tolerance = config.anim_simplify_scale_tolerance;
 
 			if (simplify_translation_tolerance > 0) {
-				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Vec3>, hg::Vec3>(pos_track, simplify_translation_tolerance);
+				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Vec3>>(pos_track, simplify_translation_tolerance);
 				hg::debug(hg::format("Clean position track: %1").arg(removed));
 			}
 			if (simplify_rotation_tolerance > 0) {
-				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackT<hg::Quaternion>, hg::Quaternion>(rot_track, simplify_rotation_tolerance);
+				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackT<hg::Quaternion>>(rot_track, simplify_rotation_tolerance);
 				hg::debug(hg::format("Clean rotation track: %1").arg(removed));
 			}
 			if (simplify_scale_tolerance > 0) {
-				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Vec3>, hg::Vec3>(scl_track, simplify_scale_tolerance);
+				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Vec3>>(scl_track, simplify_scale_tolerance);
 				hg::debug(hg::format("Clean rotation track: %1").arg(removed));
 			}
 

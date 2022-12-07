@@ -507,10 +507,11 @@ ModelRef Scene::GetObjectModel(ComponentRef ref) const {
 }
 
 void Scene::SetObjectModel(ComponentRef ref, const ModelRef &v) {
-	if (auto *c = GetComponent_(objects, ref))
+	if (auto *c = GetComponent_(objects, ref)) {
 		c->model = v;
-	else
+	} else {
 		warn("Invalid object component");
+	}
 }
 
 bool Object::IsValid() const { return scene_ref && scene_ref->scene ? scene_ref->scene->IsValidObjectRef(ref) : false; }
@@ -598,9 +599,10 @@ std::string Scene::GetObjectMaterialName(ComponentRef ref, size_t slot_idx) cons
 			return c->material_infos[slot_idx].name;
 
 		warn("Invalid object material slot index");
+	} else {
+		warn("Invalid object component");
 	}
 
-	warn("Invalid object component");
 	return {};
 }
 

@@ -103,7 +103,7 @@ bool match_wildcard(const char *text, const char *pattern) {
 }
 
 std::string slice(const std::string &str, ptrdiff_t from, ptrdiff_t count) {
-	auto l = str.length();
+	const size_t l = str.length();
 
 	if (from < 0)
 		from += l; // start from right of std::string
@@ -119,11 +119,11 @@ std::string slice(const std::string &str, ptrdiff_t from, ptrdiff_t count) {
 	if (count > (ptrdiff_t(l) - from))
 		count = l - from; // clamp to length
 
-	return count > 0 ? str.substr(from, count) : "";
+	return count > 0 ? str.substr(from, count) : std::string();
 }
 
-std::string left(const std::string &str, size_t count) { return slice(str, 0, count); }
-std::string right(const std::string &str, size_t count) { return slice(str, -(ptrdiff_t)count, 0); }
+std::string left(const std::string &str, ptrdiff_t count) { return slice(str, 0, count); }
+std::string right(const std::string &str, ptrdiff_t count) { return slice(str, -count, 0); }
 
 size_t replace_all(std::string &value, const std::string &what, const std::string &by) {
 	auto what_len = what.length(), by_len = by.length();
@@ -144,17 +144,21 @@ std::vector<std::string> split(const std::string &value, const std::string &sepa
 	std::vector<std::string> elements; // keep here to help NVRO
 	elements.reserve(8);
 
-	auto value_length = value.length();
-	auto separator_length = separator.length();
-	auto trim_length = trim.length();
+	const size_t value_length = value.length();
+	const size_t separator_length = separator.length();
+	const size_t trim_length = trim.length();
 
 	for (std::string::size_type s = 0, i = 0; i != std::string::npos;) {
 		i = value.find(separator, i);
 
 		if (i == std::string::npos) {
-			auto v = value.substr(s);
-			if (!v.empty())
-				elements.push_back(std::move(v));
+			std::string element = value.substr(s);
+			if (!element.empty()) {
+				if (trim_length) {
+					replace_all(element, trim, "");
+				}
+				elements.push_back(std::move(element));
+			}
 			break;
 		} else {
 			std::string element(value.substr(s, i - s));
@@ -204,19 +208,19 @@ std::string reduce(const std::string &str, const std::string &fill, const std::s
 
 //
 std::string lstrip(const std::string &str, const std::string &pattern) {
-	const auto str_begin = str.find_first_not_of(pattern);
+	const size_t str_begin = str.find_first_not_of(pattern);
 
 	if (str_begin == std::string::npos)
-		return str;
+		return {};
 
 	return str.substr(str_begin, str.length() - str_begin);
 }
 
 std::string rstrip(const std::string &str, const std::string &pattern) {
-	const auto str_end = str.find_last_not_of(pattern);
+	const size_t str_end = str.find_last_not_of(pattern);
 
 	if (str_end == std::string::npos)
-		return str;
+		return {};
 
 	return str.substr(0, str_end + 1);
 }
@@ -260,13 +264,15 @@ std::u32string utf8_to_utf32(const std::string &str) {
 }
 
 std::string wchar_to_utf8(const std::wstring &str) {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv;
-	return wcv.to_bytes(str);
+	std::string out;
+	utf8::utf16to8(str.begin(), str.end(), std::back_inserter(out));
+	return out;
 }
 
 std::wstring utf8_to_wchar(const std::string &str) {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv;
-	return wcv.from_bytes(str);
+	std::wstring out;
+	utf8::utf8to16(str.begin(), str.end(), std::back_inserter(out));
+	return out;
 }
 
 std::wstring ansi_to_wchar(const std::string &str) {

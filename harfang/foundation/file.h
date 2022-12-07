@@ -10,6 +10,10 @@
 #include <cstddef>
 #include <string>
 
+#if _WIN32
+#undef CopyFile
+#endif
+
 namespace hg {
 
 struct File {
@@ -39,6 +43,7 @@ size_t Tell(File file);
 void Rewind(File file);
 
 bool IsFile(const char *path);
+bool IsDirectory(const char *path);
 bool Unlink(const char *path);
 
 struct FileInfo {
@@ -72,7 +77,7 @@ std::string FileToString(const char *path, bool silent = false);
 /// Write a string as a file on the local filesystem.
 bool StringToFile(const char *path, const char *str);
 
-Data FileToData(const char *path, bool silent = false);
+bool FileToData(const char *path, Data &data, bool silent = false);
 
 //
 struct ScopedFile {

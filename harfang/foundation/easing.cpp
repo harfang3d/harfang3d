@@ -79,11 +79,11 @@ float EaseInOutBounce(float t) { return EaseMix<EaseInBounce, EaseOutBounce>(t);
 float EaseOutInBounce(float t) { return EaseMix<EaseOutBounce, EaseInBounce>(t); }
 
 //
-static const EaseFunc Ease_func[E_Count] = {EaseLinear, EaseStep, EaseSmoothStep, EaseInQuad, EaseOutQuad, EaseInOutQuad, EaseOutInQuad, EaseInCubic,
+static const EaseFunc Ease_func[E_Count + 1] = {EaseLinear, EaseStep, EaseSmoothStep, EaseInQuad, EaseOutQuad, EaseInOutQuad, EaseOutInQuad, EaseInCubic,
 	EaseOutCubic, EaseInOutCubic, EaseOutInCubic, EaseInQuart, EaseOutQuart, EaseInOutQuart, EaseOutInQuart, EaseInQuint, EaseOutQuint, EaseInOutQuint,
 	EaseOutInQuint, EaseInSine, EaseOutSine, EaseInOutSine, EaseOutInSine, EaseInExpo, EaseOutExpo, EaseInOutExpo, EaseOutInExpo, EaseInCirc, EaseOutCirc,
 	EaseInOutCirc, EaseOutInCirc, EaseInElastic, EaseOutElastic, EaseInOutElastic, EaseOutInElastic, EaseInBack, EaseOutBack, EaseInOutBack, EaseOutInBack,
-	EaseInBounce, EaseOutBounce, EaseInOutBounce, EaseOutInBounce};
+	EaseInBounce, EaseOutBounce, EaseInOutBounce, EaseOutInBounce, EaseLinear};
 
 EaseFunc GetEaseFunc(Easing easing) { return Ease_func[easing]; }
 

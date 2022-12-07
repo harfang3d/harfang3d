@@ -1,6 +1,12 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #pragma once
+
+#include "foundation/math.h"
+
+#if defined(__cpluscplus)
+#error "ARG"
+#endif
 
 #include <cstddef>
 
@@ -8,8 +14,6 @@ namespace hg {
 
 template <typename T> struct tVec2;
 struct Vec4;
-struct Mat3;
-struct Mat4;
 
 /// 3-Component vector
 struct Vec3 {
@@ -69,31 +73,95 @@ struct Vec3 {
 		return *this;
 	}
 	inline Vec3 &operator/=(const float k) {
-		const float k_ = k != 0.f ? 1.f / k : 0.f;
+		const float k_ = NotEqualZero(k) ? 1.F / k : 0.F;
 		x *= k_;
 		y *= k_;
 		z *= k_;
 		return *this;
 	}
 
-	inline float operator[](size_t n) const { return (&x)[n]; }
-	inline float &operator[](size_t n) { return (&x)[n]; }
+	inline Vec3 operator-() const {
+		return Vec3(-x, -y, -z);
+	}
+
+	inline float operator[](size_t n) const {
+		float res;
+
+		if (n == 0) {
+			res = x;
+		} else if (n == 1) {
+			res = y;
+		} else if (n == 2) {
+			res = z;
+		} else {
+			res = std::numeric_limits<float>::max();
+		}
+
+		return res;
+	}
+
+	inline float &operator[](size_t n) {
+		float *res;
+
+		if (n == 0) {
+			res = &x;
+		} else if (n == 1) {
+			res = &y;
+		} else if (n == 2) {
+			res = &z;
+		} else {
+			res = nullptr;
+		}
+
+		return *res;
+	}
 
 	float x, y, z;
 };
 
-inline bool operator==(const Vec3 &a, const Vec3 &b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
-inline bool operator!=(const Vec3 &a, const Vec3 &b) { return a.x != b.x || a.y != b.y || a.z != b.z; }
+inline bool operator==(const Vec3 &a, const Vec3 &b) {
+	return Equal(a.x, b.x) && Equal(a.y, b.y) && Equal(a.z, b.z);
+}
 
-inline Vec3 operator+(const Vec3 &a, const Vec3 &b) { return {a.x + b.x, a.y + b.y, a.z + b.z}; }
-inline Vec3 operator+(const Vec3 &a, const float v) { return {a.x + v, a.y + v, a.z + v}; }
-inline Vec3 operator-(const Vec3 &a, const Vec3 &b) { return {a.x - b.x, a.y - b.y, a.z - b.z}; }
-inline Vec3 operator-(const Vec3 &a, const float v) { return {a.x - v, a.y - v, a.z - v}; }
-inline Vec3 operator*(const Vec3 &a, const Vec3 &b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }
-inline Vec3 operator*(const Vec3 &a, const float v) { return {a.x * v, a.y * v, a.z * v}; }
-inline Vec3 operator*(const float v, const Vec3 &a) { return a * v; }
-inline Vec3 operator/(const Vec3 &a, const Vec3 &b) { return {a.x / b.x, a.y / b.y, a.z / b.z}; }
-inline Vec3 operator/(const Vec3 &a, const float v) { return {a.x / v, a.y / v, a.z / v}; }
+inline bool operator!=(const Vec3 &a, const Vec3 &b) {
+	return NotEqual(a.x, b.x) || NotEqual(a.y, b.y) || NotEqual(a.z, b.z);
+}
+
+inline Vec3 operator+(const Vec3 &a, const Vec3 &b) {
+	return Vec3(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+
+inline Vec3 operator+(const Vec3 &a, const float v) {
+	return Vec3(a.x + v, a.y + v, a.z + v);
+}
+
+inline Vec3 operator-(const Vec3 &a, const Vec3 &b) {
+	return Vec3(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+inline Vec3 operator-(const Vec3 &a, const float v) {
+	return Vec3(a.x - v, a.y - v, a.z - v);
+}
+
+inline Vec3 operator*(const Vec3 &a, const Vec3 &b) {
+	return Vec3(a.x * b.x, a.y * b.y, a.z * b.z);
+}
+
+inline Vec3 operator*(const Vec3 &a, const float v) {
+	return Vec3(a.x * v, a.y * v, a.z * v);
+}
+
+inline Vec3 operator*(const float v, const Vec3 &a) {
+	return a * v;
+}
+
+inline Vec3 operator/(const Vec3 &a, const Vec3 &b) {
+	return Vec3(a.x / b.x, a.y / b.y, a.z / b.z);
+}
+
+inline Vec3 operator/(const Vec3 &a, const float v) {
+	return Vec3(a.x / v, a.y / v, a.z / v);
+}
 
 /// Return a random vector.
 Vec3 RandomVec3(float min = -1.f, float max = 1.f);
@@ -127,14 +195,24 @@ Vec3 Min(const Vec3 &a, const Vec3 &b);
 Vec3 Max(const Vec3 &a, const Vec3 &b);
 
 /// Returns the dot product of two vectors.
-inline float Dot(const Vec3 &a, const Vec3 &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+inline float Dot(const Vec3 &a, const Vec3 &b) {
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
 /// Returns the cross product of two vectors.
-inline Vec3 Cross(const Vec3 &a, const Vec3 &b) { return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x}; }
+inline Vec3 Cross(const Vec3 &a, const Vec3 &b) {
+	return Vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+}
 
 /// Returns the provided vector pointing in the opposite direction.
-inline Vec3 Reverse(const Vec3 &v) { return {-v.x, -v.y, -v.z}; }
+inline Vec3 Reverse(const Vec3 &v) {
+	return Vec3(-v.x, -v.y, -v.z);
+}
+
 /// Returns the inverse of a vector.
-inline Vec3 Inverse(const Vec3 &v) { return {1.f / v.x, 1.f / v.y, 1.f / v.z}; }
+inline Vec3 Inverse(const Vec3 &v) {
+	return Vec3(1.F / v.x, 1.F / v.y, 1.F / v.z);
+}
 
 /// Normalize a vector.
 Vec3 Normalize(const Vec3 &v);
@@ -179,6 +257,8 @@ Vec3 Deg3(float x, float y, float z);
 Vec3 Rad3(float x, float y, float z);
 
 /// Return a vector from integer value in the [0;255] range.
-inline Vec3 Vec3I(int x, int y, int z) { return {float(x) / 255.f, float(y) / 255.f, float(z) / 255.f}; }
+inline Vec3 Vec3I(int x, int y, int z) {
+	return Vec3(static_cast<float>(x) / 255.F, static_cast<float>(y) / 255.F, static_cast<float>(z) / 255.F);
+}
 
 } // namespace hg

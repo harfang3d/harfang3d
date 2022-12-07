@@ -24,6 +24,7 @@ set(HDRS
 	motion_blur.h
 	node.h
 	openvr_api.h
+	openxr_api.h
 	physics.h
 	picking_helper.h
 	picture.h
@@ -77,6 +78,7 @@ set(SRCS
 	motion_blur.cpp
 	node.cpp
 	openvr_api.cpp
+	openxr_api.cpp
 	physics.cpp
 	picking_helper.cpp
 	picture.cpp
@@ -126,6 +128,10 @@ if(HG_ENABLE_OPENVR_API)
 	target_link_libraries(engine PRIVATE OpenVR)
 endif()
 
+if(HG_ENABLE_OPENXR_API)
+	target_link_libraries(engine PRIVATE openxr)
+endif()
+
 if(HG_ENABLE_SRANIPAL_API)
 	target_link_libraries(engine PRIVATE SRanipal)
 endif()
@@ -135,7 +141,7 @@ if(HG_ENABLE_RECAST_DETOUR_API)
 endif()
 
 if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
-	target_link_libraries(engine PRIVATE BulletDynamics)
+	target_link_libraries(engine PRIVATE BulletDynamics BulletWorldImporter)
 endif()
 
 if(MSVC)

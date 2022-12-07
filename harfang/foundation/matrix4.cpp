@@ -255,7 +255,7 @@ void Decompose(const Mat4 &m, Vec3 *position, Mat3 *rotation, Vec3 *scale) {
 bool Inverse(const Mat4 &m, Mat4 &I) {
 	float inv[12], det;
 
-	inv[0] = m.m[1][1] * m.m[2][2] - m.m[1][1] - m.m[2][1] * m.m[1][2];
+	inv[0] = m.m[1][1] * m.m[2][2] - m.m[2][1] * m.m[1][2];
 	inv[4] = -m.m[1][0] * m.m[2][2] + m.m[2][0] * m.m[1][2];
 	inv[8] = m.m[1][0] * m.m[2][1] - m.m[2][0] * m.m[1][1];
 	inv[1] = -m.m[0][1] * m.m[2][2] + m.m[2][1] * m.m[0][2];
@@ -272,19 +272,26 @@ bool Inverse(const Mat4 &m, Mat4 &I) {
 			  m.m[2][0] * m.m[0][1] * m.m[1][3] + m.m[2][0] * m.m[0][3] * m.m[1][1];
 	det = m.m[0][0] * inv[0] + m.m[0][1] * inv[4] + m.m[0][2] * inv[8];
 
-	if (!det)
-		return false;
+	bool res = true;
 
-	det = 1.f / det;
+	if (EqualZero(det)) {
+		res = false;
+	} else {
+		det = 1.F / det;
 
-	for (auto i = 0; i < 12; i++)
-		reinterpret_cast<float *>(I.m)[i] = inv[i] * det;
+		size_t k = 0;
+		for (size_t j = 0; j < 3; ++j) {
+			for (size_t i = 0; i < 4; ++i) {
+				I.m[j][i] = inv[k++] * det;
+			}
+		}
+	}
 
-	return true;
+	return res;
 }
 
 Mat4 InverseFast(const Mat4 &m) {
-	const float Sx = 1.f / Len2(GetX(m)), Sy = 1.f / Len2(GetY(m)), Sz = 1.f / Len2(GetZ(m));
+	const float Sx = 1.F / Len2(GetX(m)), Sy = 1.F / Len2(GetY(m)), Sz = 1.F / Len2(GetZ(m));
 	Mat4 o(m.m[0][0] * Sx, m.m[0][1] * Sy, m.m[0][2] * Sz, m.m[1][0] * Sx, m.m[1][1] * Sy, m.m[1][2] * Sz, m.m[2][0] * Sx, m.m[2][1] * Sy, m.m[2][2] * Sz, 0, 0,
 		0);
 
@@ -297,12 +304,12 @@ Mat4 InverseFast(const Mat4 &m) {
 
 //
 Mat4 Orthonormalize(const Mat4 &m) {
-	const auto T = GetT(m);
+	const Vec3 T = GetT(m);
 	return TransformationMat4(T, Orthonormalize(Mat3(m)));
 }
 
 Mat4 Normalize(const Mat4 &m) {
-	const auto T = GetT(m);
+	const Vec3 T = GetT(m);
 	return TransformationMat4(T, Normalize(Mat3(m)));
 }
 
@@ -349,6 +356,24 @@ void Set(Mat4 &m, float m00, float m10, float m20, float m01, float m11, float m
 	m.m[1][3] = m13;
 	m.m[2][3] = m23;
 }
+
+//
+#if 0
+Mat4::Mat4() {
+	m[0][0] = 1.F;
+	m[1][0] = 0.F;
+	m[2][0] = 0.F;
+	m[0][1] = 0.F;
+	m[1][1] = 1.F;
+	m[2][1] = 0.F;
+	m[0][2] = 0.F;
+	m[1][2] = 0.F;
+	m[2][2] = 1.F;
+	m[0][3] = 0.F;
+	m[1][3] = 0.F;
+	m[2][3] = 0.F;
+}
+#endif
 
 //
 Mat4::Mat4(float m00, float m10, float m20, float m01, float m11, float m21, float m02, float m12, float m22, float m03, float m13, float m23) {

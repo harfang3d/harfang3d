@@ -1,3 +1,64 @@
+## Release Notes
+
+This minor release provides several fixes and new features in the VR/XR and Physics areas. Platform compatibility was slightly improved as well on OS X and WASM (still experimental):
+
+### Framework integration and source code maintenance
+* Improved the support of WASM (@PMP-P).
+* Improved the MacOS support (@Tommo).
+* Improved the unit testing & code coverage of `Foundation` and `Engine`.
+* Various fixes to improve the compatibility of [Harfang Studio](https://www.harfang3d.com/en_US/studio) on Linux.
+* CMake Fixes.
+
+### VR/XR
+* OpenXR:
+  * Added the support of OpenXR to Harfang (see `OpenXRInit`, `OpenXRShutdown`, `OpenXREyeFrameBuffer`, `OpenXRCreateEyeFrameBuffer`, `OpenXRGetHeadPose`...).
+  * Support of the most common features.
+  * Support of the hand tracking.
+  * Support of the passthrough.
+  * Support of the eye gaze tracking.
+  * Added the extensions `VARJO_QUADVIEWS` and `COMPOSITION_LAYER_DEPTH` to support the [Varjo XR-3 headset](https://varjo.com/products/xr-3/).
+* OpenVR:
+  * Fixed #34, added a function that tells if the HMD is mounted or not.
+  * Fixed #35, added the support for OpenGL and DX12 renderers.
+
+### Physics
+* Added the support for physics geometries (**Bullet** and **Assetc**).
+* Added the support for **6DOF** physics constraints (see `Add6DofConstraint`, `Remove6DofConstraint`).
+* Added pre-tick callback to the Physics system (see `SetPreTickCallback`).
+   * The `SetPreTickCallback` allows the user to define a function that will be automatically invoked by the Physics solver. This function is provided with 2 parameters, the **physics system** and the **delta of time** within the current solver step:
+       ```python
+       # scene physics
+       physics = hg.SceneBullet3Physics()
+       physics.SceneCreatePhysicsFromAssets(scene)
+       physics_step = hg.time_from_sec_f(1 / 60)
+       
+       function foo(ph, dt)
+           # do physics stuff (AddForce, AddImpulse...) 
+       end
+       
+       physics.SetPreTickCallback(foo)
+       ```
+
+### Misc
+* Fixed #33, added a function to disable/grab mouse cursor (see `DisableCursor`).
+* Fixed incorrect warning message (see `Scene::SetObjectModel` and `Object::IsValid`).
+* Fixed X11 display retrieval and propagate GFLW backend to parent project.
+
+### Rendering
+* Added a blending mode: `BM_AlphaRGB_AddAlpha` (required by [Harfang GUI](https://github.com/harfang3d/harfang-gui)).
+
+### Harfang Python
+* Packaged **Assetc** into the bdist wheel and allow it to be called as a function of harfang.bin module.
+   * Can be used from the command line: 
+     ```bash
+     python3 -m harfang.bin assetc resources_path -api GL
+     ```
+   * Or as a python module: 
+     ```python
+     import harfang.bin
+     harfang.bin.assetc('resources', '-api', 'GL')
+     ```
+
 # [3.2.4] - 2022-09-27
 
 This minor release provides minor corrections and fixes to specific issues:

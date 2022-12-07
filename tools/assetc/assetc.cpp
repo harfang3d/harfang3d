@@ -115,7 +115,7 @@ static std::string global_shader_defines;
 
 //
 struct Toolchain {
-	std::string shaderc, texturec, luac, cmft, recastc, texconv;
+	std::string shaderc, texturec, luac, cmft, recastc, texconv, bulletc;
 };
 
 static Toolchain toolchain;
@@ -133,14 +133,16 @@ static void ToolchainExists() {
 		toolchain.recastc.clear();
 	if (!IsFile(toolchain.texconv.c_str()))
 		toolchain.texconv.clear();
+	if (!IsFile(toolchain.bulletc.c_str()))
+		toolchain.bulletc.clear();
 }
 
 static void SetToolchain(const std::string &path) {
 #ifdef WIN32
 	toolchain = {PathJoin({path, "shaderc.exe"}), PathJoin({path, "texturec.exe"}), PathJoin({path, "luac.exe"}), PathJoin({path, "cmft.exe"}),
-		PathJoin({path, "recastc.exe"}), PathJoin({path, "texconv.exe"})};
+		PathJoin({path, "recastc.exe"}), PathJoin({path, "texconv.exe"}), PathJoin({path, "bulletc.exe"})};
 #else
-	toolchain = {PathJoin({path, "shaderc"}), PathJoin({path, "texturec"}), PathJoin({path, "luac"}), PathJoin({path, "cmft"}), PathJoin({path, "texconv"})};
+	toolchain = {PathJoin({path, "shaderc"}), PathJoin({path, "texturec"}), PathJoin({path, "luac"}), PathJoin({path, "cmft"}), PathJoin({path, "recast"}), PathJoin({path, "texconv"}), PathJoin({path, "bulletc"})};
 #endif
 }
 
@@ -1468,8 +1470,27 @@ static void Physics(std::map<std::string, Hash> &hashes, const std::string &path
 	ProfilerPerfSection perf("Command/Physics");
 
 	log(format("  Physics resource '%1'").arg(path));
-	// [todo]
-	debug("    Skipping, no compiler found for physics resource");
+
+	if (toolchain.bulletc.empty()) {
+		debug("    Skipping, no compiler found for physics bullet resource");
+	} else {
+		if (NeedsCompilation(hashes, {path}, {path}, {})) {
+			const auto cwd = GetCurrentWorkingDirectory();
+			const auto src = FullInputPath(path), dst = FullOutputPath(path);
+
+			if (!CopyFile(src.c_str(), dst.c_str())) {
+				ReportFailedInput(src);
+				const json json_err = {{"type", "FailedToCopyInput"}, {"src", src}, {"dst", dst}};
+				log_error(json_err);
+			}
+
+			const auto cmd = format("\"%1\" \"%2\" \"%3_bullet\" -root \"%4\"").arg(toolchain.bulletc).arg(src).arg(dst).arg(input_dir);
+			PushAsyncProcessTask(path, cmd, cwd);
+		} else {
+			debug("  [O] Physics resource up to date");
+		}
+	}
+
 }
 
 static void PathFinding(std::map<std::string, Hash> &hashes, const std::string &path) {
@@ -1515,7 +1536,6 @@ static AssetType GetAssetFileType(std::string path, const std::vector<std::strin
 	static const std::set<std::string> ignored_exts = {"tmp"};
 
 	const auto ext = tolower(GetFileExtension(path));
-
 	if (ext == "scn") {
 		out_files.push_back(path);
 		return AssetType::Scene;

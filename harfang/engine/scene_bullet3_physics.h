@@ -11,6 +11,8 @@
 class btRigidBody;
 class btDiscreteDynamicsWorld;
 class btCollisionShape;
+class btDynamicsWorld;
+class btGeneric6DofConstraint;
 
 namespace hg {
 
@@ -117,6 +119,12 @@ public:
 	Vec3 NodeGetAngularFactor(const Node &node) const { return NodeGetAngularFactor(node.ref); }
 	void NodeSetAngularFactor(const Node &node, const Vec3 &k) { NodeSetAngularFactor(node.ref, k); }
 
+	btGeneric6DofConstraint *Add6DofConstraint(const NodeRef &nodeARef, const NodeRef &nodeBRef, const Mat4 &anchorALocal, const Mat4 &anchorBInLocalSpaceA);
+	btGeneric6DofConstraint *Add6DofConstraint(const Node &nodeA, const Node &nodeB, const Mat4 &anchorALocal, const Mat4 &anchorBInLocalSpaceA) {
+		return Add6DofConstraint(nodeA.ref, nodeB.ref, anchorALocal, anchorBInLocalSpaceA);
+	}
+	void Remove6DofConstraint(btGeneric6DofConstraint* constraint);
+
 	//
 	btCollisionShape *LoadCollisionTree(const Reader &ir, const ReadProvider &ip, const char *name, int shape_id = 0);
 
@@ -133,7 +141,11 @@ public:
 	//
 	void RenderCollision(bgfx::ViewId view_id, const bgfx::VertexLayout &vtx_decl, bgfx::ProgramHandle program, RenderState state, uint32_t depth);
 
-private:
+	//
+	void SetPreTickCallback(const std::function<void(SceneBullet3Physics &, hg::time_ns t)> &cbk);
+	void TriggerPreTickCallback(hg::time_ns dt);
+
+ private:
 	std::unique_ptr<btDiscreteDynamicsWorld> world;
 
 	std::map<NodeRef, Bullet3Node> nodes;
@@ -148,6 +160,8 @@ private:
 
 	std::map<NodeRef, Mat4> prv_world_mtx; // [EJ] this will probably quickly become a bottleneck and just be replaced by a faster structure
 	std::vector<NodeRef> was_teleported;
+
+	std::function<void(SceneBullet3Physics&, hg::time_ns t)> pre_tick_callback;
 };
 
 } // namespace hg

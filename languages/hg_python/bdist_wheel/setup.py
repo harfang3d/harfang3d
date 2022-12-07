@@ -57,7 +57,7 @@ setup(
 
 	packages=['harfang'],
 	package_data={
-		'harfang': ['*.pyd', '*.pdb', '*.so', '*.so.*', '*.dll', '*.dylib']
+		'harfang': ['*.pyd', '*.pdb', '*.so', '*.so.*', '*.dll', '*.dylib', 'bin/*', 'bin/assetc/*', 'bin/assetc/toolchains/*', 'bin/assetc/toolchains/host*target*/*']
 	},
 	distclass=BinaryDistribution
 )

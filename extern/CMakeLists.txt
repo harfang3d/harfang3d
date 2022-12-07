@@ -43,7 +43,7 @@ if(HG_USE_GLFW)
 		message(ERROR "GLFW: unknown or unsupported backed")
 	endif()
 	set(HG_GLFW_BACKEND ${HG_GLFW_BACKEND} PARENT_SCOPE)
-
+	
 	if(NOT DEFINED HG_REBUILD_GLFW)
 		set(HG_REBUILD_GLFW ON)
 	endif()
@@ -98,6 +98,7 @@ if(HG_USE_GLFW)
 		# we set the corresponding compile definition. This define will be exported in the CMake configuration files.
 		target_compile_definitions(glfw PUBLIC GLFW_${HG_GLFW_BACKEND}=1)
 	endif()
+	set(HG_REBUILD_GLFW ${HG_REBUILD_GLFW} PARENT_SCOPE)
 else()
 	set(HG_GLFW_BACKEND "NONE" PARENT_SCOPE)
 endif()
@@ -138,14 +139,6 @@ target_include_directories(libluadll PUBLIC $<INSTALL_INTERFACE:${CppSdkHeadersD
 
 install_cppsdk_external_target(libluadll lua)
 
-# gtest
-if(HG_BUILD_TESTS)
-	set(gtest_force_shared_crt ON CACHE BOOL "googletest: Force shared CRT")
-
-	add_subdirectory(googletest EXCLUDE_FROM_ALL)
-	set_target_properties(gtest PROPERTIES FOLDER "harfang/3rdparty")
-endif(HG_BUILD_TESTS)
-
 # STB vorbis (customized to handle raw VORBIS stream)
 add_library(stb_vorbis STATIC stb_vorbis/stb_vorbis.c)
 set_target_properties(stb_vorbis PROPERTIES FOLDER "harfang/3rdparty")
@@ -176,11 +169,16 @@ if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
 	set_target_properties(BulletCollision PROPERTIES FOLDER "harfang/3rdparty/bullet3")
 	set_target_properties(BulletCommon PROPERTIES FOLDER "harfang/3rdparty/bullet3")
 	set_target_properties(LinearMath PROPERTIES FOLDER "harfang/3rdparty/bullet3")
+	set_target_properties(BulletWorldImporter PROPERTIES FOLDER "harfang/3rdparty/bullet3")
+	set_target_properties(BulletFileLoader PROPERTIES FOLDER "harfang/3rdparty/bullet3")
 
 	install_cppsdk_external_target(BulletDynamics)
 	install_cppsdk_external_target(BulletCollision)
 	install_cppsdk_external_target(BulletCommon)
 	install_cppsdk_external_target(LinearMath)
+	install_cppsdk_external_target(BulletWorldImporter)
+	install_cppsdk_external_target(BulletFileLoader)
+
 endif()
 
 # imgui
@@ -220,7 +218,7 @@ set(LIBTYPE STATIC)  # build as static library
 add_subdirectory(openal-soft EXCLUDE_FROM_ALL)
 target_include_directories(OpenAL PRIVATE openal-soft-hrtf)
 target_include_directories(OpenAL PUBLIC $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>)
-target_compile_definitions(OpenAL PUBLIC ALSOFT_EMBED_HRTF_DATA=1 AL_LIBTYPE_STATIC=1) # make sure to correctly propagate this flag to consuming librairies
+target_compile_definitions(OpenAL PUBLIC AL_LIBTYPE_STATIC=1) # make sure to correctly propagate this flag to consuming librairies
 set_target_properties(OpenAL PROPERTIES FOLDER "harfang/3rdparty")
 
 # ... try to fix include directories
@@ -301,6 +299,38 @@ if(HG_ENABLE_OPENVR_API)
 	unset(_OPENVR_ARCH)
 endif()
 
+# OpenXR
+if(HG_ENABLE_OPENXR_API)
+	set(BUILD_WITH_SYSTEM_JSONCPP OFF CACHE BOOL "Build json openxr with system" FORCE)
+
+	add_subdirectory(OpenXR EXCLUDE_FROM_ALL)
+	set_target_properties(openxr_loader PROPERTIES FOLDER "harfang/3rdparty")
+
+	add_library(openxr INTERFACE)
+	# Several files use these compile-time platform switches
+	if(WIN32)
+		target_compile_definitions(openxr INTERFACE XR_USE_PLATFORM_WIN32 XR_USE_GRAPHICS_API_D3D11)# XR_USE_GRAPHICS_API_D3D12)
+	elseif(ANDROID)
+		target_compile_definitions(openxr INTERFACE XR_USE_PLATFORM_ANDROID)
+	elseif(PRESENTATION_BACKEND MATCHES "xlib")
+		target_compile_definitions(openxr INTERFACE XR_USE_PLATFORM_XLIB)
+	elseif(PRESENTATION_BACKEND MATCHES "wayland")
+		target_compile_definitions(openxr INTERFACE XR_USE_PLATFORM_WAYLAND)
+	endif()
+	
+	target_compile_definitions(openxr INTERFACE XR_USE_GRAPHICS_API_OPENGL)
+#	find_package(Vulkan)
+#    if(Vulkan_FOUND)
+#		target_include_directories(openxr INTERFACE "bgfx/bgfx/3rdparty/khronos")
+#		target_compile_definitions(openxr INTERFACE XR_USE_GRAPHICS_API_VULKAN)
+#	endif()
+
+	target_link_libraries(openxr INTERFACE openxr_loader)
+	get_target_property(openxr_loader_INCLUDES openxr_loader INCLUDE_DIRECTORIES)
+
+	install_cppsdk_external_target(openxr)
+endif()
+
 # SRanipal
 if(HG_ENABLE_SRANIPAL_API)
 	# [todo] linux
@@ -367,6 +397,10 @@ set(CMAKE_INSTALL_INCLUDEDIR ${CppSdkHeadersDestination}/extern)
 add_subdirectory(meshoptimizer EXCLUDE_FROM_ALL)
 set_target_properties(meshoptimizer PROPERTIES FOLDER "harfang/3rdparty")
 install_cppsdk_external_target(meshoptimizer)
+
+if(HG_ENABLE_OPENXR_API)
+	install_cppsdk_external_target(openxr_loader)
+endif()
 
 # meshoptimizer: in emscripten remove some compile options flag
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")

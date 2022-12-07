@@ -9,3 +9,4 @@
 * Eric Kernin
 * Elie Michel
 * Thomas "Scorpheus" Simonnet
+* Tommo Zhou

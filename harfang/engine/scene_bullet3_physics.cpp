@@ -20,6 +20,8 @@
 
 #include <BulletCollision/BroadphaseCollision/btAxisSweep3.h>
 
+#include <Serialize/BulletWorldImporter/btBulletWorldImporter.h>
+
 #include <memory>
 
 namespace hg {
@@ -129,6 +131,8 @@ SceneBullet3Physics::SceneBullet3Physics(int threads) {
 	debug_draw->setDebugMode(btIDebugDraw::DBG_DrawWireframe | btIDebugDraw::DBG_DrawContactPoints | btIDebugDraw::DBG_DrawConstraints |
 							 btIDebugDraw::DBG_DrawConstraintLimits | btIDebugDraw::DBG_DrawFeaturesText);
 	world->setDebugDrawer(debug_draw);
+
+	pre_tick_callback = nullptr;
 }
 
 SceneBullet3Physics::~SceneBullet3Physics() { Clear(); }
@@ -613,6 +617,21 @@ void SceneBullet3Physics::NodeSetAngularFactor(NodeRef ref, const Vec3 &k) {
 		body->setAngularFactor(to_btVector3(k));
 }
 
+btGeneric6DofConstraint* SceneBullet3Physics::Add6DofConstraint(
+	const NodeRef &nodeARef, const NodeRef &nodeBRef, const Mat4 &anchorALocal, const Mat4 &anchorBInLocalSpaceA) {
+	if (auto bodyA = GetNodeBody(nodeARef, __func__))
+		if (auto bodyB = GetNodeBody(nodeBRef, __func__)) {
+			auto constraint6Dof = new btGeneric6DofConstraint(*bodyA, *bodyB, to_btTransform(anchorALocal), to_btTransform(anchorBInLocalSpaceA), true);
+			world->addConstraint(constraint6Dof);
+			return constraint6Dof;
+		}
+	return nullptr;
+}
+
+void SceneBullet3Physics::Remove6DofConstraint(btGeneric6DofConstraint* constraint6Dof){
+	world->addConstraint(constraint6Dof);
+}
+
 //
 struct NodeCollideWorldCallback : btCollisionWorld::ContactResultCallback {
 	NodeCollideWorldCallback(const Scene &_scene, NodeRef _node_ref) : scene(_scene), node_ref(_node_ref) {}
@@ -775,10 +794,25 @@ btCollisionShape *SceneBullet3Physics::LoadCollisionTree(const Reader &ir, const
 	ScopedReadHandle h(ip, name);
 	DeserializeHandle hnd = {ir, h};
 
-	if (ir.is_valid(hnd.h))
-		collision = nullptr; // NewtonCreateCollisionFromSerialization(world, _ReadCollisionMesh, &hnd);
+	if (ir.is_valid(hnd.h)) {
+		btBulletWorldImporter importer;
+		const size_t size = ir.size(h);
+
+		std::vector<char> buffer(size, 0);
+		ir.read(h, buffer.data(), size);
+
+		if (importer.loadFileFromMemory(buffer.data(), size)) {
+			const int numShape = importer.getNumCollisionShapes();
+
+			if (numShape)
+				collision = importer.getCollisionShapeByIndex(0);
+			else
+				error(format("Failed to load Bullet3 collision tree '%1'").arg(name));
+		}
+	}
 
 	collision_trees[name] = collision;
+
 	if (!collision)
 		warn(format("Failed to load Bullet3 collision tree '%1'").arg(name));
 
@@ -810,6 +844,24 @@ void SceneBullet3Physics::RenderCollision(
 	debug_draw->SetDrawContext({view_id, vtx_decl, program, state, depth});
 
 	world->debugDrawWorld();
+}
+
+void SceneBullet3Physics::TriggerPreTickCallback(hg::time_ns dt) { 
+	if (pre_tick_callback) {
+		pre_tick_callback(*this, dt);
+	}
+}
+
+void PreTickCallbackImpl(btDynamicsWorld *world, btScalar timeStep) {
+	SceneBullet3Physics *phys = reinterpret_cast<SceneBullet3Physics *>(world->getWorldUserInfo());
+	if (phys) {
+		phys->TriggerPreTickCallback(hg::time_from_sec_f(timeStep));
+	}
+}
+
+void SceneBullet3Physics::SetPreTickCallback(const std::function<void(SceneBullet3Physics &, hg::time_ns t)> &cbk) { 
+	pre_tick_callback = cbk; 
+	world->setInternalTickCallback(hg::PreTickCallbackImpl, this, true);
 }
 
 } // namespace hg
