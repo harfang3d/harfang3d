@@ -1,4 +1,4 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include "foundation/color.h"
 #include "foundation/math.h"
@@ -16,6 +16,7 @@ Color operator-(const Color &a, const Color &b) { return {a.r - b.r, a.g - b.g, 
 Color operator-(const Color &a, const float v) { return {a.r - v, a.g - v, a.b - v, a.a - v}; }
 Color operator*(const Color &a, const Color &b) { return {a.r * b.r, a.g * b.g, a.b * b.b, a.a * b.a}; }
 Color operator*(const Color &a, const float v) { return {a.r * v, a.g * v, a.b * v, a.a * v}; }
+Color operator*(const float v, const Color &a) { return a * v; }
 Color operator/(const Color &a, const Color &b) { return {a.r / b.r, a.g / b.g, a.b / b.b, a.a / b.a}; }
 Color operator/(const Color &a, const float v) { return {a.r / v, a.g / v, a.b / v, a.a / v}; }
 
@@ -54,15 +55,16 @@ unsigned int ARGB32ToRGBA32(unsigned int argb) {
 	return ((argb & 0xff) << 24) + (((argb >> 8) & 0xff) << 16) + (((argb >> 16) & 0xff) << 8) + ((argb >> 24) & 0xff);
 }
 
+static inline uint32_t pack_u32(uint8_t r, uint8_t s, uint8_t t, uint8_t p) {
+	return (r << 24) | (s << 16) | (t << 8) | p;
+}
 //
 uint32_t RGBA32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-	uint8_t u8[4] = {a, b, g, r};
-	return *reinterpret_cast<uint32_t *>(u8);
+	return pack_u32(a, b, g, r);
 }
 
 uint32_t ARGB32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-	uint8_t u8[4] = {b, g, r, a};
-	return *reinterpret_cast<uint32_t *>(u8);
+	return pack_u32(r, g, b, a);
 }
 
 /// Vector squared distance.
@@ -73,8 +75,8 @@ float Dist2(const Color &i, const Color &j) {
 float Dist(const Color &i, const Color &j) { return Sqrt(Dist2(i, j)); }
 
 /// Compare two colors with a configurable threshold.
-bool AlmostEqual(const Color &a, const Color &b, float epsilon) {
-	return Abs(a.r - b.r) <= epsilon && Abs(a.g - b.g) <= epsilon && Abs(a.b - b.b) <= epsilon && Abs(a.a - b.a) <= epsilon;
+bool AlmostEqual(const Color &a, const Color &b, float e) {
+	return AlmostEqual(a.r, b.r, e) && AlmostEqual(a.g, b.g, e) && AlmostEqual(a.b, b.b, e) && AlmostEqual(a.a, b.a, e);
 }
 
 /// Scale the chroma component of a color, return the result as a new color.
@@ -90,11 +92,16 @@ Color Clamp(const Color &c, const Color &min, const Color &max) {
 
 //
 Color ClampLen(const Color &c, float min, float max) {
-	const auto l2 = float(c.r * c.r + c.g * c.g + c.b * c.b);
-	if ((l2 >= (min * min) && l2 <= (max * max)) || l2 < 0.000001f)
-		return c;
-	const auto l = Sqrt(l2);
-	return c * Clamp(l, min, max) / l;
+	const float l2 = static_cast<float>(c.r * c.r + c.g * c.g + c.b * c.b);
+
+	Color o = c;
+
+	if ((l2 < (min * min) || l2 > (max * max)) && l2 > std::numeric_limits<float>::epsilon()) {
+		const float l = Sqrt(l2);
+		o = c * Clamp(l, min, max) / l;
+	}
+
+	return o;
 }
 
 Color ColorFromVector3(const Vec3 &v) { return {v.x, v.y, v.z, 1}; }
@@ -152,57 +159,57 @@ static float QqhToRgb(float q1, float q2, float hue) {
 }
 
 Color FromHLS(const Color &c) {
-	const float p2 = c.g <= 0.5f ? c.g * (1.f + c.b) : c.g + c.b - c.g * c.b;
-	const float p1 = 2.f * c.g - p2;
-
 	float r, g, b;
 
-	if (c.b == 0.f) {
+	if (EqualZero(c.b)) {
 		r = c.g;
 		g = c.g;
 		b = c.g;
 	} else {
-		r = QqhToRgb(p1, p2, c.r + 120.f);
+		const float p2 = c.g <= 0.5F ? c.g * (1.F + c.b) : c.g + c.b - c.g * c.b;
+		const float p1 = 2.F * c.g - p2;
+
+		r = QqhToRgb(p1, p2, c.r + 120.F);
 		g = QqhToRgb(p1, p2, c.r);
-		b = QqhToRgb(p1, p2, c.r - 120.f);
+		b = QqhToRgb(p1, p2, c.r - 120.F);
 	}
 
-	return {r, g, b, c.a};
+	return Color(r, g, b, c.a);
 }
 
 //
 Color SetHue(const Color &c, float h) {
-	auto hls = ToHLS(c);
+	Color hls = ToHLS(c);
 	hls.r = h;
 	return FromHLS(hls);
 }
 
 Color SetSaturation(const Color &c, float s) {
-	auto hls = ToHLS(c);
+	Color hls = ToHLS(c);
 	hls.b = s;
 	return FromHLS(hls);
 }
 
 Color SetLuminance(const Color &c, float l) {
-	auto hls = ToHLS(c);
+	Color hls = ToHLS(c);
 	hls.g = l;
 	return FromHLS(hls);
 }
 
 Color ScaleHue(const Color &c, float k) {
-	auto hls = ToHLS(c);
+	Color hls = ToHLS(c);
 	hls.r *= k;
 	return FromHLS(hls);
 }
 
 Color ScaleSaturation(const Color &c, float k) {
-	auto hls = ToHLS(c);
+	Color hls = ToHLS(c);
 	hls.b *= k;
 	return FromHLS(hls);
 }
 
 Color ScaleLuminance(const Color &c, float k) {
-	auto hls = ToHLS(c);
+	Color hls = ToHLS(c);
 	hls.g *= k;
 	return FromHLS(hls);
 }

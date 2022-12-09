@@ -158,7 +158,7 @@ struct Window {
 void *GetDisplay() {
 #if GLFW_WAYLAND
 	return glfwGetWaylandDisplay();
-#elif GLFW_LINUX
+#elif GLFW_X11
 	return glfwGetX11Display();
 #else
 	return nullptr;
@@ -423,6 +423,11 @@ void ShowCursor() {
 void HideCursor() {
 	if (window_in_focus)
 		glfwSetInputMode((GLFWwindow *)window_in_focus, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+}
+
+void DisableCursor() {
+	if (window_in_focus)
+		glfwSetInputMode((GLFWwindow *)window_in_focus, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 GLFWwindow *GetGLFWWindow(const Window *w) { return (GLFWwindow *)w; }

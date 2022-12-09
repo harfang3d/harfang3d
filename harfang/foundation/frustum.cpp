@@ -16,8 +16,8 @@ static inline Plane NormalizePlane(const Plane &p) {
 
 Frustum MakeFrustum(const Mat44 &projection) {
 	const auto X = GetRow(projection, 0), Y = GetRow(projection, 1), Z = GetRow(projection, 2), W = GetRow(projection, 3);
-	return {Opposite(NormalizePlane(W + Y)), Opposite(NormalizePlane(W - Y)), Opposite(NormalizePlane(W + X)), Opposite(NormalizePlane(W - X)),
-		Opposite(NormalizePlane(W + Z)), Opposite(NormalizePlane(W - Z))};
+	return {Reverse(NormalizePlane(W + Y)), Reverse(NormalizePlane(W - Y)), Reverse(NormalizePlane(W + X)), Reverse(NormalizePlane(W - X)),
+		Reverse(NormalizePlane(W + Z)), Reverse(NormalizePlane(W - Z))};
 }
 
 Frustum MakeFrustum(const Mat44 &projection, const Mat4 &m) { return TransformFrustum(MakeFrustum(projection), m); }

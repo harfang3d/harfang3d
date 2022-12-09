@@ -8,6 +8,10 @@ if(HG_ENABLE_RECAST_DETOUR_API)
 	add_subdirectory(recastc)
 endif()
 
+if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
+	add_subdirectory(bulletc)
+endif()
+
 if(UNIX)
 	target_link_libraries(assetc pthread)
 endif()
@@ -37,3 +41,8 @@ endif()
 if(HG_ENABLE_RECAST_DETOUR_API)
 	install(TARGETS recastc RUNTIME DESTINATION ${TOOLCHAIN_PATH} COMPONENT assetc)
 endif()
+
+if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
+	install(TARGETS bulletc RUNTIME DESTINATION ${TOOLCHAIN_PATH} COMPONENT assetc)
+endif()
+

@@ -343,20 +343,20 @@ static void ExportMotions(
 			float simplify_color_tolerance = config.anim_simplify_color_tolerance;
 
 			if (simplify_translation_tolerance > 0) {
-				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Vec3>, hg::Vec3>(pos_track, simplify_translation_tolerance);
+				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Vec3>>(pos_track, simplify_translation_tolerance);
 				hg::debug(hg::format("Clean position track: %1").arg(removed));
 			}
 			if (simplify_rotation_tolerance > 0) {
-				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackT<hg::Quaternion>, hg::Quaternion>(rot_track, simplify_rotation_tolerance);
+				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackT<hg::Quaternion>>(rot_track, simplify_rotation_tolerance);
 				hg::debug(hg::format("Clean rotation track: %1").arg(removed));
 			}
 			if (simplify_scale_tolerance > 0) {
-				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Vec3>, hg::Vec3>(scl_track, simplify_scale_tolerance);
+				auto removed = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Vec3>>(scl_track, simplify_scale_tolerance);
 				hg::debug(hg::format("Clean rotation track: %1").arg(removed));
 			}
 			if (light != nullptr && simplify_color_tolerance > 0) {
-				auto removed0 = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Color>, hg::Color>(diffuse_track, simplify_color_tolerance);
-				auto removed1 = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Color>, hg::Color>(specular_track, simplify_color_tolerance);
+				auto removed0 = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Color>>(diffuse_track, simplify_color_tolerance);
+				auto removed1 = hg::SimplifyAnimTrackT<hg::AnimTrackHermiteT<hg::Color>>(specular_track, simplify_color_tolerance);
 				hg::debug(hg::format("Clean light tracks: %1").arg(removed0 + removed1));
 			}
 

@@ -1,39 +1,39 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include "foundation/quaternion.h"
 #include "foundation/math.h"
 #include "foundation/matrix3.h"
 #include "foundation/vector3.h"
+#include "foundation/vector4.h"
 
 namespace hg {
 
 const Quaternion Quaternion::Identity(0, 0, 0, 1);
 
 Quaternion Slerp(const Quaternion &a, const Quaternion &b, float t) {
-	float d = Dot(a, b);
-
+	float cs = Dot(a, b);
 	bool bFlip = false;
 
-	if (d < 0.f) {
-		d = -d;
+	if (cs < 0.F) {
+		cs = -cs;
 		bFlip = true;
 	}
 
-	float inv_d;
-	if (1.f - d < 0.000001f) {
-		inv_d = 1.f - t;
+	float s;
+	if (cs > (1.F - 0.000001F)) {
+		s = 1.F - t;
 	} else {
-		float theta = ACos(d);
-		float s = 1.f / Sin(theta);
-
-		inv_d = Sin((1.f - t) * theta) * s;
-		t = Sin(t * theta) * s;
+		const float theta = ACos(cs);
+		const float sn = Sin(theta);
+		s = Sin((1.F - t) * theta) / sn;
+		t = Sin(t * theta) / sn;
 	}
 
-	if (bFlip)
+	if (bFlip) {
 		t = -t;
+	}
 
-	return Quaternion(inv_d * a.x + t * b.x, inv_d * a.y + t * b.y, inv_d * a.z + t * b.z, inv_d * a.w + t * b.w);
+	return Quaternion(s * a.x + t * b.x, s * a.y + t * b.y, s * a.z + t * b.z, s * a.w + t * b.w);
 }
 
 //
@@ -124,15 +124,14 @@ Quaternion QuaternionFromEuler(float x, float y, float z, RotationOrder rorder) 
 		case RO_XZY:
 			r = qx * qz * qy;
 			break;
-		default:
-		case RO_YXZ:
-			r = qy * qx * qz;
-			break;
 		case RO_XYZ:
 			r = qx * qy * qz;
 			break;
 		case RO_XY:
 			r = qx * qy;
+			break;
+		default: // RO_YXZ
+			r = qy * qx * qz;
 			break;
 	}
 	return Normalize(r);
@@ -168,5 +167,15 @@ Mat3 ToMatrix3(const Quaternion &q) {
 
 Vec3 ToEuler(const Quaternion &q, RotationOrder rorder) { return ToEuler(ToMatrix3(q), rorder); }
 Quaternion QuaternionFromEuler(const Vec3 &v, RotationOrder order) { return QuaternionFromEuler(v.x, v.y, v.z, order); }
+
+Vec3 Rotate(const Quaternion &q, const Vec3 &v) {
+	Vec3 u(q.x, q.y, q.z);
+	const float s = q.w;
+	return 2.F * Dot(u, v) * u + (s * s - Dot(u, u)) * v + 2.F * s * Cross(u, v);
+}
+
+Vec4 Rotate(const Quaternion &q, const Vec4 &v) {
+	return Vec4(Rotate(q, Vec3(v)), v.w);
+}
 
 } // namespace hg

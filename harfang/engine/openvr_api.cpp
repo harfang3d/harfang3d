@@ -269,9 +269,31 @@ void OpenVRSubmitFrame(void *left_eye_texture, void *right_eye_texture) {
 	if (!vr::VRCompositor())
 		return;
 
-	vr::Texture_t leftEyeTexture = {left_eye_texture, vr::TextureType_DirectX, vr::ColorSpace_Gamma};
+	vr::ETextureType texture_type;
+	switch (bgfx::getRendererType()) {
+		case bgfx::RendererType::Direct3D11:
+			texture_type = vr::TextureType_DirectX;
+			break;
+		case bgfx::RendererType::Direct3D12:
+			texture_type = vr::TextureType_DirectX12;
+			break;
+		case bgfx::RendererType::OpenGLES:
+		case bgfx::RendererType::OpenGL:
+			texture_type = vr::TextureType_OpenGL;
+			break;
+		case bgfx::RendererType::Vulkan:
+			texture_type = vr::TextureType_Vulkan;
+			break;
+		case bgfx::RendererType::Metal:
+			texture_type = vr::TextureType_Metal;
+			break;
+		default:
+			return;
+	}
+
+	vr::Texture_t leftEyeTexture = {left_eye_texture, texture_type, vr::ColorSpace_Gamma};
 	vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
-	vr::Texture_t rightEyeTexture = {right_eye_texture, vr::TextureType_DirectX, vr::ColorSpace_Gamma};
+	vr::Texture_t rightEyeTexture = {right_eye_texture, texture_type, vr::ColorSpace_Gamma};
 	vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
 }
 
@@ -333,6 +355,13 @@ void OpenVRPostPresentHandoff() { vr::VRCompositor()->PostPresentHandoff(); }
 Texture OpenVRGetColorTexture(const OpenVREyeFrameBuffer &eye) { return {BGFX_TEXTURE_RT | ovraa_flags[eye.aa], eye.color}; }
 Texture OpenVRGetDepthTexture(const OpenVREyeFrameBuffer &eye) { return {BGFX_TEXTURE_RT_WRITE_ONLY | ovraa_flags[eye.aa], eye.depth}; }
 
+//
+bool OpenVRIsHMDMounted() { 
+	vr::EDeviceActivityLevel lvl = vr_system->GetTrackedDeviceActivityLevel(vr::k_unTrackedDeviceIndex_Hmd);
+	return (lvl == vr::k_EDeviceActivityLevel_UserInteraction) || (lvl == vr::k_EDeviceActivityLevel_UserInteraction_Timeout);
+}
+
+
 } // namespace hg
 
 #else
@@ -360,6 +389,8 @@ void OpenVRSubmitFrame(void *, void *) {}
 void OpenVRSubmitFrame(const OpenVREyeFrameBuffer &, const OpenVREyeFrameBuffer &) {}
 
 void OpenVRPostPresentHandoff() {}
+
+bool OpenVRIsHMDMounted() { return false; }
 
 Texture OpenVRGetColorTexture(const OpenVREyeFrameBuffer &eye) { return {}; }
 Texture OpenVRGetDepthTexture(const OpenVREyeFrameBuffer &eye) { return {}; }

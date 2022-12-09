@@ -6,10 +6,6 @@
 	path = extern/openvr
 	url = https://github.com/ValveSoftware/openvr.git
 	branch = v.1.6.10b  
-[submodule "extern/googletest"]
-	path = extern/googletest
-	url = https://github.com/google/googletest.git
-	branch = release-1.11.0
 [submodule "extern/glfw"]
 	path = extern/glfw
 	url = https://github.com/glfw/glfw.git
@@ -36,3 +32,6 @@
 [submodule "tools/assimp_converter/assimp"]
 	path = tools/assimp_converter/assimp
 	url = https://github.com/assimp/assimp
+[submodule "extern/OpenXR"]
+	path = extern/OpenXR
+	url = https://github.com/KhronosGroup/OpenXR-SDK.git

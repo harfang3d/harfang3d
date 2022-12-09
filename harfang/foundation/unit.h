@@ -62,8 +62,8 @@ template <typename T> constexpr T Inch(T v) {
 	return v * T(0.0254);
 }
 
-inline constexpr size_t KB(const size_t size) { return size * 1024; }
-inline constexpr size_t MB(const size_t size) { return size * 1024 * 1024; }
+inline constexpr int64_t KB(const int64_t size) { return size * 1024; }
+inline constexpr int64_t MB(const int64_t size) { return size * 1024 * 1024; }
 
 template <typename T> std::string FormatMemorySize(T v_) {
 	std::ostringstream str;

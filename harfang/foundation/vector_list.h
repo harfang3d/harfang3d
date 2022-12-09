@@ -1,4 +1,4 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #pragma once
 
@@ -30,13 +30,15 @@ class vector_list {
 public:
 	static const uint32_t invalid_idx = 0xffffffff;
 
-	vector_list() = default;
-	explicit vector_list(size_t count) { reserve(count); }
+	vector_list() : storage_capacity_(0), storage_(nullptr), idx_(), size_(0), free_(0) {}
+	explicit vector_list(size_t count) : storage_capacity_(0), storage_(nullptr), idx_(), size_(0), free_(0) {
+		reserve(count);
+	}
 
 	//
 	void reserve(size_t count) {
 		__ASSERT__(count < 0x00ffffff);
-		const auto capacity_ = uint32_t(idx_.size());
+		const uint32_t capacity_ = uint32_t(idx_.size());
 
 		if (count > capacity_) {
 			reserve_storage_(count);
@@ -51,7 +53,7 @@ public:
 	size_t capacity() const { return idx_.size(); }
 
 	void clear() {
-		for (auto i = first(); i != invalid_idx; i = next(i))
+		for (uint32_t i = first(); i != invalid_idx; i = next(i))
 			reinterpret_cast<T *>(storage_)[i].~T();
 
 		free(storage_);
@@ -103,14 +105,34 @@ public:
 	public:
 		inline iterator(vector_list<T> *c_, uint32_t i_) : c(c_), i(i_) {}
 
-		inline T &operator*() const { return (*c)[i]; }
-		inline T *operator->() const { return &(*c)[i]; }
+		inline T &operator*() const {
+			return (*c)[i];
+		}
 
-		inline bool operator==(const iterator &i_) const { return i == i_.i; }
-		inline bool operator!=(const iterator &i_) const { return i != i_.i; }
-		inline void operator++() { i = c->next(i); }
+		inline T *operator->() const {
+			return &(*c)[i];
+		}
 
-		inline uint32_t idx() const { return i; }
+		inline iterator &operator++() {
+			i = c->next(i);
+			return *this;
+		}
+		inline iterator operator++(int) {
+			iterator tmp = *this;
+			i = c->next(i);
+			return tmp;
+		}
+
+		inline bool operator==(const iterator &i_) const {
+			return i == i_.i;
+		}
+		inline bool operator!=(const iterator &i_) const {
+			return i != i_.i;
+		}
+
+		inline uint32_t idx() const {
+			return i;
+		}
 
 	private:
 		vector_list<T> *c;
@@ -124,14 +146,29 @@ public:
 	public:
 		inline const_iterator(const vector_list<T> *c_, uint32_t i_) : c(c_), i(i_) {}
 
-		inline const T &operator*() const { return (*c)[i]; }
-		inline const T *operator->() const { return &(*c)[i]; }
+		inline const T &operator*() const {
+			return (*c)[i];
+		}
 
-		inline bool operator==(const const_iterator &i_) const { return i == i_.i; }
-		inline bool operator!=(const const_iterator &i_) const { return i != i_.i; }
-		inline void operator++() { i = c->next(i); }
+		inline const T *operator->() const {
+			return &(*c)[i];
+		}
 
-		inline uint32_t idx() const { return i; }
+		inline bool operator==(const const_iterator &i_) const {
+			return i == i_.i;
+		}
+
+		inline bool operator!=(const const_iterator &i_) const {
+			return i != i_.i;
+		}
+
+		inline void operator++() {
+			i = c->next(i);
+		}
+
+		inline uint32_t idx() const {
+			return i;
+		}
 
 	private:
 		const vector_list<T> *c;
@@ -181,7 +218,7 @@ public:
 	}
 
 	uint32_t remove(uint32_t i) {
-		const auto n = next(i); // next entry in use
+		const uint32_t n = next(i); // next entry in use
 
 		{
 			const uint32_t idx = idx_[i];
@@ -255,7 +292,7 @@ private:
 	template <typename U=T>
 	inline typename std::enable_if<(!std::is_trivially_copyable<U>::value) && std::is_move_constructible<U>::value, void>::type
 	transfer_storage(U *new_storage) {
-		for (auto i = first(); i != invalid_idx; i = next(i)) {
+		for (uint32_t i = first(); i != invalid_idx; i = next(i)) {
 			U* dst = reinterpret_cast<U *>(new_storage) + i;
 			U* src = reinterpret_cast<U *>(storage_) + i;
 			new (dst) T(std::move(*src));
@@ -265,7 +302,7 @@ private:
 	template <typename U=T>
 	inline typename std::enable_if<(!std::is_trivially_copyable<U>::value) && (!std::is_move_constructible<U>::value), void>::type
 	transfer_storage(U *new_storage) {
-		for (auto i = first(); i != invalid_idx; i = next(i)) {
+		for (uint32_t i = first(); i != invalid_idx; i = next(i)) {
 			U* dst = reinterpret_cast<U *>(new_storage) + i;
 			U* src = reinterpret_cast<U *>(storage_) + i;
 			new (dst) U(*src);
@@ -276,7 +313,7 @@ private:
 		if (capacity > storage_capacity_) {
 			void *new_storage_ = malloc(sizeof(T) * capacity);
 			transfer_storage((T*)new_storage_);
-			for (auto i = first(); i != invalid_idx; i = next(i))
+			for (uint32_t i = first(); i != invalid_idx; i = next(i))
 				reinterpret_cast<T *>(storage_)[i].~T();
 			free(storage_);
 			storage_ = new_storage_;
@@ -286,8 +323,8 @@ private:
 
 	std::vector<uint32_t> idx_;
 
-	size_t size_{};
-	uint32_t free_{};
+	size_t size_;
+	uint32_t free_;
 
 	static size_t get_storage_adjusted_reserve(size_t size) { return size + size / 8; }
 

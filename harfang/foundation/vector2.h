@@ -4,17 +4,19 @@
 
 #include <cstddef>
 
+#include "foundation/cext.h"
+#include "foundation/assert.h"
+
 namespace hg {
 
 struct Vec3;
 struct Vec4;
-struct Mat3;
 
 template <class T> struct tVec2 {
 	static tVec2 Zero;
 	static tVec2 One;
 
-	tVec2<T>() = default;
+	tVec2<T>() : x(0), y(0) {}
 	tVec2<T>(T x_, T y_) : x(x_), y(y_) {}
 	explicit tVec2<T>(const Vec3 &v);
 	explicit tVec2<T>(const Vec4 &v);
@@ -67,8 +69,41 @@ template <class T> struct tVec2 {
 		return *this;
 	}
 
-	inline float operator[](size_t n) const { return (&x)[n]; }
-	inline float &operator[](size_t n) { return (&x)[n]; }
+	inline tVec2<T> operator-() const {
+		return tVec2<T>(-x, -y);
+	}
+
+	inline T operator[](size_t n) const {
+		__ASSERT__(n >= 0 && n <= 1);
+
+		T v;
+
+		if (n == 0) {
+			v = x;
+		} else if (n == 1) {
+			v = y;
+		} else {
+			v = std::numeric_limits<T>::max();
+		}
+
+		return v;
+	}
+
+	inline T &operator[](size_t n) {
+		__ASSERT__(n >= 0 && n <= 1);
+
+		T *v;
+
+		if (n == 0) {
+			v = &x;
+		} else if (n == 1) {
+			v = &y;
+		} else {
+			v = nullptr;
+		}
+
+		return *v;
+	}
 
 	T x, y;
 };
@@ -82,6 +117,9 @@ template <typename T> tVec2<T> tVec2<T>::One{1, 1};
 template <typename T> bool operator==(const tVec2<T> &a, const tVec2<T> &b) { return a.x == b.x && a.y == b.y; }
 template <typename T> bool operator!=(const tVec2<T> &a, const tVec2<T> &b) { return a.x != b.x || a.y != b.y; }
 
+template <> bool operator==(const tVec2<float> &a, const tVec2<float> &b);
+template <> bool operator!=(const tVec2<float> &a, const tVec2<float> &b);
+
 template <typename T> bool AlmostEqual(const tVec2<T> &a, const tVec2<T> &b, float e) { return Abs(a.x - b.x) <= e && Abs(a.y - b.y) <= e; }
 
 template <typename T> tVec2<T> operator+(const tVec2<T> &a, const tVec2<T> &b) { return {a.x + b.x, a.y + b.y}; }
@@ -94,7 +132,6 @@ template <typename T> tVec2<T> operator*(const T k, const tVec2<T> &v) { return 
 template <typename T> tVec2<T> operator/(const tVec2<T> &a, const tVec2<T> &b) { return {a.x / b.x, a.y / b.y}; }
 template <typename T> tVec2<T> operator/(const tVec2<T> &v, const T k) { return {v.x / k, v.y / k}; }
 
-template <typename T> tVec2<T> operator*(const tVec2<T> &v, const Mat3 &m);
 
 template <typename T> tVec2<T> Min(const tVec2<T> &v, const tVec2<T> &m) { return {v.x < m.x ? v.x : m.x, v.y < m.y ? v.y : m.y}; }
 template <typename T> tVec2<T> Max(const tVec2<T> &v, const tVec2<T> &m) { return {v.x > m.x ? v.x : m.x, v.y > m.y ? v.y : m.y}; }

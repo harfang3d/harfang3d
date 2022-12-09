@@ -31,6 +31,7 @@ template <typename T> struct AnimKeyT {
 };
 
 template <typename T> struct AnimTrackT {
+	using Value = T;
 	using Key = AnimKeyT<T>;
 	std::string target;
 	std::deque<Key> keys;
@@ -44,6 +45,7 @@ template <typename T> struct AnimKeyHermiteT {
 };
 
 template <typename T> struct AnimTrackHermiteT {
+	using Value = T;
 	using Key = AnimKeyHermiteT<T>;
 	std::string target;
 	std::deque<Key> keys;
@@ -211,8 +213,8 @@ struct Anim {
 	std::vector<AnimTrackHermiteT<Color>> color_tracks;
 	std::vector<AnimTrackT<std::string>> string_tracks;
 	AnimTrackT<InstanceAnimKey> instance_anim_track;
-	time_ns t_start, t_end;
-	uint8_t flags{};
+	time_ns t_start{0}, t_end{0};
+	uint8_t flags{0};
 };
 
 void SaveAnimToJson(nlohmann::json &js, const Anim &anim);
@@ -242,47 +244,45 @@ void ResampleAnim(Anim &anim, time_ns old_start, time_ns old_end, time_ns new_st
 void ReverseAnim(Anim &anim, time_ns t_start, time_ns t_end);
 void QuantizeAnim(Anim &anim, time_ns t_step);
 
-static bool CompareKeyValue(const Vec3 &v_a, const Vec3 &v_b, float epsilon) { return Len(v_a - v_b) <= epsilon; }
+inline bool CompareKeyValue(const float &t0, const float &t1, float epsilon) { return AlmostEqual(t0, t1, epsilon); }
 
-static bool CompareKeyValue(const Quaternion &v_a, const Quaternion &v_b, float epsilon) { return Abs(ACos(Dot(v_a, v_b))) <= epsilon * 0.5f; }
+inline bool CompareKeyValue(const Vec3 &v_a, const Vec3 &v_b, float epsilon) { return Len(v_a - v_b) <= epsilon; }
 
-static bool CompareKeyValue(const Color &v_a, const Color &v_b, float epsilon) {
+inline bool CompareKeyValue(const Quaternion &v_a, const Quaternion &v_b, float epsilon) { 
+	float v = Dot(v_a, v_b);
+	if (v < 0.f) {
+		v = Dot(v_a, v_b * -1.f);
+	}
+	return (2.f * Abs(ACos(v))) <= epsilon;
+}
+
+inline bool CompareKeyValue(const Color &v_a, const Color &v_b, float epsilon) {
 	return Max(Abs(v_a.r - v_b.r), Max(Abs(v_a.g - v_b.g), Max(Abs(v_a.b - v_b.b), Abs(v_a.a - v_b.a)))) <= epsilon;
 }
 
 //
-template <typename AnimTrack, typename T> size_t SimplifyAnimTrackT(AnimTrack &track, float epsilon) {
-	AnimTrack track_ref = track;
-	track.keys.clear();
+template <typename AnimTrack> size_t SimplifyAnimTrackT(AnimTrack &track, float epsilon) {
+	size_t removed = 0;
 
-	// copy keys that can't be interpolated from the others
-	int last_copied = 0;
-	for (int i = 0; i < track_ref.keys.size(); i++) {
-		if (i == 0 || i == track_ref.keys.size() - 1) {
-			track.keys.push_back(track_ref.keys[i]);
-			last_copied = i;
+	for (size_t i = 1; (i + 1) < track.keys.size();) {
+		typename AnimTrack::Key k = track.keys[i];
+		typename AnimTrack::Value interpolated;
+
+		track.keys.erase(track.keys.begin() + i);
+		if (Evaluate(track, k.t, interpolated) && CompareKeyValue(interpolated, k.v, epsilon)) {
+			removed++;
 		} else {
-			const auto &prev = track_ref.keys[last_copied];
-			const auto &next = track_ref.keys[i + 1];
-			for (int j = last_copied + 1; j <= i; j++) {
-				const auto &src_key = track_ref.keys[j];
-				T interpolated;
-				Evaluate(track, src_key.t, interpolated);
-				if (!CompareKeyValue(interpolated, src_key.v, epsilon)) {
-					track.keys.push_back(src_key);
-					last_copied = i;
-					break;
-				}
-			}
+			track.keys.insert(track.keys.begin() + i, k);
+			i++;
 		}
 	}
 
 	// erase last key if it's the same as the first and there's just the two of them
-	if (track.keys.size() == 2 && CompareKeyValue(track.keys[0].v, track.keys[1].v, epsilon))
+	if (track.keys.size() == 2 && CompareKeyValue(track.keys[0].v, track.keys[1].v, epsilon)) {
 		track.keys.pop_back();
-
-	__ASSERT__(track.keys.size() <= track_ref.keys.size());
-	return track_ref.keys.size() - track.keys.size();
+		removed++;
+	}
+	return removed;
 }
 
 //

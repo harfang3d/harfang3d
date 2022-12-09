@@ -1,4 +1,4 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #include <foundation/data.h>
 #include <foundation/rw_interface.h>
@@ -7,7 +7,7 @@
 namespace hg {
 
 bool Exists(const Reader &ir, const ReadProvider &ip, const char *path) {
-	auto h = ip.open(path, true);
+	Handle h = ip.open(path, true);
 	if (!ir.is_valid(h))
 		return false;
 	ip.close(h);
@@ -32,7 +32,7 @@ bool Read(const Reader &i, const Handle &h, std::string &v) {
 }
 
 bool Write(const Writer &i, const Handle &h, const std::string &v) {
-	const auto size = uint16_t(v.size());
+	const uint16_t size = uint16_t(v.size());
 	return Write(i, h, size) && i.write(h, v.data(), size) == size;
 }
 
@@ -55,14 +55,17 @@ bool Seek(const Writer &i, const Handle &h, ptrdiff_t offset, SeekMode mode) { r
 //
 Data LoadData(const Reader &i, const Handle &h) {
 	Data data;
-	auto size = i.size(h);
-	data.Skip(size);
-	i.read(h, data.GetData(), data.GetSize());
+	const size_t size = i.size(h);
+	if(data.Skip(size)) {
+		i.read(h, data.GetData(), data.GetSize());
+	} else {
+		i.seek(h, size, SM_Current);
+	}
 	return data;
 }
 
 std::string LoadString(const Reader &i, const Handle &h) {
-	auto size = i.size(h);
+	const size_t size = i.size(h);
 	std::string str(size, 0);
 	i.read(h, &str[0], size);
 	return str;

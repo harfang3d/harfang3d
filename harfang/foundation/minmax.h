@@ -1,8 +1,9 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #pragma once
 
 #include "foundation/axis.h"
+#include "foundation/cext.h"
 #include "foundation/vector3.h"
 
 namespace hg {
@@ -10,7 +11,7 @@ namespace hg {
 struct Mat4;
 
 struct MinMax {
-	MinMax() = default;
+	MinMax() : mn(Vec3::Max), mx(Vec3::Min) {}
 	MinMax(const Vec3 &min, const Vec3 &max) : mn(min), mx(max) {}
 
 	Vec3 mn, mx;
@@ -49,7 +50,7 @@ inline MinMax Union(const MinMax &a, const MinMax &b) { return {Min(a.mn, b.mn),
 inline MinMax Union(const MinMax &mm, const Vec3 &p) { return {Min(mm.mn, p), Max(mm.mx, p)}; }
 
 /// Return a transformed copy of a minmax instance.
-MinMax operator*(const MinMax &mm, const Mat4 &m);
+MinMax operator*(const Mat4 &m, const MinMax &mm);
 
 /// Intersect ray with this minmax.
 bool IntersectRay(const MinMax &mm, const Vec3 &o, const Vec3 &d, float &tmin, float &tmax);

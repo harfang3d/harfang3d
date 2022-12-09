@@ -374,7 +374,7 @@ DepthTest GetMaterialDepthTest(const Material &mat);
 void SetMaterialDepthTest(Material &mat, DepthTest test);
 
 /// Control the compositing mode used to draw primitives.
-enum BlendMode { BM_Additive, BM_Alpha, BM_Darken, BM_Lighten, BM_Multiply, BM_Opaque, BM_Screen, BM_LinearBurn, BM_Undefined };
+enum BlendMode { BM_Additive, BM_Alpha, BM_Darken, BM_Lighten, BM_Multiply, BM_Opaque, BM_Screen, BM_LinearBurn, BM_AlphaRGB_AddAlpha, BM_Undefined };
 
 BlendMode GetMaterialBlendMode(const Material &mat);
 void SetMaterialBlendMode(Material &mat, BlendMode mode);

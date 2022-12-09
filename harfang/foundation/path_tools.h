@@ -1,4 +1,4 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #pragma once
 
@@ -8,9 +8,6 @@
 namespace hg {
 
 bool IsPathAbsolute(const std::string &path);
-
-std::string PathToDisplay(const std::string &path);
-std::string NormalizePath(const std::string &path);
 
 std::string PathToDisplay(const std::string &path);
 std::string NormalizePath(const std::string &path);
@@ -28,6 +25,9 @@ std::string FactorizePath(const std::string &path);
 */
 std::string CleanPath(const std::string &path);
 std::string CleanFileName(const std::string &filename);
+
+// Returns the absolute pathname of an existing file or directory.
+std::string GetAbsolutePath(const std::string path);
 
 /// Returns the folder navigation part of a file path. The file name and its extension are stripped.
 /// @see CutFileExtension and CutFileName.
@@ -49,6 +49,8 @@ bool PathStartsWith(const std::string &path, const std::string &with);
 std::string PathStripPrefix(const std::string &path, const std::string &prefix);
 std::string PathStripSuffix(const std::string &path, const std::string &suffix);
 std::string PathJoin(const std::vector<std::string> &elements);
+std::string PathJoin(const std::string &a, const std::string &b);
+std::string PathJoin(const std::string &a, const std::string &b, const std::string &c);
 
 std::string SwapFileExtension(const std::string &path, const std::string &ext);
 

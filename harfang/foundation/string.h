@@ -23,6 +23,14 @@ enum case_sensitivity { insensitive, sensitive };
 
 inline char to_lower(char c) { return c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c; }
 
+inline bool case_sensitive_eq_func(const char &a, const char &b) {
+	return a == b;
+}
+
+inline bool case_insensitive_eq_func(const char &a, const char &b) {
+	return to_lower(a) == to_lower(b);
+}
+
 inline bool starts_with(const std::string &value, const std::string &prefix, case_sensitivity sensitivity = case_sensitivity::sensitive) {
 	if (prefix.size() > value.size())
 		return false;
@@ -71,7 +79,7 @@ std::string reduce(const std::string &str, const std::string &fill = " ", const 
 
 /// Join several std::strings with a separator std::string.
 template <typename T> std::string join(T begin_it, T end_it, const std::string &separator) {
-	const auto count = std::distance(begin_it, end_it);
+	const ptrdiff_t count = std::distance(begin_it, end_it);
 
 	if (count <= 0)
 		return {};
@@ -83,7 +91,7 @@ template <typename T> std::string join(T begin_it, T end_it, const std::string &
 	std::string out;
 	out.reserve((64 + 2) * count);
 
-	for (auto i = begin_it; i != end_it; ++i) {
+	for (T i = begin_it; i != end_it; ++i) {
 		out += *i;
 		out += separator;
 	}
@@ -93,14 +101,14 @@ template <typename T> std::string join(T begin_it, T end_it, const std::string &
 }
 
 template <typename T> std::string join(T begin_it, T end_it, const std::string &separator, const std::string &last_separator) {
-	const auto count = std::distance(begin_it, end_it);
+	const ptrdiff_t count = std::distance(begin_it, end_it);
 
 	if (count <= 0)
 		return {};
 	if (count == 1)
 		return *begin_it;
 
-	auto e = std::prev(end_it);
+	T e = std::prev(end_it);
 
 	std::string out;
 	out = join(begin_it, e, separator) + last_separator;
@@ -129,8 +137,8 @@ std::string toupper(std::string str, size_t start = 0, size_t end = 0);
 /// minus 'count'.
 std::string slice(const std::string &str, ptrdiff_t from, ptrdiff_t count = 0);
 
-std::string left(const std::string &str, size_t count);
-std::string right(const std::string &str, size_t count);
+std::string left(const std::string &str, ptrdiff_t count);
+std::string right(const std::string &str, ptrdiff_t count);
 
 enum EOLConvention { EOLUnix, EOLWindows };
 

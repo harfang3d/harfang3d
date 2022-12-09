@@ -49,6 +49,8 @@ void OpenVRSubmitFrame(const OpenVREyeFrameBuffer &left, const OpenVREyeFrameBuf
 
 void OpenVRPostPresentHandoff();
 
+bool OpenVRIsHMDMounted();
+
 Texture OpenVRGetColorTexture(const OpenVREyeFrameBuffer &eye);
 Texture OpenVRGetDepthTexture(const OpenVREyeFrameBuffer &eye);
 

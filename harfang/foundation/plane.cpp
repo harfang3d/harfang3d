@@ -8,7 +8,7 @@ namespace hg {
 
 Plane MakePlane(const Vec3 &p, const Vec3 &n) { return {n.x, n.y, n.z, -Dot(p, n)}; }
 Plane MakePlane(const Vec3 &p, const Vec3 &n, const Mat4 &m) {
-	Vec3 tp = m * p, tn = m * n;
+	Vec3 tp = m * p, tn = Vec3(m * Vec4(n, 0.f));
 	return {tn.x, tn.y, tn.z, -Dot(tp, tn)};
 }
 

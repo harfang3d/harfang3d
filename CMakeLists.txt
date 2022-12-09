@@ -17,6 +17,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/harfang/cmake")
 
+if(HG_ENABLE_COVERAGE)
+	include(CodeCoverage)
+	append_coverage_compiler_flags()
+endif()
+
 # -----------------------------------------------------------------------------
 # Debug/tooling options
 # -----------------------------------------------------------------------------
@@ -49,6 +54,7 @@ option(HG_ENABLE_BULLET3_SCENE_PHYSICS "Harfang: Scene physics using Bullet Dyna
 option(HG_ENABLE_RECAST_DETOUR_API "Harfang: Enable Recast/Detour API" ON)
 
 option(HG_ENABLE_OPENVR_API "Harfang: Enable OpenVR API" OFF)
+option(HG_ENABLE_OPENXR_API "Harfang: Enable OpenXR API" OFF)
 cmake_dependent_option(HG_ENABLE_SRANIPAL_API "Harfang: Enable VIVE Eye and Facial Tracking SDK (SRanipal) API" OFF "HG_ENABLE_OPENVR_API;MSVC" OFF)
 
 set(HG_FABGEN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../fabgen" CACHE PATH "Harfang: Path to FabGen script installation")
@@ -98,7 +104,7 @@ endif()
 
 if(MSVC)
 	add_compile_options(/MP /fp:fast /permissive-) # use /GL for LTGC
-	add_compile_definitions(_CRT_SECURE_NO_WARNINGS _ENABLE_EXTENDED_ALIGNED_STORAGE)
+	add_compile_definitions(_CRT_SECURE_NO_WARNINGS _ENABLE_EXTENDED_ALIGNED_STORAGE NOMINMAX)
 	#add_compile_options(/Od /Zi /Zo)
 	add_link_options(/DEBUG)
 	#add_link_options(/LTCG)
@@ -122,10 +128,13 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -s STANDALONE_WASM=1 -s WASM=1 -O0 -DNDEBUG -g4 -s ASSERTIONS=2 -s DEMANGLE_SUPPORT=1 -s FORCE_FILESYSTEM=1")	
 else()
 	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-	if(NOT APPLE)
+	set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+	set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+	if(APPLE)
+		set(MACOSX_RPATH TRUE)
+		set(CMAKE_INSTALL_RPATH @loader_path)
+	else()
 		set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
-		set(CMAKE_SKIP_BUILD_RPATH  FALSE)
-		set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 		set(CMAKE_INSTALL_RPATH $ORIGIN)
 	endif()
 	# gcc 7.4.0 + shaderc workaround ...
@@ -172,6 +181,9 @@ endif()
 if(HG_ENABLE_BULLET3_SCENE_PHYSICS)
 	add_compile_definitions(HG_ENABLE_BULLET3_SCENE_PHYSICS)
 endif()
+if(HG_ENABLE_OPENXR_API)
+	add_compile_definitions(HG_ENABLE_OPENXR_API)
+endif()
 
 if(HG_ENABLE_SRANIPAL_API)
 	add_compile_definitions(HG_ENABLE_SRANIPAL_API)
@@ -207,6 +219,8 @@ if(NOT HG_HOST_PREFIX)
 		string(APPEND HG_HOST_PREFIX "-x86")
 	elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(aarch64.*|AARCH64.*)")
 		string(APPEND HG_HOST_PREFIX "-aarch64")
+	elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(arm64.*|ARM64.*)")
+		string(APPEND HG_HOST_PREFIX "-arm64")
 	elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(arm.*|ARM.*)")
 		string(APPEND HG_HOST_PREFIX "-arm")
 	endif()
@@ -219,6 +233,8 @@ if(NOT HG_TARGET_PREFIX)
 			string(APPEND HG_TARGET_PREFIX "-x64")
 		elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64.*|AARCH64.*)")
 			string(APPEND HG_TARGET_PREFIX "-aarch64")
+		elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64.*|ARM64.*)")
+			string(APPEND HG_TARGET_PREFIX "-arm64")
 		endif()
 	elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 		if(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*|amd64.*|AMD64.*")
@@ -229,17 +245,11 @@ if(NOT HG_TARGET_PREFIX)
 	endif()
 endif(NOT HG_TARGET_PREFIX)
 
-get_directory_property(_hasParent PARENT_DIRECTORY)
-if(_hasParent)	# after 3.21 use if(NOT PROJECT_IS_TOP_LEVEL)
-	set(HG_HOST_PREFIX ${HG_TARGET_PREFIX} PARENT_SCOPE)
-	set(HG_TARGET_PREFIX ${HG_TARGET_PREFIX} PARENT_SCOPE)
-	set(HG_GRAPHIC_API ${HG_GRAPHIC_API} PARENT_SCOPE)
-endif()
-unset(_hasParent)
-
 if(NOT HG_GRAPHIC_API)
 	if(MSVC)
 		set(HG_GRAPHIC_API "DX11")
+	elseif(APPLE)
+		set(HG_GRAPHIC_API "MTL")
 	elseif(NOT HG_GRAPHC_API)
 		set(HG_GRAPHIC_API "GL")
 	endif()
@@ -346,6 +356,19 @@ if(HG_BUILD_DOCS)
 endif()
 
 # -----------------------------------------------------------------------------
+# Propagate variables to parent if harfang is used as a subdirectory
+# -----------------------------------------------------------------------------
+get_directory_property(_hasParent PARENT_DIRECTORY)
+if(_hasParent)	# after 3.21 use if(NOT PROJECT_IS_TOP_LEVEL)
+	set(HG_HOST_PREFIX ${HG_TARGET_PREFIX} PARENT_SCOPE)
+	set(HG_TARGET_PREFIX ${HG_TARGET_PREFIX} PARENT_SCOPE)
+	set(HG_GRAPHIC_API ${HG_GRAPHIC_API} PARENT_SCOPE)
+	set(HG_GRAPHIC_API ${HG_GRAPHIC_API} PARENT_SCOPE)
+	set(HG_GLFW_BACKEND ${HG_GLFW_BACKEND} PARENT_SCOPE)
+endif()
+unset(_hasParent)
+
+# -----------------------------------------------------------------------------
 # Setup/recap dump
 # -----------------------------------------------------------------------------
 message(STATUS [[
@@ -394,6 +417,9 @@ endif()
 if(HG_ENABLE_OPENVR_API)
 	message(STATUS " - OpenVR")
 endif()
+if(HG_ENABLE_OPENXR_API)
+	message(STATUS " - OpenXR")
+endif()
 if(HG_ENABLE_SRANIPAL_API)
 	message(STATUS " - Sranipal")
 endif()
@@ -401,7 +427,7 @@ if(HG_ENABLE_RECAST_DETOUR_API)
 	message(STATUS " - RecastDetour")
 endif()
 
-message(STATUS "Use GLFW backend: " ${HG_USE_GLFW})
+message(STATUS "Use GLFW backend: " ${HG_USE_GLFW} " ${HG_GLFW_BACKEND}")
 message(STATUS "Fabgen dir: " ${HG_FABGEN_PATH})
 message(STATUS "Installation dir: " ${CMAKE_INSTALL_PREFIX})
 
@@ -423,6 +449,10 @@ if(HG_ENABLE_OPENVR_API)
 endif()
 
 if(HG_BUILD_CPP_SDK)
+	if(NOT HG_REBUILD_GLFW)
+		set(HG_REBUILD_GLFW OFF)
+	endif()
+
 	write_basic_package_version_file( harfangConfigVersion.cmake VERSION ${HG_VERSION} COMPATIBILITY SameMajorVersion )
 	configure_package_config_file( harfang/cmake/harfangConfig.cmake.in harfangConfig.cmake INSTALL_DESTINATION cmake INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} )
 	install(

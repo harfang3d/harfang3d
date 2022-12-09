@@ -131,6 +131,8 @@ void DisconnectWindowSystemSignals();
 void ShowCursor();
 /// Hide mouse cursor
 void HideCursor();
+/// Disable mouse cursor (grabs the cursor and allow unlimited movement).
+void DisableCursor();
 
 /// Enable drop support on a specific window
 void SetWindowDropCallback(const Window *window, void (*cb)(const Window *window, int count, const char **paths));

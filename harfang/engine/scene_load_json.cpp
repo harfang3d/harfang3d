@@ -265,10 +265,13 @@ static void LoadProbe(Probe &probe, const json &js, const Reader &deps_ir, const
 	bool do_not_load_resources, bool silent) {
 	const auto irradiance_map = js["irradiance_map"].get<std::string>();
 	const auto radiance_map = js["radiance_map"].get<std::string>();
-
-	probe.irradiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, irradiance_map.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
-	probe.radiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, radiance_map.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
-
+	if (!irradiance_map.empty()) {
+		probe.irradiance_map =
+			SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, irradiance_map.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
+	}
+	if (!radiance_map.empty()) {
+		probe.radiance_map = SkipLoadOrQueueTextureLoad(deps_ir, deps_ip, radiance_map.c_str(), resources, queue_texture_loads, do_not_load_resources, silent);
+	}
 	probe.type = js["type"];
 	probe.parallax = pack_float<uint8_t>(js["parallax"].get<float>());
 

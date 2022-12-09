@@ -410,6 +410,8 @@ BlendMode GetMaterialBlendMode(const Material &mat) {
 		return BM_Screen;
 	if (blend_state == BGFX_STATE_BLEND_LINEAR_BURN)
 		return BM_LinearBurn;
+	if (blend_state == BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE))
+		return BM_AlphaRGB_AddAlpha;
 
 	return BM_Opaque;
 }
@@ -433,6 +435,8 @@ void SetMaterialBlendMode(Material &mat, BlendMode mode) {
 		mat.state.state |= BGFX_STATE_BLEND_SCREEN;
 	else if (mode == BM_LinearBurn)
 		mat.state.state |= BGFX_STATE_BLEND_LINEAR_BURN;
+	else if (mode == BM_AlphaRGB_AddAlpha)
+		mat.state.state |= BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
 }
 
 bool GetMaterialNormalMapInWorldSpace(const Material &m) { return m.flags & MF_NormalMapInWorldSpace; }
@@ -537,7 +541,8 @@ RenderState ComputeRenderState(BlendMode blend, DepthTest test, FaceCulling cull
 		state.state |= BGFX_STATE_BLEND_SCREEN;
 	else if (blend == BM_LinearBurn)
 		state.state |= BGFX_STATE_BLEND_LINEAR_BURN;
-
+	else if (blend == BM_AlphaRGB_AddAlpha)
+		state.state |= BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
 	return state;
 }
 
@@ -1250,7 +1255,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(FaceCulling, {{FC_Disabled, "disabled"}, {FC_Clockw
 NLOHMANN_JSON_SERIALIZE_ENUM(DepthTest, {{DT_Less, "less"}, {DT_LessEqual, "leq"}, {DT_Equal, "eq"}, {DT_GreaterEqual, "geq"}, {DT_Greater, "greater"},
 											{DT_NotEqual, "neq"}, {DT_Never, "never"}, {DT_Always, "always"}, {DT_Disabled, "disabled"}});
 NLOHMANN_JSON_SERIALIZE_ENUM(BlendMode, {{BM_Additive, "add"}, {BM_Alpha, "alpha"}, {BM_Darken, "darken"}, {BM_Lighten, "lighten"}, {BM_Multiply, "multiply"},
-											{BM_Opaque, "opaque"}, {BM_Screen, "screen"}, {BM_LinearBurn, "linearburn"}, {BM_Undefined, "undefined"}});
+											{BM_Opaque, "opaque"}, {BM_Screen, "screen"}, {BM_LinearBurn, "linearburn"},{BM_AlphaRGB_AddAlpha, "alphaRGB_addAlpha"}, {BM_Undefined, "undefined"}});
 
 bool SaveMaterial(const Material &mat, json &js, const PipelineResources &resources) {
 	js["program"] = resources.programs.GetName(mat.program);
@@ -2094,7 +2099,7 @@ static void _RenderDisplayLists(bgfx::ViewId view_id, const std::vector<DisplayL
 void CullModelDisplayLists(const Frustum &frustum, std::vector<ModelDisplayList> &display_lists, const std::vector<Mat4> &mtxs, const PipelineResources &res) {
 	const auto i = std::remove_if(std::begin(display_lists), std::end(display_lists), [&](const ModelDisplayList &display_list) {
 		const auto &model = res.models.Get_unsafe_(display_list.mdl_idx);
-		return TestVisibility(frustum, model.bounds[display_list.lst_idx] * mtxs[display_list.mtx_idx]) == V_Outside;
+		return TestVisibility(frustum, mtxs[display_list.mtx_idx] * model.bounds[display_list.lst_idx]) == V_Outside;
 	});
 	display_lists.resize(std::distance(std::begin(display_lists), i));
 }

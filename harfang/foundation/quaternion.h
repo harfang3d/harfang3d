@@ -2,18 +2,20 @@
 
 #pragma once
 
+#include "foundation/math.h"
 #include "foundation/rotation_order.h"
 
 namespace hg {
 
 struct Vec3;
+struct Vec4;
 struct Mat3;
 
 /// Quaternion
 struct Quaternion {
 	static const Quaternion Identity;
 
-	Quaternion() = default;
+	Quaternion() : x(0.f), y(0.f), z(0.f), w(1.f) {};
 	Quaternion(const Quaternion &q) = default;
 	Quaternion(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
 
@@ -78,8 +80,8 @@ struct Quaternion {
 	}
 };
 
-inline bool operator==(const Quaternion &a, const Quaternion &b) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
-inline bool operator!=(const Quaternion &a, const Quaternion &b) { return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w; }
+inline bool operator==(const Quaternion &a, const Quaternion &b) { return Equal(a.x, b.x) && Equal(a.y, b.y) && Equal(a.z, b.z) && Equal(a.w, b.w); }
+inline bool operator!=(const Quaternion &a, const Quaternion &b) { return NotEqual(a.x, b.x) || NotEqual(a.y, b.y) || NotEqual(a.z, b.z) || NotEqual(a.w, b.w); }
 
 inline float Dot(const Quaternion &a, const Quaternion &b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
 
@@ -97,6 +99,7 @@ inline Quaternion operator*(const Quaternion &a, const Quaternion &b) {
 }
 
 inline Quaternion operator*(const Quaternion &q, float v) { return {q.x * v, q.y * v, q.z * v, q.w * v}; }
+inline Quaternion operator*(float v, const Quaternion &q) { return q * v; }
 inline Quaternion operator/(const Quaternion &q, float v) { return {q.x / v, q.y / v, q.z / v, q.w / v}; }
 
 /// Normalize quaternion.
@@ -111,7 +114,7 @@ float Len2(const Quaternion &q);
 
 /// Distance to quaternion.
 float Dist(const Quaternion &a, const Quaternion &b);
-/// Slerp.
+/// Spherical linear interpolation.
 Quaternion Slerp(const Quaternion &a, const Quaternion &b, float t);
 
 /// From Euler angle triplet.
@@ -128,5 +131,9 @@ Quaternion QuaternionFromAxisAngle(float angle, const Vec3 &axis);
 Mat3 ToMatrix3(const Quaternion &q);
 /// To Euler angle triplet.
 Vec3 ToEuler(const Quaternion &q, RotationOrder = RO_Default);
+
+/// Rotate a vector
+Vec3 Rotate(const Quaternion &q, const Vec3 &v);
+Vec4 Rotate(const Quaternion &q, const Vec4 &v);
 
 } // namespace hg

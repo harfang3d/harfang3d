@@ -1,4 +1,4 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #pragma once
 
@@ -41,10 +41,10 @@ public:
 	void Reset() { size_ = cursor = 0; }
 	bool Empty() const { return size_ == 0; }
 
-	void Reserve(size_t size);
-	void Resize(size_t size);
+	bool Reserve(size_t size);
+	bool Resize(size_t size);
 
-	void Skip(size_t count);
+	bool Skip(size_t count);
 
 	size_t Write(const void *data, size_t size);
 	size_t Read(void *data, size_t size) const;
@@ -82,7 +82,7 @@ template <typename T> struct DeferredDataWrite {
 	}
 
 	void Commit(const T &v) {
-		const auto seek_ = data.GetCursor();
+		const size_t seek_ = data.GetCursor();
 
 		data.SetCursor(cursor);
 		data.Write(&v, sizeof(T));
@@ -91,7 +91,7 @@ template <typename T> struct DeferredDataWrite {
 	}
 
 	void CommitAsChunkSize() {
-		const auto chunk_size = data.GetCursor() - (cursor + sizeof(T));
+		const size_t chunk_size = data.GetCursor() - (cursor + sizeof(T));
 		Commit(T(chunk_size));
 	}
 

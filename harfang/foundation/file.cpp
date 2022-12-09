@@ -1,12 +1,4 @@
-// HARFANG(R) Copyright (C) 2021 Emmanuel Julien, NWNC HARFANG. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
-
-#include "foundation/file.h"
-#include "foundation/cext.h"
-#include "foundation/dir.h"
-#include "foundation/format.h"
-#include "foundation/log.h"
-#include "foundation/rand.h"
-#include "foundation/string.h"
+// HARFANG(R) Copyright (C) 2022 NWNC. Released under GPL/LGPL/Commercial Licence, see licence.txt for details.
 
 #if _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -16,6 +8,14 @@
 #include <unistd.h>
 #endif
 #include <sys/stat.h>
+
+#include "foundation/cext.h"
+#include "foundation/dir.h"
+#include "foundation/file.h"
+#include "foundation/log.h"
+#include "foundation/rand.h"
+#include "foundation/string.h"
+#include "foundation/format.h"
 
 #include <cstdio>
 #include <mutex>
@@ -30,10 +30,10 @@ static std::mutex files_mutex;
 static FILE *_Open(const char *path, const char *mode, bool silent = false) {
 	FILE *file = nullptr;
 #if _WIN32
-	auto wpath = utf8_to_wchar(path);
-	auto wmode = utf8_to_wchar(mode);
+	const std::wstring wpath = utf8_to_wchar(path);
+	const std::wstring wmode = utf8_to_wchar(mode);
 
-	const auto err = _wfopen_s(&file, wpath.data(), wmode.data());
+	const errno_t err = _wfopen_s(&file, wpath.data(), wmode.data());
 
 	if (!silent && err != 0) {
 		char errmsg[256];
@@ -163,10 +163,10 @@ size_t GetSize(File file) {
 	std::lock_guard<std::mutex> lock(files_mutex);
 	if (!files.is_valid(file.ref))
 		return 0;
-	const auto s = files[file.ref.idx];
-	const auto t = ftell(s);
+	FILE *s = files[file.ref.idx];
+	const long t = ftell(s);
 	fseek(s, 0, SEEK_END);
-	const auto size = ftell(s);
+	const size_t size = ftell(s);
 	fseek(s, t, SEEK_SET);
 	return size;
 }
@@ -206,7 +206,7 @@ void Rewind(File file) {
 
 //
 FileInfo GetFileInfo(const char *path) {
-#if WIN32
+#if defined WIN32 && !defined __CYGWIN__
 	struct _stat info;
 	const auto wpath = utf8_to_wchar(path);
 	if (_wstat(wpath.c_str(), &info) != 0)
@@ -226,10 +226,9 @@ FileInfo GetFileInfo(const char *path) {
 
 //
 bool IsFile(const char *path) {
-#if WIN32
+#if defined WIN32 && !defined __CYGWIN__
 	struct _stat info;
-	const auto wpath = utf8_to_wchar(path);
-	if (_wstat(wpath.c_str(), &info) != 0)
+	if (_wstat(utf8_to_wchar(path).c_str(), &info) != 0)
 		return false;
 #else
 	struct stat info;
@@ -245,9 +244,32 @@ bool IsFile(const char *path) {
 	return false;
 }
 
+//
+bool IsDirectory(const char *path) {
+	bool res;
+
+#if _WIN32
+	struct _stat info;
+	if (_wstat(utf8_to_wchar(path).c_str(), &info) == 0) {
+		res = (info.st_mode & S_IFDIR) != 0;
+	} else {
+		res = false;
+	}
+#else
+	struct stat info;
+	if (stat(path, &info) == 0) {
+		res = (info.st_mode & S_IFDIR) != 0;
+	} else {
+		res = false;
+	}
+#endif
+
+	return res;
+}
+
 bool Unlink(const char *path) {
 #if _WIN32
-	const auto wpath = utf8_to_wchar(path);
+	const std::wstring wpath = utf8_to_wchar(path);
 	return DeleteFileW(wpath.c_str()) == TRUE;
 #else
 	return unlink(path) == 0;
@@ -257,8 +279,8 @@ bool Unlink(const char *path) {
 //
 bool CopyFile(const char *src, const char *dst) {
 #if _WIN32
-	const auto wsrc = utf8_to_wchar(src);
-	const auto wdst = utf8_to_wchar(dst);
+	const std::wstring wsrc = utf8_to_wchar(src);
+	const std::wstring wdst = utf8_to_wchar(dst);
 	return ::CopyFileW(wsrc.c_str(), wdst.c_str(), FALSE) ? true : false;
 #else
 	ScopedFile in(Open(src));
@@ -281,23 +303,23 @@ bool CopyFile(const char *src, const char *dst) {
 }
 
 //
-Data FileToData(const char *path, bool silent) {
-	Data data;
+bool FileToData(const char *path, Data &data, bool silent) {
 	File file = Open(path, silent);
 
-	if (IsValid(file)) {
-		data.Resize(GetSize(file));
-		Read(file, data.GetData(), data.GetSize());
-		Close(file);
+	if (!IsValid(file)) {
+		return false;
 	}
+	data.Resize(GetSize(file));
+	Read(file, data.GetData(), data.GetSize());
+	Close(file);
 
-	return data;
+	return true;
 }
 
 //
 std::string FileToString(const char *path, bool silent) {
 	ScopedFile in(Open(path, silent));
-	const auto size = GetSize(in);
+	const size_t size = GetSize(in);
 
 	std::string str(size, 0);
 	Read(in, &str[0], size);
@@ -312,14 +334,14 @@ bool StringToFile(const char *path, const char *str) {
 
 //
 std::string ReadString(File file) {
-	const auto len = Read<uint32_t>(file);
+	const size_t len = Read<uint32_t>(file);
 	std::string s(len, 0);
 	Read(file, &s[0], len);
 	return s;
 }
 
 bool WriteString(File file, const std::string &v) {
-	const auto len = v.length();
+	const size_t len = v.length();
 	return Write(file, numeric_cast<uint32_t>(len)) && Write(file, v.data(), len) == len;
 }
 
