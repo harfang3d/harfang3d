@@ -1,4 +1,4 @@
-## Release Notes
+# [3.2.5] - 2022-12-09
 
 This minor release provides several fixes and new features in the VR/XR and Physics areas. Platform compatibility was slightly improved as well on OS X and WASM (still experimental):
 
