@@ -189,6 +189,7 @@ hg::Vec2 GetWindowContentScale(const Window *window) {
 
 void ShowCursor() { SDL_ShowCursor(SDL_ENABLE); }
 void HideCursor() { SDL_ShowCursor(SDL_DISABLE); }
+void DisableCursor() { SDL_SetRelativeMouseMode(SDL_TRUE); }
 void WindowSystemShutdown() { }
 
 } // namespace hg
