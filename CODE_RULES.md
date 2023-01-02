@@ -5,7 +5,7 @@
 > _Nothing here is dogma. There is no single way._<br>
 > _But when in doubt, following these rules might keep you out of trouble for a little longer._
 
-> I have yet to see any problem, however complicated, which, when you looked at it in the right way, did not become still more complicated.
+> I have yet to see any problem, however complicated, which when looked at in the right way, did not become still more complicated.
 > Anderson's Law
 
 - https://www.youtube.com/watch?v=rX0ItVEVjHc
@@ -51,13 +51,13 @@
 ## Declare functions static by default
 
 - Non-static functions might potentially be used elsewhere in the program even if you did not intend them to be.
-- Modifying a non static function needs to care about potential side effects in the rest of the codebase.
+- When modifying a non static function, care needs to be taken with potential side effects in the rest of the codebase.
 
 ## Avoid deep callbacks
 
 - Callbacks are good old spaghetti code squared.
 - It is most likely that callbacks will be written without sufficient understanding of the context they are being called from.
-- When placing a callback hook in your program you have the responsibilty of designing the context is can access:
+- When placing a callback hook in your program you have the responsibilty of designing the context it can access:
 	- This encourages solving problems you don't have. _(What will a callback need to efficiently solve hypothetic problem A or B? What if problem C arises?)_
 	- Almost guaranteed sub-optimal solution.
 		- Can't reason in terms of many if the call site was not designed for it.
@@ -105,7 +105,7 @@
 ## Subjective: Do not split large functions into smaller ones
 
 - If that function represents a monolithic task you only make that fact unclear by splitting it.
-- Moving code to separate functions for readability purpose does not change a thing:
+- Moving code to separate functions for readability purposes does not change a thing:
 	- That code is still executed and part of the function.
 	- You now need to track it down to understand the function.
 - Use scope to isolate conceptual segments of code inside a long function.
