@@ -361,6 +361,32 @@ add_library(BulletCollision STATIC EXCLUDE_FROM_ALL
 	Bullet3Collision/NarrowPhaseCollision/shared/b3UpdateAabbs.h)
 target_include_directories(BulletCollision PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
+add_library(BulletFileLoader STATIC EXCLUDE_FROM_ALL
+	Serialize/BulletFileLoader/bChunk.cpp
+	Serialize/BulletFileLoader/bDNA.cpp
+	Serialize/BulletFileLoader/bFile.cpp
+	Serialize/BulletFileLoader/btBulletFile.cpp
+	Serialize/BulletFileLoader/bChunk.h
+	Serialize/BulletFileLoader/bCommon.h
+	Serialize/BulletFileLoader/bDefines.h
+	Serialize/BulletFileLoader/bDNA.h
+	Serialize/BulletFileLoader/bFile.h
+	Serialize/BulletFileLoader/btBulletFile.h
+)
+target_include_directories(BulletFileLoader PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_link_libraries(BulletFileLoader PUBLIC LinearMath)
+ 
+add_library(BulletWorldImporter STATIC EXCLUDE_FROM_ALL
+	Serialize/BulletWorldImporter/btMultiBodyWorldImporter.cpp
+	Serialize/BulletWorldImporter/btMultiBodyWorldImporter.h
+	Serialize/BulletWorldImporter/btBulletWorldImporter.cpp
+	Serialize/BulletWorldImporter/btBulletWorldImporter.h
+	Serialize/BulletWorldImporter/btWorldImporter.cpp
+	Serialize/BulletWorldImporter/btWorldImporter.h
+)
+target_include_directories(BulletWorldImporter PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_link_libraries(BulletWorldImporter PUBLIC BulletFileLoader BulletDynamics)
+
 #
 add_library(BulletDynamics STATIC EXCLUDE_FROM_ALL
 	BulletDynamics/Character/btCharacterControllerInterface.h
