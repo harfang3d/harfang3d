@@ -99,6 +99,8 @@ if(WIN32)
 	target_compile_definitions(libluadll PRIVATE _CRT_SECURE_NO_WARNINGS LUA_BUILD_AS_DLL)
 elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	target_compile_definitions(libluadll PUBLIC LUA_USE_LINUX)
+elseif(APPLE)
+	target_compile_definitions(libluadll PUBLIC LUA_USE_MACOSX)
 endif()
 set_target_properties(libluadll PROPERTIES OUTPUT_NAME lua54)
 
