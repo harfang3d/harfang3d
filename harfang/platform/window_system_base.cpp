@@ -19,10 +19,15 @@ void DisconnectWindowSystemSignals() {
 }
 
 bool IsWindowOpen(const Window *window) {
+#   if defined(__EMSCRIPTEN__)
+    // with EGL context there's no window.
+    return true;
+#   else
 	for (auto &w : open_window_list)
 		if (w == window)
 			return true;
 	return false;
+#endif // __EMSCRIPTEN__
 }
 
 } // namespace hg
