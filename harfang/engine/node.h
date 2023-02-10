@@ -92,6 +92,8 @@ struct Camera { // 16B on 64 bit
 	void SetIsOrthographic(bool v);
 	float GetSize() const;
 	void SetSize(float v);
+    void SetCenterOffset(const Vec2 & offset);
+    Vec2 GetCenterOffset() const;
 
 	intrusive_shared_ptr_st<SceneRef> scene_ref;
 	ComponentRef ref;

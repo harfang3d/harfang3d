@@ -245,7 +245,7 @@ ViewState Scene::ComputeCameraViewState(NodeRef ref, const Vec2 &aspect_ratio) c
 			if (auto cam_ = GetComponent_(cameras, node_->components[NCI_Camera])) {
 				const auto &world = transform_worlds[trs_ref.idx];
 				return cam_->ortho ? ComputeOrthographicViewState(world, cam_->size, cam_->zrange.znear, cam_->zrange.zfar, aspect_ratio)
-								   : ComputePerspectiveViewState(world, cam_->fov, cam_->zrange.znear, cam_->zrange.zfar, aspect_ratio);
+								   : ComputePerspectiveViewState(world, cam_->fov, cam_->zrange.znear, cam_->zrange.zfar, aspect_ratio, cam_->center_offset);
 			} else {
 				warn("Invalid node camera");
 			}

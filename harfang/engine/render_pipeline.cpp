@@ -72,10 +72,10 @@ ViewState ComputeOrthographicViewState(const Mat4 &world, float size, float znea
 	return {frustum, proj, view};
 }
 
-ViewState ComputePerspectiveViewState(const Mat4 &world, float fov, float znear, float zfar, const Vec2 &aspect_ratio, const Vec2 &offset) {
+ViewState ComputePerspectiveViewState(const Mat4 &world, float fov, float znear, float zfar, const Vec2 &aspect_ratio, const Vec2 &offset, const Vec2 & center_offset) {
 	const bgfx::Caps *caps = bgfx::getCaps();
 	const auto view = InverseFast(world);
-	const auto proj = ComputePerspectiveProjectionMatrix(znear, zfar, FovToZoomFactor(fov), aspect_ratio, offset);
+	const auto proj = ComputePerspectiveProjectionMatrix(znear, zfar, FovToZoomFactor(fov), aspect_ratio, offset, center_offset);
 	const auto frustum = MakeFrustum(proj, world);
 	return {frustum, proj, view};
 }
