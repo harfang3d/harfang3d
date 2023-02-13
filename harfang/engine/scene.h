@@ -308,7 +308,7 @@ public:
 	void SetCameraSize(ComponentRef ref, float v);
 	bool GetCameraIsOrthographic(ComponentRef ref) const;
 	void SetCameraIsOrthographic(ComponentRef ref, const bool &v);
-    void SetCameraCenterOffset(ComponentRef ref, const Vec2 & offset);
+    void SetCameraCenterOffset(ComponentRef ref, const Vec2 & v);
     Vec2 GetCameraCenterOffset(ComponentRef ref) const;
 
 	Camera CreateCamera(float znear, float zfar, float fov = Deg(45.f));

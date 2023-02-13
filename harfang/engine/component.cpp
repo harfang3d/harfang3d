@@ -321,9 +321,9 @@ void Scene::SetCameraZNear(ComponentRef ref, float v) {
 		warn("Invalid camera component");
 }
 
-void Scene::SetCameraCenterOffset(ComponentRef ref, const Vec2 & offset) {
+void Scene::SetCameraCenterOffset(ComponentRef ref, const Vec2 & v) {
     if (auto *c = GetComponent_(cameras, ref))
-        c->center_offset = offset;
+        c->center_offset = v;
     else
         warn("Invalid camera component");
 }
@@ -503,11 +503,19 @@ void Camera::SetSize(float v) {
 		warn("Orphaned camera component");
 }
 
-void Camera::SetCenterOffset(const Vec2 & offset) {
+void Camera::SetCenterOffset(const Vec2 & v) {
     if (scene_ref && scene_ref->scene)
-        scene_ref->scene->SetCameraCenterOffset(ref, offset);
+        scene_ref->scene->SetCameraCenterOffset(ref, v);
     else
         warn("Orphaned camera component");
+}
+
+Vec2 Camera::GetCenterOffset() const {
+    if (scene_ref && scene_ref->scene)
+        return scene_ref->scene->GetCameraCenterOffset(ref);
+
+    warn("Orphaned camera component");
+    return {};
 }
 
 Camera Scene::CreateCamera(const float znear, const float zfar, const float fov) { return {scene_ref, cameras.add_ref({{znear, zfar}, fov, false})}; }
