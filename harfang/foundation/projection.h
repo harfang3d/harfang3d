@@ -45,7 +45,7 @@ Mat44 ComputeOrthographicProjectionMatrix(float znear, float zfar, float size, c
 
 	@see ZoomFactorToFov, FovToZoomFactor, ComputeAspectRatioX and ComputeAspectRatioY.
 */
-Mat44 ComputePerspectiveProjectionMatrix(float znear, float zfar, float zoom_factor, const Vec2 &aspect_ratio, const Vec2 &offset = Vec2::Zero);
+Mat44 ComputePerspectiveProjectionMatrix(float znear, float zfar, float zoom_factor, const Vec2 &aspect_ratio, const Vec2 &offset = Vec2::Zero, const Vec2 &centerOffset = Vec2::Zero);
 /// Returns a projection matrix from a 2D space to the 3D world, as required by SetViewTransform() for example.
 Mat44 Compute2DProjectionMatrix(float znear, float zfar, float res_x, float res_y, bool y_up);
 

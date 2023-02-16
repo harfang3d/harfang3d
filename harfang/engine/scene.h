@@ -308,6 +308,8 @@ public:
 	void SetCameraSize(ComponentRef ref, float v);
 	bool GetCameraIsOrthographic(ComponentRef ref) const;
 	void SetCameraIsOrthographic(ComponentRef ref, const bool &v);
+    void SetCameraCenterOffset(ComponentRef ref, const Vec2 & v);
+    Vec2 GetCameraCenterOffset(ComponentRef ref) const;
 
 	Camera CreateCamera(float znear, float zfar, float fov = Deg(45.f));
 	Camera CreateOrthographicCamera(float znear, float zfar, float size = 1.f);
@@ -739,6 +741,7 @@ private:
 		float fov{Deg(40.f)};
 		bool ortho{false};
 		float size{1.f};
+        Vec2 center_offset{0.f, 0.f};
 	};
 
 	struct Object_ {

@@ -26,13 +26,16 @@ Mat44 ComputeOrthographicProjectionMatrix(float znear, float zfar, float size, c
 	return {2.f / size / aspect_ratio.x, 0, 0, 0, 0, 2.f / size / aspect_ratio.y, 0, 0, 0, 0, qA, 0, offset.x, offset.y, qB, 1};
 }
 
-Mat44 ComputePerspectiveProjectionMatrix(float znear, float zfar, float zoom_factor, const Vec2 &aspect_ratio, const Vec2 &offset) {
+Mat44 ComputePerspectiveProjectionMatrix(float znear, float zfar, float zoom_factor, const Vec2 &aspect_ratio, const Vec2 &offset, const Vec2 &centerOffset) {
 	const NDCInfos &ndc_infos = GetNDCInfos();
 
 	const float qA = ndc_infos.homogeneous_depth ? ((zfar + znear) / (zfar - znear)) : (zfar / (zfar - znear));
 	const float qB = ndc_infos.homogeneous_depth ? (-2 * zfar * znear / (zfar - znear)) : (-qA * znear);
-	return {zoom_factor / aspect_ratio.x, 0, 0, 0, 0, zoom_factor / aspect_ratio.y, 0, 0, 0, 0, qA, 1, offset.x, offset.y, qB, 0};
+
+
+	return {zoom_factor / aspect_ratio.x, 0, 0, 0, 0, zoom_factor / aspect_ratio.y, 0, 0, centerOffset.x, centerOffset.y, qA, 1, offset.x, offset.y, qB, 0};
 }
+
 
 Mat44 Compute2DProjectionMatrix(float znear, float zfar, float res_x, float res_y, bool y_up) {
 	const NDCInfos &ndc_infos = GetNDCInfos();
