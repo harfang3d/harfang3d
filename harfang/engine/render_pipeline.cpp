@@ -319,7 +319,7 @@ void SetMaterialWriteRGBA(Material &m, bool write_r, bool write_g, bool write_b,
 		(write_r ? BGFX_STATE_WRITE_R : 0) | (write_g ? BGFX_STATE_WRITE_G : 0) | (write_b ? BGFX_STATE_WRITE_B : 0) | (write_a ? BGFX_STATE_WRITE_A : 0);
 }
 
-void SetMaterialPrimativeType(Material &m, PrimativeType primative_type){
+void SetMaterialPrimitiveType(Material &m, PrimitiveType primitive_type){
     m.state.state &= ~BGFX_STATE_PT_MASK;
 
     if (primative_type == PRIM_T_TriangleStrip)
@@ -332,7 +332,7 @@ void SetMaterialPrimativeType(Material &m, PrimativeType primative_type){
         m.state.state |= BGFX_STATE_PT_POINTS;
 }
 
-PrimativeType GetMaterialPrimativeType(const Material &m)
+PrimitiveType GetMaterialPrimitiveType(const Material &m)
 {
     const auto pt = m.state.state & BGFX_STATE_PT_MASK;
     if (pt == BGFX_STATE_PT_TRISTRIP)
