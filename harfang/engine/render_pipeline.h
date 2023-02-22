@@ -381,7 +381,7 @@ void SetMaterialBlendMode(Material &mat, BlendMode mode);
 
 enum PrimitiveType { PRIM_T_Triangle, PRIM_T_TriangleStrip, PRIM_T_Lines, PRIM_T_LineStrip, PRIM_T_Points};
 
-void SetMaterialPrimitiveType(Material &m, PrimitiveType primative_type);
+void SetMaterialPrimitiveType(Material &m, PrimitiveType primitive_type);
 PrimitiveType GetMaterialPrimitiveType(const Material &m);
 
 void GetMaterialWriteRGBA(const Material &m_, bool &write_r, bool &write_g, bool &write_b, bool &write_a);
