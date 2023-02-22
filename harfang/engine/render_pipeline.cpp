@@ -322,13 +322,13 @@ void SetMaterialWriteRGBA(Material &m, bool write_r, bool write_g, bool write_b,
 void SetMaterialPrimitiveType(Material &m, PrimitiveType primitive_type){
     m.state.state &= ~BGFX_STATE_PT_MASK;
 
-    if (primative_type == PRIM_T_TriangleStrip)
+    if (primitive_type == PRIM_T_TriangleStrip)
         m.state.state |= BGFX_STATE_PT_TRISTRIP;
-    else if (primative_type == PRIM_T_Lines)
+    else if (primitive_type == PRIM_T_Lines)
         m.state.state |= BGFX_STATE_PT_LINES;
-    else if (primative_type == PRIM_T_LineStrip)
+    else if (primitive_type == PRIM_T_LineStrip)
         m.state.state |= BGFX_STATE_PT_LINESTRIP;
-    else if (primative_type == PRIM_T_Points)
+    else if (primitive_type == PRIM_T_Points)
         m.state.state |= BGFX_STATE_PT_POINTS;
 }
 
