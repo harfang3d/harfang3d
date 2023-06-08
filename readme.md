@@ -269,21 +269,29 @@ There are numerous ways to help Harfang grow its community:
 <a name="section_9"></a>
 # More screenshots...
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sun_temple_aaa.png)
+![Nvidia USD Attic](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.2.6/attic_harfang.png)
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sun_temple_aaa_2.png)
+*(The NVIDIA USD Attic using the HARFANG 3D AAA renderer)*
+
+![ORCA Sun Temple](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sun_temple_aaa.png)
+
+![ORCA Sun Temple](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sun_temple_aaa_2.png)
 
 *(Sun Temple, courtesy of the Open Research Content Archive (ORCA))*
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cafe_exterior_aaa.png)
+![ORCA Bistro](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cafe_exterior_aaa.png)
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cafe_exterior_aaa_2.png)
+![ORCA Bistro](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/cafe_exterior_aaa_2.png)
 
 *(Bistro, courtesy of the Open Research Content Archive (ORCA))*
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sponza_atrium_aaa.png)
+![Sponza Atrium](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sponza_atrium_aaa.png)
 
-![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sponza_atrium_aaa_2.png)
+![Sponza Atrium](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.1.1/sponza_atrium_aaa_2.png)
 
 *(Sponza Atrium GLTF, courtesy of Crytek/Themaister)*
+
+![alt text](https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.2.6/marine-melodies-screenshot_1280.png)
+
+*(Marine Melodies, by Resistance Norway)*
 
