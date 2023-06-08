@@ -1609,9 +1609,8 @@ bgfx::VertexLayout VertexLayoutPosFloatNormUInt8TexCoord0UInt8() {
 	bgfx::VertexLayout vtx_layout;
 	vtx_layout.begin()
 		.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-		.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true, false)
+		.add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Uint8, true, true)
 		.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Uint8, true, false)
-		.skip(2)
 		.end();
 	return vtx_layout;
 }
@@ -2317,9 +2316,20 @@ TextureRef LoadTextureFromAssets(const char *name, uint64_t flags, PipelineResou
 }
 
 //
-uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t, Picture &pic) {
+uint32_t CaptureTexture(bgfx::ViewId &view_id, const PipelineResources &resources, const TextureRef &t, const Texture &readback, Picture &pic) {
 	const auto ref = resources.textures.Get(t);
-	return bgfx::readTexture(ref.handle, pic.GetData());
+
+	constexpr uint64_t expected_flags = BGFX_TEXTURE_READ_BACK | BGFX_TEXTURE_BLIT_DST;
+	if (((readback.flags & expected_flags) != expected_flags) || (readback.flags & BGFX_TEXTURE_RT_MASK)) {
+		hg::error("invalid texture flags.");
+		return BGFX_INVALID_HANDLE;
+	}
+	
+	view_id++;
+	bgfx::touch(view_id);
+	bgfx::blit(view_id, readback.handle, 0, 0, ref.handle);
+
+	return bgfx::readTexture(readback.handle, pic.GetData());
 }
 
 //

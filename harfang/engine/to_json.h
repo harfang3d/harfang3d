@@ -45,7 +45,7 @@ inline void from_json(const json &j, gen_ref &v) {
 		v.idx = j;
 }
 
-NLOHMANN_JSON_SERIALIZE_ENUM(RigidBodyType, {{RBT_Dynamic, "dynamic"}, {RBT_Kinematic, "kinematic"}});
+NLOHMANN_JSON_SERIALIZE_ENUM(RigidBodyType, {{RBT_Dynamic, "dynamic"}, {RBT_Kinematic, "kinematic"}, {RBT_Static, "static"}});
 NLOHMANN_JSON_SERIALIZE_ENUM(
 	CollisionType, {{CT_Sphere, "sphere"}, {CT_Cube, "cube"}, {CT_Cone, "cone"}, {CT_Capsule, "capsule"}, {CT_Cylinder, "cylinder"}, {CT_Mesh, "mesh"}});
 

@@ -157,13 +157,21 @@ Color GetPixelRGBA(const Picture &pic, uint16_t x, uint16_t y) {
 	if (x >= pic.GetWidth() || y >= pic.GetHeight())
 		return Color::Zero;
 
-	const int size = size_of(pic.GetFormat());
-	int offset = numeric_cast<int>((x + (size_t)pic.GetWidth() * y) * size);
-	Color out(Color::Zero);
-	const uint8_t *data = pic.GetData();
-
-	for (int i = 0; i < size;)
-		out[i++] = data[offset++] / 255.f;
+	Color out = Color::Zero;
+	const PictureFormat &fmt = pic.GetFormat();
+	const int channel_count = GetChannelCount(fmt);
+	const size_t offset = (x + y * pic.GetWidth()) * size_of(fmt);
+	if (fmt == PF_RGBA32F) {
+		const float *in = reinterpret_cast<float *>(pic.GetData() + offset);
+		for (int i = 0; i < channel_count; i++) {
+			out[i] = in[i];
+		}
+	} else {
+		const uint8_t *in = pic.GetData() + offset;
+		for (int i = 0; i < channel_count; i++) {
+			out[i] = in[i] / 255.f;
+		}
+	}
 
 	return out;
 }
@@ -172,12 +180,20 @@ void SetPixelRGBA(Picture &pic, uint16_t x, uint16_t y, const Color &col) {
 	if ((x >= pic.GetWidth()) || (y >= pic.GetHeight()))
 		return;
 
-	const int size = size_of(pic.GetFormat());
-	int offset = numeric_cast<int>((x + (size_t)pic.GetWidth() * y) * size);
-	uint8_t *data = pic.GetData();
-
-	for (int i = 0; i < size;)
-		data[offset++] = uint8_t(Clamp(col[i++], 0.f, 1.f) * 255.f);
+	const PictureFormat &fmt = pic.GetFormat();
+	const int channel_count = GetChannelCount(fmt);
+	const size_t offset = (x + y * pic.GetWidth()) * size_of(fmt);
+	if (fmt == PF_RGBA32F) {
+		float *out = reinterpret_cast<float *>(pic.GetData() + offset);
+		for (int i = 0; i < channel_count; i++) {
+			out[i] = col[i];
+		}
+	} else {
+		uint8_t *out = pic.GetData() + offset;
+		for (int i = 0; i < channel_count; i++) {
+			out[i] = uint8_t(Clamp(col[i], 0.f, 1.f) * 255.f);
+		}
+	}
 }
 
 //

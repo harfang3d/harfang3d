@@ -18,6 +18,38 @@ The easiest way is to drag and drop the resources folder on the assetc executabl
 
 ## Command-Line
 
+Since HARFANG 3.2.5, `assetc` is now included in both _Python_ and _Lua_ versions.
+
+### Python
+
+In HARFANG Python 3.2.5 and above, `assetc` is packaged into the bdist wheel and can be invoked as a function of harfang.bin module.
+
+In this example, we will compile a folder called `resources` and target the `OpenGL` API:
+
+* From the command line:
+   ```bash
+   python3 -m harfang.bin assetc resources -api GL
+   ```
+
+* As a Python module:
+   ```python
+   import harfang.bin
+   harfang.bin.assetc('resources', '-api', 'GL')
+   ```
+
+### Lua
+
+In HARFANG Lua 3.2.5 and above, `assetc` is packaged along with the Lua extension and can be invoked as a function of harfang.bin.
+
+In this example, we will compile a folder called `resources` and target the `OpenGL` API:
+
+```lua
+hg_bin = require "harfang.bin"
+hg_bin.assetc('resources', '-api', 'GL')
+```
+
+## Usage in detail
+
 If you need more control over the compilation options, the command line gets the following parameters:
 
 ```

@@ -141,9 +141,7 @@ inline bool operator==(const Color &a, const Color &b) {
 	return Equal(a.r, b.r) && Equal(a.g, b.g) && Equal(a.b, b.b) && Equal(a.a, b.a);
 }
 
-inline bool operator!=(const Color &a, const Color &b) {
-	return NotEqual(a.r, b.r) && NotEqual(a.g, b.g) && NotEqual(a.b, b.b) && NotEqual(a.a, b.a);
-}
+inline bool operator!=(const Color &a, const Color &b) { return NotEqual(a.r, b.r) || NotEqual(a.g, b.g) || NotEqual(a.b, b.b) || NotEqual(a.a, b.a); }
 
 Color operator+(const Color &a, const Color &b);
 Color operator+(const Color &a, const float v);

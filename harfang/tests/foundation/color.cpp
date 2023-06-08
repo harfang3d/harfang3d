@@ -116,7 +116,9 @@ void test_color() {
 		Color c0(75.757575f, 1.207f, -44.01f, 0.192f);
 		Color c1(75.757575f, 1.207f, -44.01f, 0.192f);
 		Color c2(70.0101f, 4.4444f, 1.0001f, 0.4f);
+		Color c3(70.0101f, 1.207f, -44.01f, 0.192f);
 		TEST_CHECK(c0 != c2);
+		TEST_CHECK(c0 != c3);
 		TEST_CHECK((c0 != c1) == false);
 	}
 	{

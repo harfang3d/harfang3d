@@ -128,10 +128,25 @@ void test_minmax() {
 		MinMax m0(-Vec3::One, Vec3::One); 
 		Mat4 trs = TransformationMat4(Vec3(-0.5f, 0.5f, 0.8f), Deg3(45.f, -30.f, 60.f), Vec3(2.f, 0.8f, 1.f));
 		MinMax m1 = trs * m0;
-		Vec3 p0 = trs * m0.mn;
-		Vec3 p1 = trs * m0.mx;
-		TEST_CHECK(AlmostEqual(m1.mn, Min(p0, p1), 0.000001f));
-		TEST_CHECK(AlmostEqual(m1.mx, Max(p0, p1), 0.000001f));
+		// Brute force computation of the new minmax
+		Vec3 p[8] = {
+			trs * m0.mn,
+			trs * Vec3(m0.mn.x, m0.mn.y, m0.mx.z),
+			trs * Vec3(m0.mn.x, m0.mx.y, m0.mn.z),
+			trs * Vec3(m0.mn.x, m0.mx.y, m0.mx.z),
+			trs * Vec3(m0.mx.x, m0.mn.y, m0.mn.z),
+			trs * Vec3(m0.mx.x, m0.mn.y, m0.mx.z),
+			trs * Vec3(m0.mx.x, m0.mx.y, m0.mn.z),
+			trs * m0.mx
+		};
+		Vec3 p0 = p[0], p1 = p[0];
+		for (int i = 1; i < 8; i++) {
+			p0 = Min(p0, p[i]);
+			p1 = Max(p1, p[i]);
+		}
+
+		TEST_CHECK(AlmostEqual(m1.mn, p0, 0.000001f));
+		TEST_CHECK(AlmostEqual(m1.mx, p1, 0.000001f));
 	}
 	{
 		MinMax m0(-Vec3::One, Vec3::One);
