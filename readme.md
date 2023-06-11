@@ -49,8 +49,9 @@ Rendering pipeline
 * Support of user pipeline shaders
 
 VR API
-* VR support via OpenVR/SteamVR with Eye tracking
-* Compatible with the HTC Vive/Vive Pro, Valve Index, Lenovo Explorer, Oculus Rift S
+* XR support via OpenXR
+* VR support via OpenVR/SteamVR including Eye tracking (SRanipal)
+* Tested with the HTC Vive/Vive Pro, Valve Index, Lenovo Explorer, Oculus Rift S, Oculus Quest 2, Varjo XR-3
 
 Physics API
 * Rigid bodies, collisions, mechanical constraints, ray casting
