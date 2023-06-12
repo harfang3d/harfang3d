@@ -1,3 +1,34 @@
+# [3.2.6] - 2023-06-05
+
+This minor release provides several fixes and brings a functionning API to capture the framebuffer and save it as a picture.
+
+### Framework integration and source code maintenance
+* Fixed the missing `DisableCursor` on SDL (by @PMP-P). 
+* Fixed Linux Golang module build script.
+
+### Rendering
+* Added the ability to set the pixel center offset for the projection matrix: `SetCameraCenterOffset` and `GetCameraCenterOffset` (by @RobEwbank1).
+* Resolved issue #50 (fix CaptureTexture() for Python / Lua)":
+  * **OLD:** `uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t, Picture &pic)`
+  * **NEW:** `uint32_t CaptureTexture(bgfx::ViewId &view_id, const PipelineResources &resources, const TextureRef &t, const Texture &readback, Picture &pic)`
+  * Fixed Picture Set/Get RGBA: `GetPixelRGBA` and `SetPixelRGBA`.
+  * How does the framebuffer capture work ?
+    * In order to grab the framebuffer, create an empty picture: `picture = hg.Picture(512, 512, hg.PF_RGBA32)`
+    * The texture framebuffer is created as in [`draw to texture`](https://github.com/harfang3d/tutorials-hg2/blob/da92f5dc96099dfc315c90d3ea188fc30f18f28f/scene_draw_to_texture.lua)
+    * Then, set framebuffer to `TF_ReadBack`: `tex_readback = hg.CreateTexture(512, 512, "readback", hg.TF_ReadBack | hg.TF_BlitDestination, hg.TF_RGBA8)`
+    * When submitting the scene, target the framebuffer: `hg.SubmitSceneToPipeline(view_id, scene, hg.IntRect(0, 0, 512, 512), true, pipeline, res, frame_buffer.handle)`
+    * The capture will be made asynchronously: `frame_count_capture, view_id = hg.CaptureTexture(view_id, res, tex_color_ref, tex_readback, picture)`
+    * Then, only when the current `frame` counter is greater or equal to `frame_count_capture`, save the picture: `hg.SavePNG(picture, "capture.png")`
+
+### Misc bug fix
+* Fixed `!=` color operator.
+* Brought back the old `minmax` transform to fix #49. 
+* Removed warning message ("Invalid node instance"). 
+* Resolve "Tutorials issues on Linux Ubuntu" (Fixed `VertexLayoutPosFloatNormUInt8TexCoord0UInt8`).
+* Studio related fixes
+  * `RBT_Static` wasn't saved properly in the scene file.
+  * Fixed `GetAnimableNodePropertyFloat` and `SetAnimableNodePropertyFloat` to handle the camera FOV.
+
 # [3.2.5] - 2022-12-09
 
 This minor release provides several fixes and new features in the VR/XR and Physics areas. Platform compatibility was slightly improved as well on OS X and WASM (still experimental):

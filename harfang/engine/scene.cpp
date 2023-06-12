@@ -1259,11 +1259,7 @@ ScenePlayAnimRef Scene::GetOnInstantiatePlayAnimRef(ComponentRef ref) {
 
 Instance Scene::GetNodeInstance(NodeRef ref) const {
 	const auto cref = GetNodeInstanceRef(ref);
-	if (cref != InvalidComponentRef)
-		return {scene_ref, cref};
-
-	warn("Invalid node instance");
-	return {};
+	return (cref != InvalidComponentRef) ? Instance{scene_ref, cref} : Instance{};
 }
 
 ComponentRef Scene::GetNodeInstanceRef(NodeRef ref) const {
@@ -2529,6 +2525,8 @@ float GetAnimableNodePropertyFloat(const Scene &scene, NodeRef ref, const std::s
 			return node.GetLight().GetDiffuseIntensity();
 		else if (name == "Light.SpecularIntensity")
 			return node.GetLight().GetSpecularIntensity();
+		else if (name == "Camera.Fov")
+			return node.GetCamera().GetFov();
 	}
 	return 1.f;
 }
@@ -2539,6 +2537,8 @@ void SetAnimableNodePropertyFloat(Scene &scene, NodeRef ref, const std::string &
 			node.GetLight().SetDiffuseIntensity(v);
 		else if (name == "Light.SpecularIntensity")
 			node.GetLight().SetSpecularIntensity(v);
+		else if (name == "Camera.Fov")
+			node.GetCamera().SetFov(v);
 	}
 }
 

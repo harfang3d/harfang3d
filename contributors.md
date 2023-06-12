@@ -4,6 +4,7 @@
 
 * Vincent Cruz
 * Camille Dudognon
+* Robert Ewbank
 * François Gutherz
 * Emmanuel Julien
 * Eric Kernin

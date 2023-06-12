@@ -529,7 +529,7 @@ TextureRef LoadTextureFromAssets(const char *path, uint64_t flags, PipelineResou
 /// A Picture object can be accessed by the CPU.
 /// This function is asynchronous and its result will not be available until the returned frame counter is equal or greater to the frame counter returned by
 /// Frame.
-uint32_t CaptureTexture(const PipelineResources &resources, const TextureRef &t, Picture &pic);
+uint32_t CaptureTexture(bgfx::ViewId &view_id, const PipelineResources &resources, const TextureRef &t, const Texture &readback, Picture &pic);
 
 MaterialRef LoadMaterialRef(const Reader &ir, const Handle &h, const char *path, const Reader &deps_ir, const ReadProvider &deps_ip,
 	PipelineResources &resources, const PipelineInfo &pipeline, bool queue_texture_loads, bool do_not_load_resources, bool silent = false);

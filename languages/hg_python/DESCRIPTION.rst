@@ -10,7 +10,20 @@ Harfang is a 3D real time visualization framework for the industry, the educatio
 See https://www.harfang3d.com/license for licensing terms.
 
 | 
-| **Quickstart**
+| **Quickstart, command line method (Windows/Linux)**
+
+1. Clone the tutorials' repository: 
+    - ``git clone https://github.com/harfang3d/tutorials-hg2.git``
+2. Enter the repository:
+    - ``cd tutorials-hg2``
+3. Compile the tutorial resources:
+    - ``python3 -m harfang.bin assetc resources``
+    - After the compilation process finishes, you should see a ``resources_compiled`` folder next to the resources folder.
+4. Run the tutorials:
+    - ``D:\tutorials-hg2>python3 draw_lines.py``
+
+| 
+| **Quickstart, drag & drop method (Windows)**
 
 1. Download the tutorials https://github.com/harfang3d/tutorials-hg2 and unzip them to your computer (eg. *d:/tutorials-hg2*).
 2. To compile the tutorial resources, download **assetc** for your platform: https://dev.harfang3d.com/releases/
@@ -27,7 +40,17 @@ Alternatively you can open the tutorial folder and run the provided debug target
 | 
 | **Screenshots**
 
-The following screenshots were captured on a 2070RTX in 1080P running at 60FPS, GI is performed using screen space raytracing and does not require RTX capable hardware.
+The following screenshots were captured on a 2060RTX in 1080P running at 60FPS, GI is performed using screen space raytracing and does not require RTX capable hardware.
+
+| 
+| The NVIDIA USD Attic using the AAA renderer *(Courtesy of NVIDIA)*
+
+.. image:: https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.2.6/attic_harfang.png
+
+| 
+| Marine Melodies *(interactive musical experience)*
+
+.. image:: https://raw.githubusercontent.com/harfang3d/image-storage/main/portfolio/3.2.5/marine-melodies-screenshot_000.png
 
 | 
 | Cyber City *(CyberPunk City, CyberPunk Girl and Robot R32 by art-equilibrium, ILranch and ZeroArt3d)*
