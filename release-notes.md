@@ -1,3 +1,12 @@
+# [3.2.7] - 2023-08-14
+
+This minor release brings the support for the DOF post process.
+
+* Added the support for the depth of field  post process (CoC spiral gather method)
+  * Adds `dof_focus_point` and `dof_focus_length` (see [ForwardPipelineAAAConfig()](https://dev.harfang3d.com/api/3.2.7/cpython/classes/#forwardpipelineaaaconfig))
+  * Available in the AAA rendering pipeline only.
+* Fix CMake warnings.
+
 # [3.2.6] - 2023-06-05
 
 This minor release provides several fixes and brings a functionning API to capture the framebuffer and save it as a picture.

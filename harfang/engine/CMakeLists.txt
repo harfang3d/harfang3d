@@ -9,6 +9,7 @@ set(HDRS
 	cubemap.h
 	dear_imgui.h
 	debugger.h
+	dof.h
 	file_format.h
 	font.h
 	forward_pipeline.h
@@ -65,6 +66,7 @@ set(SRCS
 	cubemap.cpp
 	dear_imgui.cpp
 	debugger.cpp
+	dof.cpp
 	font.cpp
 	forward_pipeline.cpp
 	fps_controller.cpp

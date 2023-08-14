@@ -407,7 +407,7 @@ endif()
 message(STATUS "Build Go module: " ${HG_BUILD_HG_GO})
 
 message(STATUS "Embedded system build: " ${HG_EMBEDDED})
-message(STATUS "Binding defines: " ${HG_BINDING_DEFINES})
+message(STATUS "Binding defines: " ${HG_BINDING_DEFINES_LIST})
 
 message(STATUS "Available APIs:")
 message(STATUS " - Core")

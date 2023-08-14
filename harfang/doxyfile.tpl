@@ -69,7 +69,7 @@ CITE_BIB_FILES         =
 
 # Configuration options related to warning and progress messages
 
-QUIET                  = NO
+QUIET                  = YES
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = YES
 WARN_IF_DOC_ERROR      = YES
@@ -99,7 +99,6 @@ CLANG_OPTIONS          =
 # Configuration options related to the alphabetical class index
 
 ALPHABETICAL_INDEX     = YES
-COLS_IN_ALPHA_INDEX    = 3
 IGNORE_PREFIX          = 
 
 # Configuration options related to the HTML output
@@ -115,7 +114,6 @@ HTML_EXTRA_FILES       =
 HTML_COLORSTYLE_HUE    = 220
 HTML_COLORSTYLE_SAT    = 100
 HTML_COLORSTYLE_GAMMA  = 80
-HTML_TIMESTAMP         = NO
 HTML_DYNAMIC_SECTIONS  = NO
 HTML_INDEX_NUM_ENTRIES = 100
 SEARCHENGINE           = YES
