@@ -3,6 +3,7 @@
 #pragma once
 
 #include "engine/aaa_blur.h"
+#include "engine/dof.h"
 #include "engine/bloom.h"
 #include "engine/downsample.h"
 #include "engine/forward_pipeline.h"
@@ -44,6 +45,7 @@ struct ForwardPipelineAAAConfig {
 	float motion_blur = 1.f;
 	float exposure = 1.f, gamma = 2.2f;
 	float sharpen = 0.1f;
+	float dof_focus_point = 0.f, dof_focus_length = 0.f;
 
 	bool use_tonemapping = true;
 	float specular_weight = 1.f;
@@ -112,6 +114,7 @@ struct ForwardPipelineAAA {
 
 	//
 	TAA taa;
+	Dof dof;
 
 	//
 	AAABlur blur;

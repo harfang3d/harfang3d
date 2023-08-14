@@ -1599,7 +1599,8 @@ static std::vector<hg::ForwardPipelineLight> _GetSceneForwardPipelineLights(cons
 		'int sample_count', 'float max_distance', 'float z_thickness',
 		'float bloom_threshold', 'float bloom_bias', 'float bloom_intensity',
 		'float motion_blur',
-		'float exposure', 'float gamma'
+		'float exposure', 'float gamma',
+		'float dof_focus_point', 'float dof_focus_length'
 	])
 	gen.end_class(forward_pipeline_aaa_config)
 

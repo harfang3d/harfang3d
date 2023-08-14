@@ -216,17 +216,12 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 		aaa.ssr_history_fb[1] = bgfx::createFrameBuffer(1, &aaa.ssr_history[1].handle, true);
 	}
 
-	{ aaa.blur = CreateAAABlurFromAssets(path); }
-
-	{ aaa.hiz = CreateHiZFromAssets(path, rb_factory, hg::Min(ssgi_ratio, ssr_ratio)); }
-
-	{ aaa.downsample = CreateDownsampleFromAssets(path, rb_factory); }
-
-	{ aaa.upsample = CreateUpsampleFromAssets(path); }
-
-	{ aaa.temporal_acc = CreateTemporalAccumulationFromAssets(path); }
-
-	{ aaa.motion_blur = CreateMotionBlurFromAssets(path); }
+	aaa.blur = CreateAAABlurFromAssets(path);
+	aaa.hiz = CreateHiZFromAssets(path, rb_factory, hg::Min(ssgi_ratio, ssr_ratio));
+	aaa.downsample = CreateDownsampleFromAssets(path, rb_factory);
+	aaa.upsample = CreateUpsampleFromAssets(path);
+	aaa.temporal_acc = CreateTemporalAccumulationFromAssets(path);
+	aaa.motion_blur = CreateMotionBlurFromAssets(path);
 
 	{
 		// RGBA16F
@@ -255,6 +250,8 @@ static ForwardPipelineAAA _CreateForwardPipelineAAA(const Reader &ir, const Read
 	}
 
 	aaa.taa = CreateTAAFromAssets(path);
+
+	aaa.dof = CreateDofFromAssets(path);
 	aaa.bloom = CreateBloomFromAssets(hg::format("%1/shader").arg(path), rb_factory, bgfx::BackbufferRatio::Equal);
 
 	if (!IsValid(aaa)) {
@@ -368,6 +365,7 @@ void DestroyForwardPipelineAAA(ForwardPipelineAAA &aaa) {
 
 	//
 	DestroyTAA(aaa.taa);
+	DestroyDof(aaa.dof);
 	DestroyBloom(aaa.bloom);
 	DestroyHiZ(aaa.hiz);
 
@@ -806,8 +804,16 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 		view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.next_frame_hdr_fb)}, aaa.attr0, aaa.attr1, noise, aaa.work_frame_hdr_fb, aaa.motion_blur);
 
 	// bloom
-	ApplyBloom(view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.work_frame_hdr_fb)}, fb_size, aaa.frame_hdr_fb, aaa.bloom,
-		aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity);
+	if (aaa_config.dof_focus_length == 0.f) { // TODO proper ping-pong, bloom should be optional as well...
+		ApplyBloom(view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.work_frame_hdr_fb)}, fb_size, aaa.frame_hdr_fb, aaa.bloom,
+			aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity);
+	} else {
+		ApplyBloom(view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.work_frame_hdr_fb)}, fb_size, aaa.next_frame_hdr_fb, aaa.bloom,
+			aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity);
+
+		// dof
+		ApplyDof(view_id, rect, bgfx::BackbufferRatio::Equal, {attribute_texture_flags, bgfx::getTexture(aaa.next_frame_hdr_fb)}, aaa.attr0, aaa.frame_hdr_fb, aaa.dof, aaa_config.dof_focus_point, aaa_config.dof_focus_length);
+	}
 
 	// final compositing for presentation (exposure/gamma correction)
 	if (aaa_config.use_tonemapping) {

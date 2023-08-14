@@ -12,11 +12,11 @@ here = path.abspath(path.dirname(__file__))
 
 # get version
 with open(path.join(here, 'version.txt'), encoding='utf-8') as f:
-	version_string = f.read()
+	version_string = f.read().strip()
 
 # get the long description from the relevant file
 with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
-	long_description = f.read()
+	long_description = f.read().strip()
 
 setup(
 	name='harfang',
