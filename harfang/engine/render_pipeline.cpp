@@ -319,6 +319,34 @@ void SetMaterialWriteRGBA(Material &m, bool write_r, bool write_g, bool write_b,
 		(write_r ? BGFX_STATE_WRITE_R : 0) | (write_g ? BGFX_STATE_WRITE_G : 0) | (write_b ? BGFX_STATE_WRITE_B : 0) | (write_a ? BGFX_STATE_WRITE_A : 0);
 }
 
+void SetMaterialPrimitiveType(Material &m, PrimitiveType primitive_type){
+    m.state.state &= ~BGFX_STATE_PT_MASK;
+
+    if (primitive_type == PRIM_T_TriangleStrip)
+        m.state.state |= BGFX_STATE_PT_TRISTRIP;
+    else if (primitive_type == PRIM_T_Lines)
+        m.state.state |= BGFX_STATE_PT_LINES;
+    else if (primitive_type == PRIM_T_LineStrip)
+        m.state.state |= BGFX_STATE_PT_LINESTRIP;
+    else if (primitive_type == PRIM_T_Points)
+        m.state.state |= BGFX_STATE_PT_POINTS;
+}
+
+PrimitiveType GetMaterialPrimitiveType(const Material &m)
+{
+    const auto pt = m.state.state & BGFX_STATE_PT_MASK;
+    if (pt == BGFX_STATE_PT_TRISTRIP)
+        return PRIM_T_TriangleStrip;
+    if (pt == BGFX_STATE_PT_LINES)
+        return PRIM_T_Lines;
+    if (pt == BGFX_STATE_PT_LINESTRIP)
+        return PRIM_T_LineStrip;
+    if (pt == BGFX_STATE_PT_POINTS)
+        return PRIM_T_Points;
+
+    return PRIM_T_Triangle;
+}
+
 void SetMaterialWriteZ(Material &m, bool enable) {
 	if (enable)
 		m.state.state |= BGFX_STATE_WRITE_Z;
