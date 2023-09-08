@@ -806,10 +806,10 @@ void SubmitSceneToForwardPipeline(bgfx::ViewId &view_id, const Scene &scene, con
 	// bloom
 	if (aaa_config.dof_focus_length == 0.f) { // TODO proper ping-pong, bloom should be optional as well...
 		ApplyBloom(view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.work_frame_hdr_fb)}, fb_size, aaa.frame_hdr_fb, aaa.bloom,
-			aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity);
+			aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity, aaa_config.bloom_width);
 	} else {
 		ApplyBloom(view_id, rect, {attribute_texture_flags, bgfx::getTexture(aaa.work_frame_hdr_fb)}, fb_size, aaa.next_frame_hdr_fb, aaa.bloom,
-			aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity);
+			aaa_config.bloom_threshold, aaa_config.bloom_bias, aaa_config.bloom_intensity, aaa_config.bloom_width);
 
 		// dof
 		ApplyDof(view_id, rect, bgfx::BackbufferRatio::Equal, {attribute_texture_flags, bgfx::getTexture(aaa.next_frame_hdr_fb)}, aaa.attr0, aaa.frame_hdr_fb, aaa.dof, aaa_config.dof_focus_point, aaa_config.dof_focus_length);

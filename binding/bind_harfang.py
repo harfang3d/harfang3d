@@ -1597,7 +1597,7 @@ static std::vector<hg::ForwardPipelineLight> _GetSceneForwardPipelineLights(cons
 	gen.bind_members(forward_pipeline_aaa_config, [
 		'float temporal_aa_weight',
 		'int sample_count', 'float max_distance', 'float z_thickness',
-		'float bloom_threshold', 'float bloom_bias', 'float bloom_intensity',
+		'float bloom_threshold', 'float bloom_bias', 'float bloom_intensity', 'float bloom_width',
 		'float motion_blur',
 		'float exposure', 'float gamma',
 		'float dof_focus_point', 'float dof_focus_length'
@@ -4348,7 +4348,7 @@ def bind_bloom(gen):
 	gen.bind_function('hg::CreateBloomFromFile', 'hg::Bloom', ['const char *path', 'bgfx::BackbufferRatio::Enum ratio'])
 	gen.bind_function('hg::CreateBloomFromAssets', 'hg::Bloom', ['const char *path', 'bgfx::BackbufferRatio::Enum ratio'])
 	gen.bind_function('hg::DestroyBloom', 'void', ['hg::Bloom &bloom'])
-	gen.bind_function('hg::ApplyBloom', 'void', ['bgfx::ViewId &view_id', 'const hg::Rect<int> &rect', 'const hg::Texture &input', 'bgfx::FrameBufferHandle output', 'hg::Bloom &bloom', 'float threshold', 'float smoothness', 'float intensity'], {'arg_in_out': ['view_id']})
+	gen.bind_function('hg::ApplyBloom', 'void', ['bgfx::ViewId &view_id', 'const hg::Rect<int> &rect', 'const hg::Texture &input', 'bgfx::FrameBufferHandle output', 'hg::Bloom &bloom', 'float threshold', 'float smoothness', 'float intensity', 'float width'], {'arg_in_out': ['view_id']})
 
 
 def bind_sao(gen):

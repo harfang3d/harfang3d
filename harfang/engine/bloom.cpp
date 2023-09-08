@@ -92,16 +92,16 @@ void DestroyBloom(Bloom &bloom) {
 }
 
 void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, bgfx::FrameBufferHandle output, const Bloom &bloom, float threshold,
-	float smoothness, float intensity) {
+	float smoothness, float intensity, float width) {
 	auto stats = bgfx::getStats();
 
-	const int width = stats->width;
-	const int height = stats->height;
-	ApplyBloom(view_id, rect, input, hg::iVec2(width, height), output, bloom, threshold, smoothness, intensity);
+	const int res_width = stats->width;
+	const int res_height = stats->height;
+	ApplyBloom(view_id, rect, input, hg::iVec2(res_width, res_height), output, bloom, threshold, smoothness, intensity, width);
 }
 
 void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &input, const hg::iVec2 &fb_size, bgfx::FrameBufferHandle output,
-	const Bloom &bloom, float threshold, float smoothness, float intensity) {
+	const Bloom &bloom, float threshold, float smoothness, float intensity, float width) {
 	__ASSERT__(IsValid(bloom));
 
 	const bgfx::Caps *caps = bgfx::getCaps();
@@ -155,7 +155,7 @@ void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &inp
 			bgfx::setViewClear(view_id, BGFX_CLEAR_NONE, 1.f, 0, UINT8_MAX);
 			bgfx::setViewFrameBuffer(view_id, bloom.out_fb);
 
-			const float u_source_rect[] = {float(source_rect.sx), float(source_rect.sy), float(GetWidth(source_rect)), float(GetHeight(source_rect))};
+			const float u_source_rect[] = {float(source_rect.sx), float(source_rect.sy), float(source_rect.ex), float(source_rect.ey)};
 			bgfx::setUniform(bloom.u_source_rect, u_source_rect, 1);
 			bgfx::setTexture(0, bloom.u_source, bgfx::getTexture(bloom.in_fb), BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
 
@@ -180,10 +180,10 @@ void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &inp
 			bgfx::setViewClear(view_id, BGFX_CLEAR_NONE, 1.f, 0, UINT8_MAX);
 			bgfx::setViewFrameBuffer(view_id, bloom.out_fb);
 
-			const float params[4] = {0.f, 0.f, intensity, 0.f};
-			bgfx::setUniform(bloom.u_params, &params[0], 1);
+			const float params[4] = {width, 0.f, 0.f, 0.f};
+			bgfx::setUniform(bloom.u_params, params, 1);
 
-			const float u_source_rect[] = {float(source_rect.sx), float(source_rect.sy), float(GetWidth(source_rect)), float(GetHeight(source_rect))};
+			const float u_source_rect[] = {float(source_rect.sx), float(source_rect.sy), float(source_rect.ex), float(source_rect.ey)};
 			bgfx::setUniform(bloom.u_source_rect, u_source_rect, 1);
 			bgfx::setTexture(0, bloom.u_source, bgfx::getTexture(bloom.in_fb), BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
 
@@ -204,6 +204,9 @@ void ApplyBloom(bgfx::ViewId &view_id, const iRect &rect, const hg::Texture &inp
 		bgfx::setViewTransform(view_id, NULL, ortho);
 		bgfx::setViewClear(view_id, BGFX_CLEAR_NONE, 1.0f, 0, UINT8_MAX);
 		bgfx::setViewFrameBuffer(view_id, output);
+
+		const float params[4] = {intensity, 0.f, 0.f, 0.f};
+		bgfx::setUniform(bloom.u_params, params, 1);
 
 		bgfx::setTexture(0, bloom.u_source, bgfx::getTexture(bloom.in_fb), BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
 		bgfx::setTexture(1, bloom.u_input, input.handle, BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);

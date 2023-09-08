@@ -41,7 +41,7 @@ struct ForwardPipelineAAAConfig {
 	float max_distance = 100.f; // SSGI/SSR max exploration
 	float z_thickness = 0.1f;
 
-	float bloom_threshold = 5.f, bloom_bias = 0.5f, bloom_intensity = 0.1f;
+	float bloom_threshold = 5.f, bloom_bias = 0.5f, bloom_intensity = 0.1f, bloom_width = 1.f;
 	float motion_blur = 1.f;
 	float exposure = 1.f, gamma = 2.2f;
 	float sharpen = 0.1f;
